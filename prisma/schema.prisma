@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {  
+  id          String   @id @default(uuid())  
+  name        String   
+  username    String   @unique  
+  email       String   @unique  
+  password    String   
+  phone       String?  @unique  
+  profile_img String?  // Stores profile image URL  
+  created_at  DateTime @default(now())  
+  updated_at  DateTime @updatedAt  
+  role_id     String   
+  role        Role     @relation(fields: [role_id], references: [id], onDelete: Cascade)  
+}
+
+model Role {  
+  id          String           @id @default(uuid())  
+  name        String           @unique  
+  users       User[]  
+  permissions RolePermission[] 
+}
+
+model Permission {  
+  id   String           @id @default(uuid())  
+  name String           @unique  
+  roles RolePermission[] 
+}
+
+model RolePermission {
+  role_id       String
+  permission_id String
+  role          Role        @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission    Permission  @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+}
