@@ -11,6 +11,9 @@ const prisma = new PrismaClient();
 
 interface CustomJWT extends JWT {
   id?: string;
+  username?: string; 
+  role?: string; 
+  permissions?: string[]; 
 }
 
 export const authOptions: NextAuthOptions = {
@@ -60,22 +63,24 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }: { token: CustomJWT; user?: any }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+        token.username = user.username;
+        token.role = user.role;
+        token.permissions = user.permissions;
       }
       return token;
     },
+
     async session({ session, token }: { session: Session; token: CustomJWT }) {
-      if (!token.id) {
-        throw new Error("Token ID is missing");
-      }
-      const user = await AuthUser.findByIdentifier(token.id);
-      if (user) {
+      if (token.id) {
         session.user = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          username: user.username,
-          role: user.role,
-          permissions: user.permissions,
+          id: token.id,
+          name: token.name || "",
+          email: token.email || "",
+          username: token.username || "",
+          role: token.role || "",
+          permissions: token.permissions || [],
         };
       }
       return session;

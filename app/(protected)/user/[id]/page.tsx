@@ -1,0 +1,95 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { UserProfile } from "../../../../components/user-profile";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { useUser } from "../../../../hooks/getSession";
+
+// same User type as above
+interface Role {
+  id: string;
+  name: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  phone: string | null;
+  profile_img: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  role_id: string;
+  role: Role;
+}
+
+export default function ViewUserPage() {
+  const params = useParams();
+  const router = useRouter();
+  const userId = params.id as string;
+  const { user: sessionUser, loading: sessionLoading } = useUser();
+  
+  // State to store the fetched user
+  const [fetchedUser, setFetchedUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    
+    fetch(`/api/users/${userId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("User not found");
+        return res.json();
+      })
+      .then((data: User) => {
+        setFetchedUser(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setFetchedUser(null);
+        setLoading(false);
+      });
+  }, [userId]);
+
+  if (sessionLoading || loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (!fetchedUser) {
+    return (
+      <div className="container mx-auto py-6">
+        <Breadcrumb
+          items={[
+            { label: "Users", href: "/user" },
+            { label: "User Not Found" },
+          ]}
+        />
+        <div className="flex justify-center">
+          <div className="bg-destructive/10 text-destructive p-4 rounded-md">
+            User not found. The user may have been deleted or you may have followed an invalid link.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-6">
+      <Breadcrumb
+        items={[
+          { label: "Users", href: "/user" },
+          { label: fetchedUser.name },
+        ]}
+      />
+      <div className="flex justify-center"> 
+        <UserProfile
+          user={fetchedUser}
+          onBack={() => router.push("/user")}
+        />
+      </div>
+    </div>
+  );
+}

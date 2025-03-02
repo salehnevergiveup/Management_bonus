@@ -13,15 +13,15 @@ permissions: string[];
 models: string[]; 
 
 constructor(userdata: any) {
-  this.id = userdata.id;
-  this.name = userdata.name;
-  this.email = userdata.email;
-  this.username = userdata.username;
-  this.role = userdata.role.name;
-  this.permissions = userdata.role.permissions.map(
-    (perm: any) => perm.permission.name
+  this.id = userdata?.id;
+  this.name = userdata?.name;
+  this.email = userdata?.email;
+  this.username = userdata?.username;
+  this.role = userdata?.role.name;
+  this.permissions = userdata?.role.permissions.map(
+    (perm: any) => perm.permission?.name
   );
-  this.models = [...new Set(this.permissions.map((per) => per.split(":")[1].toLocaleLowerCase()))];
+  this.models = [...new Set(this.permissions?.map((per) => per.split(":")[1].toLocaleLowerCase()))];
 }
 
 
