@@ -9,6 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUser } from "../../../hooks/getSession";
 import { useRouter } from "next/navigation";
+import { Badge } from "@/components/badge";
+import { AppColor } from "@/constants/colors";
+import { UserStatus } from "@/constants/userStatus";
+import { Roles } from "@/constants/roles";
+
 import {
   Table,
   TableBody,
@@ -44,8 +49,9 @@ interface User {
   username: string;
   email: string;
   phone: string | null;
+  status: UserStatus; // expected to be one of the UserStatus values
   profile_img: string | null;
-  created_at: string; 
+  created_at: string;
   updated_at: string;
   role_id: string;
   role: Role;
@@ -61,7 +67,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (!user.canAccess("user")) {
+      if (!user.canAccess("users")) {
         router.push("/dashboard");
       } else {
         setMounted(true);
@@ -105,13 +111,12 @@ export default function UsersPage() {
 
   return (
     <div className="container mx-auto py-6">
-      {/* Breadcrumb for navigation */}
       <Breadcrumb items={[{ label: "Users" }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>User Management</CardTitle>
-          <Link href="/user/create">
+          <Link href="/users/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Add User
@@ -153,6 +158,7 @@ export default function UsersPage() {
                   <TableHead>Username</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -174,17 +180,31 @@ export default function UsersPage() {
                     <TableCell>{u.username}</TableCell>
                     <TableCell>{u.email}</TableCell>
                     <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          u.role?.name === "Admin"
-                            ? "bg-blue-100 text-blue-800"
-                            : u.role?.name === "Management"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {u.role.name}
-                      </span>
+                      {/* Using the Badge component for role with unified color */}
+                      <Badge
+                        color={
+                          u.role.name === Roles.Admin
+                            ? AppColor.INFO
+                            : u.role.name === Roles.Management
+                            ? AppColor.WARNING
+                            : AppColor.SUCCESS
+                        }
+                        text={u.role.name}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                         color={
+                          u.status  === UserStatus.ACTIVE
+                            ? AppColor.SUCCESS
+                            : u.status === UserStatus.INACTIVE
+                            ? AppColor.WARNING
+                            :  u.status  === UserStatus.BANNED 
+                            ?  AppColor.ERROR
+                            : AppColor.INFO
+                        }
+                        text={u.status}
+                      />
                     </TableCell>
                     <TableCell>
                       {mounted ? new Date(u.created_at).toLocaleDateString() : null}
@@ -198,13 +218,13 @@ export default function UsersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <Link href={`/user/${u.id}`}>
+                          <Link href={`/users/${u.id}`}>
                             <DropdownMenuItem>
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
                           </Link>
-                          <Link href={`/user/${u.id}/edit`}>
+                          <Link href={`/users/${u.id}/edit`}>
                             <DropdownMenuItem>
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit

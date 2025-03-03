@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const actions = ["view", "create", "delete", "edit"];
-const models = ["player", "user", "profile", "matched", "bonus", "process", "request"];
+const models = ["players", "users", "profiles", "matches", "bonus", "processes", "requests", "transfer accounts"];
 
 const permissionsList = models.flatMap((model) => 
   actions.map((action) => `${model}:${action}`)

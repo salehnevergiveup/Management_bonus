@@ -1,16 +1,29 @@
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowLeft, Pencil } from "lucide-react"
-import Link from "next/link"
-import type { User } from "./user-table"
+"use client";
+
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArrowLeft, Pencil } from "lucide-react";
+import Link from "next/link";
+import type { User } from "./user-table";
+import { Badge } from "@/components/badge";
+import { AppColor } from "@/constants/colors";
+import { UserStatus } from "@/constants/userStatus";
+import { Roles } from "@/constants/roles";
 
 interface UserProfileProps {
-  user: User
-  onBack: () => void
+  user: User;
+  onBack: () => void;
 }
 
 export function UserProfile({ user, onBack }: UserProfileProps) {
+  const displayImage =
+    user.profile_img && user.profile_img.startsWith("data:")
+      ? user.profile_img
+      : user.profile_img
+      ? `data:image/png;base64,${user.profile_img}`
+      : undefined;
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
@@ -18,9 +31,26 @@ export function UserProfile({ user, onBack }: UserProfileProps) {
       </CardHeader>
       <CardContent className="flex flex-col items-center space-y-6">
         <Avatar className="h-24 w-24">
-          <AvatarImage src={user.profile_img || undefined} alt={user.name} />
-          <AvatarFallback className="text-2xl">{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+          <AvatarImage src={displayImage} alt={user.name} />
+          <AvatarFallback className="text-2xl">
+            {user.name.substring(0, 2).toUpperCase()}
+          </AvatarFallback>
         </Avatar>
+
+        <div>
+            <Badge
+              color={
+                user.status === UserStatus.ACTIVE
+                  ? AppColor.SUCCESS
+                  : user.status === UserStatus.INACTIVE
+                  ? AppColor.WARNING
+                  : user.status === UserStatus.BANNED
+                  ? AppColor.ERROR
+                  : AppColor.INFO
+              }
+              text={user.status}
+            />
+        </div>
 
         <div className="w-full space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -48,11 +78,11 @@ export function UserProfile({ user, onBack }: UserProfileProps) {
             <p className="text-sm font-medium text-muted-foreground">Role</p>
             <p
               className={`inline-block px-2 py-1 rounded-full text-xs ${
-                user.role.name === "Admin"
-                  ? "bg-blue-100 text-blue-800"
-                  : user.role.name === "Editor"
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-green-100 text-green-800"
+                user.role.name === Roles.Admin
+                  ? AppColor.SUCCESS
+                  : user.role.name === Roles.Management
+                  ? AppColor.INFO
+                  : AppColor.ERROR
               }`}
             >
               {user.role.name}
@@ -76,7 +106,7 @@ export function UserProfile({ user, onBack }: UserProfileProps) {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <Link href={`/user/${user.id}/edit`}>
+        <Link href={`/users/${user.id}/edit`}>
           <Button>
             <Pencil className="mr-2 h-4 w-4" />
             Edit
@@ -84,6 +114,5 @@ export function UserProfile({ user, onBack }: UserProfileProps) {
         </Link>
       </CardFooter>
     </Card>
-  )
+  );
 }
-

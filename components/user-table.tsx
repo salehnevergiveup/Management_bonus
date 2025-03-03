@@ -21,6 +21,7 @@ export interface User {
   name: string
   username: string
   email: string
+  status: string
   phone: string | null
   profile_img: string | null
   created_at: Date

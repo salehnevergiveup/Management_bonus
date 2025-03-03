@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { UserProfile } from "../../../../components/user-profile";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { useUser } from "../../../../hooks/getSession";
+import { UserStatus } from "@/constants/userStatus"
+
 
 // same User type as above
 interface Role {
@@ -18,6 +20,7 @@ interface User {
   username: string;
   email: string;
   phone: string | null;
+  status: UserStatus;
   profile_img: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -63,7 +66,7 @@ export default function ViewUserPage() {
       <div className="container mx-auto py-6">
         <Breadcrumb
           items={[
-            { label: "Users", href: "/user" },
+            { label: "Users", href: "/users" },
             { label: "User Not Found" },
           ]}
         />
@@ -80,7 +83,7 @@ export default function ViewUserPage() {
     <div className="container mx-auto py-6">
       <Breadcrumb
         items={[
-          { label: "Users", href: "/user" },
+          { label: "Users", href: "/users" },
           { label: fetchedUser.name },
         ]}
       />

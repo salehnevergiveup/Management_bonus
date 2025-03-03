@@ -1,7 +1,4 @@
 "use client"
-
-"use client"
-
 import type * as React from "react"
 import {
   Users,
@@ -41,13 +38,13 @@ export default function AppSidebar(props: React.ComponentProps<typeof Sidebar>) 
 
   const renderManagementMenuItems = () => {
     const sections = [
-      { name: "User", icon: <Users className="h-4 w-4" /> },
-      { name: "Player", icon: <UserCheck className="h-4 w-4" /> },
+      { name: "Users", icon: <Users className="h-4 w-4" /> },
+      { name: "Players", icon: <UserCheck className="h-4 w-4" /> },
       { name: "Bonus", icon: <BarChart3 className="h-4 w-4" /> },
-      { name: "Processe", icon: <BarChart3 className="h-4 w-4" /> },
-      { name: "Matched Player", icon: <UserCheck className="h-4 w-4" /> },
-      { name: "Transfer Account", icon: <Wallet className="h-4 w-4" /> },
-      { name: "Request", icon: <FileText className="h-4 w-4" /> },
+      { name: "Processes", icon: <BarChart3 className="h-4 w-4" /> },
+      { name: "Matches", icon: <UserCheck className="h-4 w-4" /> },
+      { name: "Transfer Accounts", icon: <Wallet className="h-4 w-4" /> },
+      { name: "Requests", icon: <FileText className="h-4 w-4" /> },
     ]
 
     return sections

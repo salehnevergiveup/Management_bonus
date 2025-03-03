@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { UserStatus } from "@/constants/userStatus";
+
 
 const prisma = new PrismaClient();
 
@@ -8,7 +10,6 @@ export const SeedAdminUser = async () => {
 
   const hashedPassword = await bcrypt.hash("password", 10);
 
-  // Fetch admin role
   const adminRole = await prisma.role.findUnique({
     where: { name: "admin" },
   });
@@ -25,8 +26,9 @@ export const SeedAdminUser = async () => {
       name: "Admin",
       email: "admin@mail.com",
       username: "admin123",
+      status:  UserStatus.ACTIVE, 
       password: hashedPassword,
-      role_id: adminRole.id, // Assign correct role ID
+      role_id: adminRole.id, 
     },
   });
 
