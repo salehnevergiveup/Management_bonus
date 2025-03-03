@@ -1,15 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Loader2, Send } from "lucide-react";
 import Link from "next/link";
 import type { User } from "./user-table";
 import { Badge } from "@/components/badge";
 import { AppColor } from "@/constants/colors";
 import { UserStatus } from "@/constants/userStatus";
 import { Roles } from "@/constants/roles";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface UserProfileProps {
   user: User;
@@ -23,6 +25,47 @@ export function UserProfile({ user, onBack }: UserProfileProps) {
       : user.profile_img
       ? `data:image/png;base64,${user.profile_img}`
       : undefined;
+
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+
+  const handleResendInvitation = async () => {
+    setIsInviting(true);
+    setInviteSuccess(null);
+    setInviteError(null);
+    setInviteLink(null);
+
+    try {
+      const response = await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          role_id: user.role.id,
+          resend: true, // indicates a resend action
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to resend invitation");
+      }
+
+      setInviteSuccess(`Invitation resent to ${user.email}`);
+
+      // For development, display the invitation link
+      if (data.invitationLink) {
+        setInviteLink(`${window.location.origin}${data.invitationLink}`);
+      }
+    } catch (error: any) {
+      setInviteError(error.message);
+    } finally {
+      setIsInviting(false);
+    }
+  };
 
   return (
     <Card className="w-full max-w-md">
@@ -38,18 +81,18 @@ export function UserProfile({ user, onBack }: UserProfileProps) {
         </Avatar>
 
         <div>
-            <Badge
-              color={
-                user.status === UserStatus.ACTIVE
-                  ? AppColor.SUCCESS
-                  : user.status === UserStatus.INACTIVE
-                  ? AppColor.WARNING
-                  : user.status === UserStatus.BANNED
-                  ? AppColor.ERROR
-                  : AppColor.INFO
-              }
-              text={user.status}
-            />
+          <Badge
+            color={
+              user.status === UserStatus.ACTIVE
+                ? AppColor.SUCCESS
+                : user.status === UserStatus.INACTIVE
+                ? AppColor.WARNING
+                : user.status === UserStatus.BANNED
+                ? AppColor.ERROR
+                : AppColor.INFO
+            }
+            text={user.status}
+          />
         </div>
 
         <div className="w-full space-y-4">
@@ -100,6 +143,50 @@ export function UserProfile({ user, onBack }: UserProfileProps) {
             </div>
           </div>
         </div>
+
+        {/* Resend Invitation section (shown only when inactive) */}
+        {user.status === UserStatus.INACTIVE && (
+          <div className="w-full mt-4 space-y-2">
+            {inviteSuccess && (
+              <Alert className="bg-green-50 border-green-200">
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>{inviteSuccess}</AlertDescription>
+              </Alert>
+            )}
+            {inviteError && (
+              <Alert variant="destructive" className="bg-red-50 border-red-200">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{inviteError}</AlertDescription>
+              </Alert>
+            )}
+            {inviteLink && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertTitle>Invitation Link (Dev Only)</AlertTitle>
+                <AlertDescription className="break-all">
+                  <a href={inviteLink} target="_blank" rel="noopener noreferrer">
+                    {inviteLink}
+                  </a>
+                </AlertDescription>
+              </Alert>
+            )}
+            <Button variant="outline" className="w-full" onClick={handleResendInvitation} disabled={isInviting}>
+              {isInviting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending Invitation...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Resend Invitation
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              This user hasn't activated their account yet. Send another invitation email.
+            </p>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button variant="outline" onClick={onBack}>
@@ -116,3 +203,5 @@ export function UserProfile({ user, onBack }: UserProfileProps) {
     </Card>
   );
 }
+
+export default UserProfile;

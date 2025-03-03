@@ -8,6 +8,19 @@ datasource db {
 }
 
 
+model UserInvitation {
+  id          String    @id @default(uuid())
+  token       String    @unique
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at  DateTime  @default(now())
+  expires_at  DateTime
+  accepted_at DateTime?
+
+  @@index([user_id])
+}
+
+
 model User {
   id          String     @id @default(uuid())
   name        String
@@ -20,6 +33,7 @@ model User {
   updated_at  DateTime   @updatedAt
   role_id     String
   role        Role       @relation(fields: [role_id], references: [id])
+  invitations UserInvitation[]
 }
 
 model Role {  

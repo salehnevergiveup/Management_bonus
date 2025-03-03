@@ -13,7 +13,6 @@ import { Badge } from "@/components/badge";
 import { AppColor } from "@/constants/colors";
 import { UserStatus } from "@/constants/userStatus";
 import { Roles } from "@/constants/roles";
-
 import {
   Table,
   TableBody,
@@ -36,8 +35,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ConfirmationDialog } from "@/components/dialog";
 
-// Define types for Role and User
 interface Role {
   id: string;
   name: string;
@@ -49,7 +48,7 @@ interface User {
   username: string;
   email: string;
   phone: string | null;
-  status: UserStatus; // expected to be one of the UserStatus values
+  status: UserStatus;
   profile_img: string | null;
   created_at: string;
   updated_at: string;
@@ -64,6 +63,10 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("");
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  // State for delete confirmation dialog.
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -86,14 +89,20 @@ export default function UsersPage() {
     return <p>Loading session...</p>;
   }
   
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
-      setUsers((prev) => prev.filter((u) => u.id !== id));
-    } catch (error) {
-      console.error(error);
-      alert("Failed to delete user.");
+  // Delete user function called upon confirming deletion.
+  const confirmDelete = async () => {
+    if (userToDelete) {
+      try {
+        const res = await fetch(`/api/users/${userToDelete.id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Delete failed");
+        setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
+      } catch (error) {
+        console.error(error);
+        alert("Failed to delete user.");
+      } finally {
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+      }
     }
   };
 
@@ -159,7 +168,6 @@ export default function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -180,7 +188,6 @@ export default function UsersPage() {
                     <TableCell>{u.username}</TableCell>
                     <TableCell>{u.email}</TableCell>
                     <TableCell>
-                      {/* Using the Badge component for role with unified color */}
                       <Badge
                         color={
                           u.role.name === Roles.Admin
@@ -194,20 +201,17 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                         color={
-                          u.status  === UserStatus.ACTIVE
+                        color={
+                          u.status === UserStatus.ACTIVE
                             ? AppColor.SUCCESS
                             : u.status === UserStatus.INACTIVE
                             ? AppColor.WARNING
-                            :  u.status  === UserStatus.BANNED 
-                            ?  AppColor.ERROR
+                            : u.status === UserStatus.BANNED
+                            ? AppColor.ERROR
                             : AppColor.INFO
                         }
                         text={u.status}
                       />
-                    </TableCell>
-                    <TableCell>
-                      {mounted ? new Date(u.created_at).toLocaleDateString() : null}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -231,7 +235,12 @@ export default function UsersPage() {
                             </DropdownMenuItem>
                           </Link>
                           {u.role.name.toLowerCase() !== "admin" && (
-                            <DropdownMenuItem onClick={() => handleDelete(u.id)}>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setUserToDelete(u);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
@@ -246,6 +255,18 @@ export default function UsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmationDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Confirm Delete"
+        confirmText="Delete"
+        confirmButtonColor="destructive"
+      >
+        Are you sure you want to delete{" "}
+        <span className="font-medium">{userToDelete?.name}</span>? This action cannot be undone.
+      </ConfirmationDialog>
     </div>
   );
 }

@@ -5,26 +5,28 @@ export const runtime = "nodejs";
 
 const prisma = new PrismaClient();
 
-export async function GET(request: Request, context: { params: { id: string } }) {
-  const { id } = context.params;
+export async function GET(
+  request: Request, 
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-    include: { role: true },
-  });
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { role: true },
+    });
 
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error: any) {
+    console.error("Error fetching user:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-
-const userResponse = {
-    ...user,
-    profile_img: user.profile_img || null,
-  };
-
-  return NextResponse.json(userResponse);
 }
-
 
 
 export async function PUT(request: Request, context: { params: { id: string } }) {
@@ -94,3 +96,22 @@ export async function PUT(request: Request, context: { params: { id: string } })
 
 }
 
+export async function DELETE(
+  request: Request, 
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    await prisma.user.delete({ where: { id } });
+    return NextResponse.json({ message: "User deleted successfully" });
+  } catch (error: any) {
+    console.error("DELETE /api/users/[id] error:", error);
+    if (error.code === "P2025") {
+      return NextResponse.json(
+        { error: `User  not found` },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

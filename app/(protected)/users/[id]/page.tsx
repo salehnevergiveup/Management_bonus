@@ -33,7 +33,7 @@ export default function ViewUserPage() {
   const router = useRouter();
   const userId = params.id as string;
   const { user: sessionUser, loading: sessionLoading } = useUser();
-  
+ 
   // State to store the fetched user
   const [fetchedUser, setFetchedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +78,7 @@ export default function ViewUserPage() {
       </div>
     );
   }
-
+  console.log(fetchedUser.status); 
   return (
     <div className="container mx-auto py-6">
       <Breadcrumb
