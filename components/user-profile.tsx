@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Pencil, Loader2, Send } from "lucide-react";
 import Link from "next/link";
-import type { User } from "./user-table";
 import { Badge } from "@/components/badge";
 import { AppColor } from "@/constants/colors";
 import { UserStatus } from "@/constants/userStatus";
 import { Roles } from "@/constants/roles";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { User } from "@/types/user";
 
 interface UserProfileProps {
   user: User;

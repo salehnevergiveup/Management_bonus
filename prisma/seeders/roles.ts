@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import {Roles}  from  "@/constants/roles"
 
 const prisma = new PrismaClient();
 
@@ -6,15 +7,15 @@ export const SeedRoles = async () => {
   console.log("Seeding roles...");
 
   const adminRole = await prisma.role.upsert({
-    where: { name: "admin" },
+    where: { name: Roles.Admin },
     update: {},
-    create: { name: "admin" },
+    create: { name: Roles.Admin },
   });
 
   const managementRole = await prisma.role.upsert({
-    where: { name: "management" },
+    where: { name:Roles.Management },
     update: {},
-    create: { name: "management" },
+    create: { name:Roles.Management },
   });
 
   const permissions = await prisma.permission.findMany();

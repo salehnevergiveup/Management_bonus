@@ -12,9 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
-import { useUser } from "../hooks/getSession"
 import { signOut } from "next-auth/react"
-
+import { useUser } from "@/contexts/usercontext";
 import {
   Sidebar,
   SidebarContent,

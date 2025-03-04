@@ -7,7 +7,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUser } from "../../../hooks/getSession";
+import { useUser } from "@/contexts/usercontext";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/badge";
 import { AppColor } from "@/constants/colors";
@@ -36,25 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ConfirmationDialog } from "@/components/dialog";
-
-interface Role {
-  id: string;
-  name: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  phone: string | null;
-  status: UserStatus;
-  profile_img: string | null;
-  created_at: string;
-  updated_at: string;
-  role_id: string;
-  role: Role;
-}
+import type { User } from "@/types/user";
 
 export default function UsersPage() {
   const { user, loading } = useUser();
@@ -67,6 +49,10 @@ export default function UsersPage() {
   // State for delete confirmation dialog.
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
   useEffect(() => {
     if (!loading && user) {
@@ -106,6 +92,7 @@ export default function UsersPage() {
     }
   };
 
+  // Filter users based on search term and role
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,6 +104,19 @@ export default function UsersPage() {
   
     return matchesSearch && matchesRole;
   });
+
+  // Pagination: Calculate total pages and current users to display.
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+
+  // Handler for changing pages.
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -143,10 +143,16 @@ export default function UsersPage() {
                 placeholder="Search users..."
                 className="pl-8"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset page on search
+                }}
               />
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <Select value={roleFilter} onValueChange={(val) => {
+              setRoleFilter(val);
+              setCurrentPage(1); // Reset page on filter change
+            }}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
@@ -172,7 +178,7 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((u) => (
+                {currentUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
@@ -253,6 +259,29 @@ export default function UsersPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end mt-4 space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

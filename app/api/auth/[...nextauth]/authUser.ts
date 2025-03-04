@@ -21,7 +21,7 @@ constructor(userdata: any) {
   this.username = userdata?.username;
   this.status = userdata?.status; 
   this.role = userdata?.role.name;
-  this.picture = userdata?.picture; 
+  this.picture = userdata?.profile_img; 
   this.permissions = userdata?.role.permissions.map(
     (perm: any) => perm.permission?.name
   );

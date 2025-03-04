@@ -1,15 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Suspense } from "react"
+import { useRouter } from "next/navigation"
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get("token")
@@ -38,7 +40,6 @@ export default function AcceptInvitationPage() {
           setError(data.error)
         } else {
           setEmail(data.email)
-  
           setUsername(data.email.split('@')[0])
         }
       })
@@ -223,5 +224,20 @@ export default function AcceptInvitationPage() {
         </form>
       </Card>
     </div>
+  )
+}
+
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AcceptInvitationContent />
+    </Suspense>
   )
 }

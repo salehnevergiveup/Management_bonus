@@ -15,10 +15,11 @@ import {
 } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowLeft, Upload } from "lucide-react"
-import type { User } from "./user-table"
 import { Badge } from "@/components/badge"
 import { AppColor } from "@/constants/colors"
 import { UserStatus } from "@/constants/userStatus"
+import type { User } from "@/types/user";
+
 
 interface Role {
   id: string

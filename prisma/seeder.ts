@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
-import SeedPermissions from "./seeders/permission";
-import SeedRoles from "./seeders/role";
-import SeedAdminUser from "./seeders/admin";
+import SeedPermissions from "./seeders/permissions";
+import SeedRoles from "./seeders/roles";
+import {SeedAdminUser, SeedManagementUsers} from "./seeders/users";
 
 const prisma = new PrismaClient();
 
@@ -12,6 +12,7 @@ const main = async () => {
     await SeedPermissions(); 
     await SeedRoles(); 
     await SeedAdminUser(); 
+    await SeedManagementUsers(); 
 
     console.log("✅ All seeders executed successfully.");
   } catch (error) {

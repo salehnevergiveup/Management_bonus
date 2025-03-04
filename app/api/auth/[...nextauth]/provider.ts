@@ -76,7 +76,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.username = user.username;
         token.name = user.name;
-        token.picture = user.picture;
+        token.picture = "";
         token.status = user.status;
         token.role = user.role;
         token.permissions = user.permissions;
@@ -84,12 +84,12 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     
-    async session({ session, token }) {
+    async session({ session, token, user }) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.name = token.name as string;
         session.user.email = token.email as string;
-        session.user.picture = token.picture as string;
+        session.user.picture = user?.picture as string || "";/// i can't store based 64 media in the session is to larage  we have to use file server or colud service 
         session.user.status = token.status as string;
         session.user.username = token.username as string;
         session.user.role = token.role as string;

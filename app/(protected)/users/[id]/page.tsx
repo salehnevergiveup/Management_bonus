@@ -4,29 +4,13 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { UserProfile } from "../../../../components/user-profile";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { useUser } from "../../../../hooks/getSession";
-import { UserStatus } from "@/constants/userStatus"
+import { useUser } from "@/contexts/usercontext";
+import { UserStatus } from "@/constants/userStatus";
+import type { User } from "@/types/user";
 
 
-// same User type as above
-interface Role {
-  id: string;
-  name: string;
-}
 
-interface User {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  phone: string | null;
-  status: UserStatus;
-  profile_img: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  role_id: string;
-  role: Role;
-}
+
 
 export default function ViewUserPage() {
   const params = useParams();
