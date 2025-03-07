@@ -1,5 +1,6 @@
 "use client"
 import type * as React from "react"
+import { cn } from "@/lib/utils" // Make sure you have this utility
 import {
   Users,
   UserCheck,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { useUser } from "@/contexts/usercontext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sidebar,
   SidebarContent,
@@ -32,9 +34,10 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { Button } from "@/components/ui/button"
 
-export default function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
+export default function AppSidebar({ className, ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, loading } = useUser()
   const { state, toggleSidebar } = useSidebar()
+  const isMobile = useIsMobile()
 
   const renderManagementMenuItems = () => {
     const sections = [
@@ -72,22 +75,32 @@ export default function AppSidebar(props: React.ComponentProps<typeof Sidebar>) 
     await signOut({ callbackUrl: "/login" })
   }
 
+  // For mobile, we want the sidebar to be offcanvas (hidden by default)
+  // For desktop, we want the icon collapsible behavior
+  const collapsibleMode = isMobile ? "offcanvas" : "icon"
+
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar 
+      collapsible={collapsibleMode} 
+      className={cn("h-[calc(100vh-4rem)] bg-background", className)}
+      {...props}
+    >
       <SidebarHeader className="relative">
         <div className="flex items-center gap-2 px-4 py-2">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-md bg-primary  ${state === "collapsed" ? "opacity-0" : "opacity-100"}`}>
+          <div className={`flex h-8 w-8 items-center justify-center rounded-md bg-primary ${state === "collapsed" && !isMobile ? "opacity-0" : "opacity-100"}`}>
             <span className="text-lg font-bold text-primary-foreground">M</span>
           </div>
           <span
-            className={`text-lg font-semibold transition-opacity duration-300 ${state === "collapsed" ? "opacity-0" : "opacity-100"}`}
+            className={`text-lg font-semibold transition-opacity duration-300 ${state === "collapsed" && !isMobile ? "opacity-0" : "opacity-100"}`}
           >
             Management
           </span>
         </div>
-        <Button variant="ghost" size="icon" className="absolute right-2 top-2" onClick={toggleSidebar}>
-          {state === "collapsed" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+        {!isMobile && (
+          <Button variant="ghost" size="icon" className="absolute right-2 top-2" onClick={toggleSidebar}>
+            {state === "collapsed" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <Collapsible defaultOpen className="group/collapsible">
@@ -153,10 +166,3 @@ export default function AppSidebar(props: React.ComponentProps<typeof Sidebar>) 
     </Sidebar>
   )
 }
-
-
-
-
-
-
-          

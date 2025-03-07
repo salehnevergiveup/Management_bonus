@@ -6,9 +6,8 @@ import { Navbar } from "@components/navbar";
 import { UserProvider } from "@/contexts/usercontext";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import  SSEComponent  from "@components/event-listener";
+import SSEComponent from "@components/event-listener";
 
-//
 export default function ProtectedLayout({
   children,
 }: {
@@ -16,19 +15,25 @@ export default function ProtectedLayout({
 }) {
   return (
     <UserProvider>
-        <div className="flex flex-col h-screen">
-          <Navbar />
-          <div className="flex flex-1 overflow-hidden">
-            <SidebarProvider>
-              <AppSidebar />
-              <main className="flex-1 p-4 overflow-auto">
-                {children}
-                <SSEComponent/>
-                <ToastContainer />
-              </main>
-            </SidebarProvider>
+      <SidebarProvider>
+        <div className="flex flex-col min-h-screen w-full">
+          {/* Navbar spans full width */}
+          <Navbar className="w-full z-20" />
+          
+          {/* Content area with sidebar and main content properly aligned */}
+          <div className="flex flex-1">
+            {/* Sidebar */}
+            <AppSidebar className="z-10 shrink-0 h-full" />
+            
+            {/* Main content area - proper width calculation */}
+            <main className="flex-1 p-4 overflow-auto w-full">
+              {children}
+              <SSEComponent/>
+              <ToastContainer />
+            </main>
           </div>
         </div>
+      </SidebarProvider>
     </UserProvider>
   );
 }

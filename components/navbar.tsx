@@ -1,12 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, ChevronDown } from "lucide-react"
+import { Bell, ChevronDown, Menu } from "lucide-react"
 import { Button } from "@components/ui/button"
 import { signOut } from "next-auth/react"
 import { useUser } from "@/contexts/usercontext"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { useSidebar } from "@components/ui/sidebar"
 import Link from "next/link"
 import { NotificationPanel } from "./ui/notification-panel"
+import { cn } from "@/lib/utils" // Make sure you have this utility
 
 import {
   DropdownMenu,
@@ -17,8 +20,10 @@ import {
 } from "@components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar"
 
-export function Navbar() {
+export function Navbar({ className, ...props }:  {className: any}) {
   const { user, loading } = useUser()
+  const isMobile = useIsMobile()
+  const { setOpenMobile } = useSidebar()
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
 
@@ -29,16 +34,35 @@ export function Navbar() {
   // If the user data is still loading, you can return a skeleton or null
   if (loading) {
     return (
-      <header className="flex h-16 w-full items-center justify-between border-b bg-background px-4">
+      <header className={cn("flex h-16 w-full items-center justify-between border-b bg-background px-4", className)} {...props}>
         <div className="flex items-center gap-2">Loading...</div>
       </header>
     )
   }
 
   return (
-    <header className="flex h-16 w-full items-center justify-between border-b bg-background px-4">
-      <div className="flex items-center gap-2">{/* You can add additional left-side navbar content here */}</div>
-      <div className="flex items-center gap-4">
+    <header className={cn("flex h-16 w-full items-center justify-between border-b bg-background px-4 relative", className)} {...props}>
+      <div className="flex items-center gap-2">
+        {/* Mobile menu trigger */}
+        {isMobile && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setOpenMobile(true)}
+          >
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Open menu</span>
+          </Button>
+          
+        )}
+
+        
+        {!isMobile && (
+              <span className="text-lg font-semibold truncate">Management Dashboard</span>
+        )}
+    
+      </div>
+      <div className="flex items-center gap-2 md:gap-4 ml-auto">
         <Button variant="outline" size="icon" className="relative" onClick={() => setIsNotificationPanelOpen(true)}>
           <Bell className="h-5 w-5" />
           {unreadNotificationCount > 0 && (
@@ -61,7 +85,7 @@ export function Navbar() {
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 z-50">
             <div className="flex items-center gap-2 p-2">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
@@ -92,4 +116,3 @@ export function Navbar() {
     </header>
   )
 }
-
