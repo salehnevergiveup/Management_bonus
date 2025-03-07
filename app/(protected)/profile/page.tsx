@@ -11,7 +11,7 @@ import { useUser } from "@/contexts/usercontext"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user: sessionUser, loading: sessionLoading } = useUser()
+  const { auth, isLoading } = useUser()
   
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<ProfileUser | null>(null)
@@ -20,7 +20,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!sessionUser?.id) return
+      if (!auth?.id) return
       
       try {
         const userRes = await fetch(`/api/profile`)
@@ -35,10 +35,10 @@ export default function ProfilePage() {
       }
     }
 
-    if (!sessionLoading) {
+    if (!isLoading) {
       fetchData()
     }
-  }, [sessionUser?.id, sessionLoading])
+  }, [auth?.id, isLoading])
 
   const handleSubmit = async (formData: any) => {
     setLoading(true)
@@ -70,7 +70,7 @@ export default function ProfilePage() {
     }
   }
 
-  if (sessionLoading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto py-6">
         <p>Loading...</p>
@@ -78,7 +78,7 @@ export default function ProfilePage() {
     )
   }
 
-  if (!sessionUser) {
+  if (!auth) {
     return (
       <div className="container mx-auto py-6">
         <div className="bg-destructive/10 text-destructive p-4 rounded-md">

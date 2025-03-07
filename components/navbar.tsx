@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar"
 import { error } from "console"
 
 export function Navbar({ className, ...props }:  {className: any}) {
-  const { user, loading } = useUser()
+  const { auth, isLoading } = useUser()
   const isMobile = useIsMobile()
   const { setOpenMobile } = useSidebar()
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
@@ -57,7 +57,7 @@ export function Navbar({ className, ...props }:  {className: any}) {
                               
   },[]); 
 
-  if (loading) {
+  if (isLoading) {
     return (
       <header className={cn("flex h-16 w-full items-center justify-between border-b bg-background px-4", className)} {...props}>
         <div className="flex items-center gap-2">Loading...</div>
@@ -98,12 +98,12 @@ export function Navbar({ className, ...props }:  {className: any}) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 p-1 px-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
-                <AvatarFallback>{user?.name ? user.name.substring(0, 1).toUpperCase() : "U"}</AvatarFallback>
+                <AvatarImage src={auth?.picture || ""} alt={auth?.name || "User"} />
+                <AvatarFallback>{auth?.name ? auth.name.substring(0, 1).toUpperCase() : "U"}</AvatarFallback>
               </Avatar>
               <div className="hidden flex-col items-start text-left md:flex">
-                <span className="text-sm font-medium">{user?.name || "Guest"}</span>
-                <span className="text-xs text-muted-foreground">{user?.email || "guest@example.com"}</span>
+                <span className="text-sm font-medium">{auth?.name || "Guest"}</span>
+                <span className="text-xs text-muted-foreground">{auth?.email || "guest@example.com"}</span>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
@@ -111,12 +111,12 @@ export function Navbar({ className, ...props }:  {className: any}) {
           <DropdownMenuContent align="end" className="w-56 z-50">
             <div className="flex items-center gap-2 p-2">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
-                <AvatarFallback>{user?.name ? user.name.substring(0, 1).toUpperCase() : "U"}</AvatarFallback>
+                <AvatarImage src={auth?.picture || ""} alt={auth?.name || "User"} />
+                <AvatarFallback>{auth?.name ? auth.name.substring(0, 1).toUpperCase() : "U"}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{user?.name || "Guest"}</span>
-                <span className="text-xs text-muted-foreground">{user?.email || "guest@example.com"}</span>
+                <span className="text-sm font-medium">{auth?.name || "Guest"}</span>
+                <span className="text-xs text-muted-foreground">{auth?.email || "guest@example.com"}</span>
               </div>
             </div>
             <DropdownMenuSeparator />

@@ -36,7 +36,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components
 import { Button } from "@/components/ui/button"
 
 export default function AppSidebar({ className, ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user, loading } = useUser()
+  const { auth, isLoading } = useUser()
   const { state, toggleSidebar } = useSidebar()
   const isMobile = useIsMobile()
 
@@ -54,7 +54,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
 
     return sections
       .map((section) => {
-        if (user && user.canAccess(section.name)) {
+        if (auth && auth.canAccess(section.name)) {
           const href = `/${section.name.toLowerCase().replace(/\s+/g, "-")}`
           return (
             <SidebarMenuItem key={section.name}>
@@ -139,7 +139,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
             <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {loading ? (
+                  {isLoading ? (
                     <div className="flex h-16 items-center justify-center">
                       <div className="spinner">Loading...</div>
                     </div>

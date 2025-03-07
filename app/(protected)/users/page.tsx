@@ -39,43 +39,43 @@ import { ConfirmationDialog } from "@/components/dialog";
 import type { User } from "@/types/user";
 
 export default function UsersPage() {
-  const { user, loading } = useUser();
+  const { auth, isLoading } = useUser();
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
-  // State for delete confirmation dialog.
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
 
   useEffect(() => {
-    if (!loading && user) {
-      if (!user.canAccess("users")) {
-        router.push("/dashboard");
-      } else {
-        setMounted(true);
-        fetch("/api/users")
-          .then((res) => {
-            if (!res.ok) throw new Error("Failed to fetch users");
-            return res.json();
-          })
-          .then((data: User[]) => setUsers(data))
-          .catch((err) => console.error("Failed to fetch users:", err));
-      }
-    }
-  }, [loading, user, router]);
 
-  if (loading) {
+    if (auth) {
+      if (!auth.canAccess("users")) {
+        router.push("/dashboard");
+        return; 
+      } 
+
+      setMounted(true);
+      fetch("/api/users")
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch users");
+          return res.json();
+        })
+        .then((data: User[]) => setUsers(data))
+        .catch((err) => console.error("Failed to fetch users:", err));
+      
+    }
+  }, [isLoading, auth, router]);
+
+  if (isLoading) {
     return <p>Loading session...</p>;
   }
   
-  // Delete user function called upon confirming deletion.
   const confirmDelete = async () => {
     if (userToDelete) {
       try {
@@ -228,19 +228,21 @@ export default function UsersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <Link href={`/users/${u.id}`}>
+                          {auth?.can("users:view") &&
+                          (<Link href={`/users/${u.id}`}>
                             <DropdownMenuItem>
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
-                          </Link>
+                          </Link>)}
+                          {auth?.can("users:edit") && (
                           <Link href={`/users/${u.id}/edit`}>
                             <DropdownMenuItem>
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
-                          </Link>
-                          {u.role.name.toLowerCase() !== "admin" && (
+                          </Link>)}
+                          {u.role.name.toLowerCase() !== "admin" && auth?.can("users:delete") && (
                             <DropdownMenuItem
                               onClick={() => {
                                 setUserToDelete(u);

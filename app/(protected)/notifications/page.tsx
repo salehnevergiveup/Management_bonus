@@ -46,7 +46,7 @@ interface ApiResponse {
 }
 
 export default function NotificationsPage() {
-  const { user, loading } = useUser()
+  const { auth, isLoading } = useUser()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [pagination, setPagination] = useState<PaginationData | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -58,11 +58,15 @@ export default function NotificationsPage() {
   const [notificationToDelete, setNotificationToDelete] = useState<Notification | null>(null)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [selectedNotification, setSelectedNotification] = useState<SelectedNotification | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   const fetchNotifications = async () => {
-    setIsLoading(true)
+    if (auth) {
+      if (!auth.canAccess("notifications")) {
+        router.push("/dashboard");
+        return; 
+      } 
+    }
     try {
       // Build query parameters
       const queryParams = new URLSearchParams()
@@ -93,7 +97,7 @@ export default function NotificationsPage() {
       console.error("Error fetching notifications:", error)
       toast.error("Failed to fetch notifications")
     } finally {
-      setIsLoading(false)
+     
     }
   }
 
@@ -105,7 +109,7 @@ export default function NotificationsPage() {
         fetchNotifications()
     //   }
     // }
-  }, [loading, user, router, currentPage, typeFilter, statusFilter, pageSize])
+  }, [isLoading, auth, router, currentPage, typeFilter, statusFilter, pageSize])
 
   // Debounced search
   useEffect(() => {
@@ -118,7 +122,7 @@ export default function NotificationsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  if (loading) {
+  if (isLoading) {
     return <p>Loading session...</p>
   }
 

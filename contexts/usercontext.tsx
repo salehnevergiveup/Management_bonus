@@ -13,13 +13,14 @@ export interface UserWithMethods {
   picture: string;
   role: string;
   permissions: string[];
+  models: string[];
   can(permission: string): boolean;
   canAccess(model: string): boolean;
 }
 
 interface UserContextType {
-  user: UserWithMethods | null;
-  loading: boolean;
+  auth: UserWithMethods | null;
+  isLoading: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -28,23 +29,23 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const { data: session, status, update } = useSession();
   const router = useRouter();
-  const loading = status === "loading";
+  const isLoading = status === "loading";
   React.useEffect(() => {
     if (status !== "loading" && !session?.user) {
       router.push("/login");
     }
   }, [status, session, router]);
 
-  const user = React.useMemo(() => {
+  const auth = React.useMemo(() => {
     if (!session?.user) return null;
     return {
       ...session.user,
+      models:[...new Set(session.user.permissions.map((p) => p.split(":")[0]))],
       can(permission: string) {
         return this.permissions.includes(permission.toLowerCase());
       },
       canAccess(model: string) {
-        const models = [...new Set(this.permissions.map((p) => p.split(":")[0]))];
-        return models.includes(model.toLowerCase());
+        return this.models.includes(model.toLowerCase());
       },
     } as UserWithMethods;
   }, [session]);
@@ -53,7 +54,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await update();
   };
 
-  const value = { user, loading, refresh };
+  const value = { auth, isLoading, refresh };
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 

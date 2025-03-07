@@ -7,6 +7,7 @@ import { InviteForm } from "@/components/invite-form";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { useUser } from "@/contexts/usercontext";
 
 export default function InviteUserPage() {
   const router = useRouter();
@@ -15,8 +16,15 @@ export default function InviteUserPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const { auth, isLoading } = useUser();
 
   useEffect(() => {
+    if (auth) {
+      if (!auth.can("users:create")) {
+        router.push("/dashboard");
+        return; 
+      } 
+    }
     fetch("/api/roles")
       .then((res) => res.json())
       .then((data) => {

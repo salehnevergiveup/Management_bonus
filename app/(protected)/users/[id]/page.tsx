@@ -11,19 +11,23 @@ import type { User } from "@/types/user";
 
 
 
-
 export default function ViewUserPage() {
   const params = useParams();
   const router = useRouter();
-  const userId = params.id as string;
-  const { user: sessionUser, loading: sessionLoading } = useUser();
- 
+  const userId = params.id as string; 
   // State to store the fetched user
   const [fetchedUser, setFetchedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { auth, isLoading } = useUser();
 
   useEffect(() => {
-    if (!userId) return;
+
+    if (auth) {
+      if (!auth.can("users:view")) {
+        router.push("/dashboard");
+        return; 
+      } 
+    }
     
     fetch(`/api/users/${userId}`)
       .then((res) => {
@@ -41,7 +45,7 @@ export default function ViewUserPage() {
       });
   }, [userId]);
 
-  if (sessionLoading || loading) {
+  if (isLoading  || loading) {
     return <p>Loading...</p>;
   }
 

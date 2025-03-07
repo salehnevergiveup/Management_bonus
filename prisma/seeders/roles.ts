@@ -28,7 +28,7 @@ export const SeedRoles = async () => {
 
   // Management Role Permissions
   const notAllowed = [
-    "user:view", "user:update", "user:create", "user:delete",
+    "users:view", "users:edit", "users:create", "users:delete",
     "bonus:create", "bonus:delete"
   ];
 

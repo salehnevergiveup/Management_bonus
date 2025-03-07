@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { UserForm } from "@/components/user-form"
 import { Breadcrumb } from "@/components/breadcrumb"
+import { useUser } from "@/contexts/usercontext";
+
 
 export default function EditUserPage() {
   const params = useParams()
@@ -14,8 +16,15 @@ export default function EditUserPage() {
   const [user, setUser] = useState<any>(null)
   const [roles, setRoles] = useState<any[]>([])
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const { auth, isLoading } = useUser();
 
   useEffect(() => {
+    if (auth) {
+      if (!auth.can("users:edit")) {
+        router.push("/dashboard");
+        return; 
+      } 
+    }
     async function fetchData() {
       try {
         const userRes = await fetch(`/api/users/${userId}`)
