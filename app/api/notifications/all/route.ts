@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   if (session.user?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden. Admin access required." }, { status: 403 });
   }
-   console.log("testing");
+
   try {
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get("limit") || "50");

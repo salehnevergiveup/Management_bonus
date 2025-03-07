@@ -1,6 +1,7 @@
 "use client"
 import type * as React from "react"
 import { cn } from "@/lib/utils" // Make sure you have this utility
+import Link from 'next/link';
 import {
   Users,
   UserCheck,
@@ -58,10 +59,10 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
           return (
             <SidebarMenuItem key={section.name}>
               <SidebarMenuButton asChild>
-                <a href={href}>
+                <Link href={href}>
                   {section.icon}
                   <span>{section.name}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )
@@ -75,8 +76,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
     await signOut({ callbackUrl: "/login" })
   }
 
-  // For mobile, we want the sidebar to be offcanvas (hidden by default)
-  // For desktop, we want the icon collapsible behavior
+
   const collapsibleMode = isMobile ? "offcanvas" : "icon"
 
   return (
@@ -116,10 +116,10 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href="/">
+                      <Link href="/">
                         <Home className="h-4 w-4" />
                         <span>Dashboard</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>

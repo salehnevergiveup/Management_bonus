@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Bell, ChevronDown, Menu } from "lucide-react"
+import { useEffect } from "react"
 import { Button } from "@components/ui/button"
 import { signOut } from "next-auth/react"
 import { useUser } from "@/contexts/usercontext"
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar"
+import { error } from "console"
 
 export function Navbar({ className, ...props }:  {className: any}) {
   const { user, loading } = useUser()
@@ -31,7 +33,30 @@ export function Navbar({ className, ...props }:  {className: any}) {
     await signOut({ callbackUrl: "/login" })
   }
 
-  // If the user data is still loading, you can return a skeleton or null
+  useEffect(() => {  
+      const notificationsCount = async()  => { 
+        try { 
+          const res  = await fetch("/api/notifications/count");  
+          if(!res.ok) {  
+            throw new Error("Failed to fetch notifications");
+          } 
+          const data  = await res.json();
+
+          if(!data?.count ==  undefined) {  
+            throw new Error("Failed to fetch the count");
+          }
+
+          setUnreadNotificationCount(data.count);
+
+        } catch(error) {  
+          console.error(error); 
+        }
+      }
+
+      notificationsCount(); 
+                              
+  },[]); 
+
   if (loading) {
     return (
       <header className={cn("flex h-16 w-full items-center justify-between border-b bg-background px-4", className)} {...props}>
@@ -55,8 +80,6 @@ export function Navbar({ className, ...props }:  {className: any}) {
           </Button>
           
         )}
-
-        
         {!isMobile && (
               <span className="text-lg font-semibold truncate">Management Dashboard</span>
         )}
