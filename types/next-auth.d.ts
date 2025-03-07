@@ -12,7 +12,7 @@ declare module "next-auth" {
 
 
   interface Session {
-    user?: {
+    user: {
       id: string;
       name: string;
       picture: string;

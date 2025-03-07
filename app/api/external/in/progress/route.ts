@@ -1,0 +1,103 @@
+//use this route to update the progress and status of the process 
+import { PrismaClient } from '@prisma/client';
+import { ProcessStatus } from '@/constants/processStatus';
+import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
+import { NextResponse } from "next/server";
+
+const prisma = new PrismaClient();
+
+export async function PATCH(request: Request) {
+  try {
+    
+    const apiKey = request.headers.get('X-API-Key');
+    let isAuthenticated = false;
+    const externalVerification = await verifyExternalRequest(request.clone());
+
+    if (apiKey) {
+      
+      if (!externalVerification.valid) {
+        return NextResponse.json(
+          { error: externalVerification.error },
+          { status: 401 }
+        );
+      }
+      isAuthenticated = true;
+    } 
+    
+    // Return error if not authenticated
+    if (!isAuthenticated) {
+      return NextResponse.json(
+        { error: "Unauthorized: Authentication required" },
+        { status: 401 }
+      );
+    }
+      //extract the token and the process id
+      const {processId, token}  = externalVerification;  
+
+      const body = await request.json();
+      const { progress, status } = body;
+
+      if (progress === undefined && !status) {
+        return NextResponse.json(
+          { error: "Missing required fields: progress or status" },
+          { status: 400 }
+        );
+      }
+
+      if (status && !Object.values(ProcessStatus).includes(status)) {
+        return NextResponse.json(
+          { 
+            error: "Invalid status value",
+            validValues: Object.values(ProcessStatus)
+          },
+          { status: 400 }
+        );
+      }
+
+      try {
+        const updateData: any = {};
+        
+        if (progress !== undefined) {
+          updateData.progress = progress;
+        }
+        
+        if (status) {
+          updateData.status = status;
+          
+          if ([ProcessStatus.COMPLETED, ProcessStatus.FAILED].includes(status)) {
+          
+            updateData.end_time = new Date();
+            
+            await prisma.processToken.update({
+              where: { token: token },
+              data: { isComplete: true }
+            });
+          }
+        }
+        
+        const updatedProcess = await prisma.userProcess.update({
+          where: { id: processId },
+          data: updateData
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Process updated successfully",
+          process: updatedProcess
+        });
+      } catch (error) {
+        console.error("Error updating process:", error);
+        return NextResponse.json(
+          { error: "Process not found or update failed" },
+          { status: 404 }
+        );
+      }
+    
+  } catch (error) {
+    console.error("Error in process update:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

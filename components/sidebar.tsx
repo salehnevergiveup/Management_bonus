@@ -6,6 +6,7 @@ import {
   BarChart3,
   Wallet,
   FileText,
+  Bell, 
   Home,
   LogOut,
   ChevronDown,
@@ -39,6 +40,7 @@ export default function AppSidebar(props: React.ComponentProps<typeof Sidebar>) 
     const sections = [
       { name: "Users", icon: <Users className="h-4 w-4" /> },
       { name: "Players", icon: <UserCheck className="h-4 w-4" /> },
+      { name: "Notifications", icon: <Bell className="h-4 w-4" /> },
       { name: "Bonus", icon: <BarChart3 className="h-4 w-4" /> },
       { name: "Processes", icon: <BarChart3 className="h-4 w-4" /> },
       { name: "Matches", icon: <UserCheck className="h-4 w-4" /> },

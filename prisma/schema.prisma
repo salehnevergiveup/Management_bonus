@@ -21,6 +21,50 @@ model UserInvitation {
 }
 
 
+model UserProcess {
+  id          String         @id
+  user_id     String
+  status      String
+  progress    Float          @default(0)
+  start_time  DateTime       @default(now())
+  end_time    DateTime?
+  result      Json?          @default("{}")
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  
+  // Relation to ProcessToken
+  tokens      ProcessToken[]
+
+  @@index([user_id])
+  @@index([status])
+}
+
+model ProcessToken {
+  token       String      @id
+  process_id  String
+  user_id     String
+  expires     DateTime
+  isComplete  Boolean     @default(false)
+  created_at  DateTime    @default(now())
+  
+  // Relation to UserProcess
+  process     UserProcess @relation(fields: [process_id], references: [id])
+
+  @@index([process_id])
+  @@index([user_id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  user_id   String?  
+  user      User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  message   String
+  status    String   @default("unread") 
+  type      String   @default("info")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model User {
   id          String     @id @default(uuid())
   name        String
@@ -34,6 +78,9 @@ model User {
   role_id     String
   role        Role       @relation(fields: [role_id], references: [id])
   invitations UserInvitation[]
+  notifications Notification[]
+
+
 }
 
 model Role {  

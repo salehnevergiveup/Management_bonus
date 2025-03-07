@@ -1,10 +1,12 @@
-"use client";
+"use client"
 
-import { Bell, ChevronDown } from "lucide-react";
-import { Button } from "@components/ui/button";
-import { signOut } from "next-auth/react";
-import { useUser } from "@/contexts/usercontext";
-import Link from "next/link";
+import { useState } from "react"
+import { Bell, ChevronDown } from "lucide-react"
+import { Button } from "@components/ui/button"
+import { signOut } from "next-auth/react"
+import { useUser } from "@/contexts/usercontext"
+import Link from "next/link"
+import { NotificationPanel } from "./ui/notification-panel"
 
 import {
   DropdownMenu,
@@ -12,36 +14,38 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar";
+} from "@components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar"
 
 export function Navbar() {
-  const { user, loading } = useUser();
+  const { user, loading } = useUser()
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/login" });
-  };
-console.log(user);
+    await signOut({ callbackUrl: "/login" })
+  }
+
   // If the user data is still loading, you can return a skeleton or null
   if (loading) {
     return (
       <header className="flex h-16 w-full items-center justify-between border-b bg-background px-4">
         <div className="flex items-center gap-2">Loading...</div>
       </header>
-    );
+    )
   }
 
   return (
     <header className="flex h-16 w-full items-center justify-between border-b bg-background px-4">
-      <div className="flex items-center gap-2">
-        {/* You can add additional left-side navbar content here */}
-      </div>
+      <div className="flex items-center gap-2">{/* You can add additional left-side navbar content here */}</div>
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" className="relative">
+        <Button variant="outline" size="icon" className="relative" onClick={() => setIsNotificationPanelOpen(true)}>
           <Bell className="h-5 w-5" />
-          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-            3
-          </span>
+          {unreadNotificationCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+              {unreadNotificationCount}
+            </span>
+          )}
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -70,9 +74,9 @@ console.log(user);
             </div>
             <DropdownMenuSeparator />
             <Link href={`/profile`}>
-            <DropdownMenuItem>
-              <span>My Profile</span>
-            </DropdownMenuItem>
+              <DropdownMenuItem>
+                <span>My Profile</span>
+              </DropdownMenuItem>
             </Link>
             <DropdownMenuItem className="text-destructive" onClick={handleSignOut}>
               <span>Logout</span>
@@ -80,6 +84,12 @@ console.log(user);
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <NotificationPanel
+        isOpen={isNotificationPanelOpen}
+        onClose={() => setIsNotificationPanelOpen(false)}
+        onUpdateUnreadCount={setUnreadNotificationCount}
+      />
     </header>
-  );
+  )
 }
+
