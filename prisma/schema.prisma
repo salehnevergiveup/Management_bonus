@@ -24,6 +24,7 @@ model UserInvitation {
 model UserProcess {
   id          String         @id
   user_id     String
+  user      User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   status      String
   progress    Float          @default(0)
   start_time  DateTime       @default(now())
@@ -79,7 +80,7 @@ model User {
   role        Role       @relation(fields: [role_id], references: [id])
   invitations UserInvitation[]
   notifications Notification[]
-
+  userProcess   UserProcess[]
 
 }
 
