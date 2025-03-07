@@ -1,32 +1,38 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+// src/middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextFetchEvent, NextRequest } from 'next/server';
+import { chain } from '@/middlewares/chain';
+import { withAuthMiddleware } from '@/middlewares/auth';
+import { withGuestMiddleware } from '@/middlewares/guest';
 
-export default withAuth(
-  function middleware(request) {
-    const { token } = request.nextauth;
-    //if user not auth redirect to the login
-    if (request.nextUrl.pathname.startsWith("/dashboard")) {
-      if (!token) {
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-    }
-    
-    //if the user is auth and want to access public route redirect to the dashboard 
-    if (
-      (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/") &&
-      token
-    ) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-  },
-  {
-    callbacks: {
-      authorized: () => true,
-    },
-  }
-);
+function baseMiddleware(
+  request: NextRequest,
+  event: NextFetchEvent,
+  response: NextResponse = NextResponse.next()
+) {
+  return response;
+}
+
+export default async function middleware(
+  request: NextRequest,
+  event: NextFetchEvent
+) {
+  const response = NextResponse.next();
+
+  const handler = chain([
+    withGuestMiddleware,
+    withAuthMiddleware
+  ]);
+  
+  return handler(request, event, response);
+}
 
 export const config = {
-
-  matcher: ["/dashboard/:path*", "/login", "/"], 
+  matcher: [
+    "/dashboard", 
+    "/users", 
+    "/notifications",
+    "/login",
+    "/"
+  ]
 };
