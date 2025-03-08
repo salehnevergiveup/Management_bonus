@@ -29,7 +29,12 @@ export const SeedRoles = async () => {
   // Management Role Permissions
   const notAllowed = [
     "users:view", "users:edit", "users:create", "users:delete",
-    "bonus:create", "bonus:delete"
+    "bonus:create", "bonus:delete", 
+    "transfer accounts:delete", "transfer accounts:edit", "transfer accounts:create",  
+    "players:delete", "players:edit", "players:edit",
+    "requests:view",  "requests:create", 
+    "matches:edit", 
+
   ];
 
   const managementRolePermissions = permissions

@@ -51,6 +51,7 @@ interface ApiResponse {
   data: Process[];
   success: boolean;
   pagination: PaginationData;
+  activeProcess: boolean;
   message: string;
 }
 
@@ -100,7 +101,8 @@ export default function ProcessManagementPage() {
       
       setProcesses(mappedData);
       setPagination(data.pagination);
-      
+
+
       // Check if there's any active process
       setHasActiveProcess(data.activeProcess);
 

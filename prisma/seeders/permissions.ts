@@ -3,11 +3,17 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const actions = ["view", "create", "delete", "edit"];
-const models = ["players", "users", "profiles", "matches", "bonus", "processes", "requests", "transfer accounts", "notifications"];
+const models = ["players", "users", "profiles", "bonus", "processes", "requests", "transfer accounts", "notifications"];
 
-const permissionsList = models.flatMap((model) => 
+let permissionsList = models.flatMap((model) => 
   actions.map((action) => `${model}:${action}`)
 );
+
+permissionsList = permissionsList.concat([
+  "matches:view", 
+  "matches:edit", 
+  "matches:resume"
+]);
 
 export const SeedPermissions = async () => {
   console.log("🌱 Seeding permissions...");

@@ -6,7 +6,6 @@ const prisma = new PrismaClient();
 export const SeedNotifications = async () => {
   console.log("Seeding notifications...");
 
-  // Get admin user
   const adminUser = await prisma.user.findUnique({
     where: { username: "admin123" },
   });
@@ -16,9 +15,8 @@ export const SeedNotifications = async () => {
     return;
   }
 
-  // Get first two non-admin users
   const regularUsers = await prisma.user.findMany({
-    where: { username: { not: "admin123" } },
+    where: { email: { not: "admin@mail.com" } },
     take: 2,
   });
 
@@ -27,7 +25,6 @@ export const SeedNotifications = async () => {
     return;
   }
 
-  // Generate notification messages
   const notificationMessages = [
     "Your account has been verified successfully.",
     "Welcome to our platform! Here's how to get started.",
@@ -90,7 +87,6 @@ export const SeedNotifications = async () => {
         ? NotificationStatus.READ 
         : NotificationStatus.UNREAD;
       
-      // Create notification with a date in the past (up to 30 days)
       const daysAgo = Math.floor(Math.random() * 30);
       const createdAt = new Date();
       createdAt.setDate(createdAt.getDate() - daysAgo);
@@ -105,13 +101,12 @@ export const SeedNotifications = async () => {
     }
   }
 
-  // Combine all notifications and create them in the database
   const allNotifications = [...adminNotifications, ...regularUserNotifications];
   
   // Use createMany for efficiency
   await prisma.notification.createMany({
     data: allNotifications,
-    skipDuplicates: true, // Skip if duplicates exist (based on unique fields)
+    skipDuplicates: true, 
   });
 
   console.log(`Successfully seeded ${allNotifications.length} notifications.`);
