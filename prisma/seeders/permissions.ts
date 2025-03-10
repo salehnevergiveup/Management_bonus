@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const actions = ["view", "create", "delete", "edit"];
-const models = ["players", "users", "profiles", "bonus", "processes", "requests", "transfer accounts", "notifications"];
+const models = ["players", "users", "profiles", "bonus", "processes", "requests", "transfer-accounts", "notifications"];
 
 let permissionsList = models.flatMap((model) => 
   actions.map((action) => `${model}:${action}`)
@@ -11,8 +11,8 @@ let permissionsList = models.flatMap((model) =>
 
 permissionsList = permissionsList.concat([
   "matches:view", 
-  "matches:edit", 
-  "matches:resume"
+  "process:resume",  
+  "matches:match"
 ]);
 
 export const SeedPermissions = async () => {

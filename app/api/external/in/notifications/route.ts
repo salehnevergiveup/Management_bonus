@@ -11,10 +11,9 @@ export async function POST(request: Request) {
 
     const apiKey = request.headers.get('X-API-Key');
     let isAuthenticated = false;
-    // Check if request has API key (external request)
+
     if (apiKey) {
       const externalVerification = await verifyExternalRequest(request.clone());
-      console.log("testinmg");
         console.log(externalVerification);
       if (!externalVerification.valid) {
         return NextResponse.json(
@@ -25,7 +24,6 @@ export async function POST(request: Request) {
       isAuthenticated = true;
     } 
 
-    // Return error if not authenticated
     if (!isAuthenticated) {
       return NextResponse.json(
         { error: "Unauthorized: Authentication required" },
@@ -33,12 +31,10 @@ export async function POST(request: Request) {
       );
     }
     
-    // Parse request body
     const clonedRequest = request.clone();
     const body = await clonedRequest.json();
     const { userId, message, type } = body;
     
-    // Validate required fields
     if (!userId || !message) {
       return NextResponse.json(
         { error: "Missing userId or message" },
@@ -46,14 +42,12 @@ export async function POST(request: Request) {
       );
     }
     
-    // Validate notification type
     const validTypes = Object.values(NotificationType); 
     const notificationType =
       type && validTypes.includes(type.toLowerCase())
         ? type.toLowerCase()
         : NotificationType.INFO;
     
-    // Create notification
     const notification = await prisma.notification.create({
       data: {
         user_id: userId,
@@ -62,7 +56,6 @@ export async function POST(request: Request) {
       },
     });
     
-    // Emit event
     eventEmitter.emit(userId, 'notification', notification);
     
     // Return success response

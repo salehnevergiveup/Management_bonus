@@ -1,4 +1,3 @@
-//use this route to update the progress and status of the process 
 import { PrismaClient } from '@prisma/client';
 import { ProcessStatus } from '@/constants/processStatus';
 import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
