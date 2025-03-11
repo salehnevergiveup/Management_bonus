@@ -5,13 +5,12 @@ import crypto from 'crypto';
 const prisma = new PrismaClient();
 
 export const verifyExternalRequest = async (request: Request) => {
-  // Extract authentication headers
+
   const apiKey = request.headers.get('X-API-Key');
   const signature = request.headers.get('X-Signature');
   const timestamp = request.headers.get('X-Timestamp');
   const token = request.headers.get('X-Token');
 
-  // Validate API key
   if (apiKey !== process.env.API_KEY) {
     return { valid: false, error: "Invalid API key" };
   }
@@ -23,12 +22,10 @@ export const verifyExternalRequest = async (request: Request) => {
     return { valid: false, error: "Request expired" };
   }
 
-  // Validate token
   if (!token) {
     return { valid: false, error: "Missing authentication token" };
   }
 
-  // Find token in database
   const tokenRecord = await prisma.processToken.findUnique({
     where: { token }
   });
@@ -45,11 +42,9 @@ export const verifyExternalRequest = async (request: Request) => {
     return { valid: false, error: "Authentication token expired" };
   }
 
-  // Get and validate request body
   const clonedRequest = request.clone();
   const bodyText = await clonedRequest.text();
   
-  // Verify signature
   const expectedSignature = crypto
     .createHmac('sha256', process.env.SHARED_SECRET || '')
     .update(bodyText)
@@ -59,7 +54,6 @@ export const verifyExternalRequest = async (request: Request) => {
     return { valid: false, error: "Invalid signature" };
   }
 
-  // Authentication successful
   return { 
     valid: true, 
     userId: tokenRecord.user_id,
@@ -67,3 +61,58 @@ export const verifyExternalRequest = async (request: Request) => {
     token: tokenRecord.token
   };
 }
+
+
+export const GenerateToken = async (userId: string,  processId :string) => {
+  // Generate token data
+  const token = crypto.randomBytes(32).toString('hex');
+  const expirationTime = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const timeStamp = new Date().toISOString();
+  
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.processToken.updateMany({
+      where: {
+        process_id: processId,
+        isComplete: false
+      },
+      data: {
+        isComplete: true
+      }
+    });
+    
+    const newToken = await tx.processToken.create({
+      data: {
+        token,
+        process_id: processId,
+        user_id: userId,
+        expires: expirationTime,
+        isComplete: false
+      }
+    });
+    
+    return newToken;
+  });
+  
+  return {
+    token,
+    expirationTime,
+    timeStamp,
+    tokenRecord: result
+  };
+};
+
+//generate sigature  
+export const Signature =  (payload: any, token: string, timestamp: string) =>  {  
+  const data = JSON.stringify({
+   ...payload,  
+   token,  
+   timestamp
+   });  
+  const signature =  crypto
+                    .createHmac('sha256', process.env.SHARED_SECRET || '')
+                    .update(data)
+                    .digest('hex');  
+
+   return signature;                     
+}
+

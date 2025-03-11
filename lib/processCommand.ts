@@ -1,12 +1,27 @@
 import { PrismaClient } from "@prisma/client"; 
 import { MatchStatus, ProcessStatus } from "@constants/processStatus";  
-import { CollectedUsers } from "@/types/collected-users";  
+import { CollectedUsers, IncomingUser } from "@/types/collected-users";  
 import { NotificationType } from "@constants/notifications";
 import { eventEmitter } from "@/lib/eventemitter";
 import { Roles } from "@constants/roles";  
-import { Bath } from "@node_modules/lucide-react/dist/lucide-react";
+import { IncomingMessage } from "http";
 
 const prisma = new PrismaClient();
+
+
+const filter = async (users: IncomingUser[]): Promise<CollectedUsers[]> => {
+    //apply different logic here
+    try {
+      return users.map(user => ({
+        username: user.username,
+        amount: user.turnover, 
+        currency: user.currency
+      }));
+    } catch (error) {
+      console.error("Error filtering users:", error);
+      return [];
+    }
+  };
 
 // Command to match the users 
 const match = async (authId: string, collectedUsers: CollectedUsers[], processId: string) => {  
@@ -160,7 +175,7 @@ const resume = async (authId: string, processId: string) => {
         });
         
         const data = databaseData.map((dt) => ({  
-            account_name: dt?.account_name,  
+            transfer_account: dt?.transfer_account,  
             account_username: dt?.account_username, 
             password: dt?.password,  
             users: dt.players.flatMap((player) => player.matches)
@@ -183,12 +198,17 @@ const resume = async (authId: string, processId: string) => {
     }
 };
 
-// Command to clear matches after process shutdown 
-const shutdown = async (authId: string, processId: string) => {  
+// Command to clear matches after process terminate 
+const terminate = async (authId: string, processId: string) => {  
     try {
         const deleteResult = await prisma.match.deleteMany({ 
             where: { process_id: processId }
         });
+
+        await prisma.userProcess.update({
+            where: { id: processId },
+            data: { status: ProcessStatus.FAILED }
+          });
 
         await notifyAll(
             authId, 
@@ -291,7 +311,7 @@ const update = async(authId: string, processId: string, updateList: UpdateList[]
         });
         
         if(updatedProcess && updatedProcess.status === ProcessStatus.COMPLETED) {
-            await shutdown(authId, processId);
+            await terminate(authId, processId);
         }
         
         await notifyAll(
@@ -352,7 +372,7 @@ const restart = async (authId: string, processId: string) => {
         });
         
         const data = databaseData.map((dt) => ({  
-            account_name: dt?.account_name,  
+            transfer_account: dt?.transfer_account,  
             account_username: dt?.account_username, 
             password: dt?.password,  
             users: dt.players.flatMap((player) => player.matches)
@@ -450,9 +470,10 @@ export const ProcessCommand = {
     "match": (authId: string, collectedUsers: CollectedUsers[], process_id: string) => match(authId, collectedUsers, process_id),
     "rematch user": (matchId: string, authId: string) => rematchSingleUser(matchId, authId),  
     "resume": (authId: string, processId: string) => resume(authId, processId),  
-    "shutdown": (authId: string, processId: string) => shutdown(authId, processId),  
+    "terminate": (authId: string, processId: string) => terminate(authId, processId),  
     "update":  (authId: string, processId: string, updateList: UpdateList[]) => update(authId, processId, updateList), 
     "restart": (authId: string, processId: string) => restart(authId, processId),   
+    "filter": (IncomingUsers: IncomingUser[]) =>  filter(IncomingUsers)
 };
 
 export default ProcessCommand;

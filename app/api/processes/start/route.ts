@@ -45,8 +45,8 @@ export async function POST(request: Request) {
 
     // Generate secure identifiers
     const process_id = crypto.randomBytes(16).toString('hex');
-    const token = crypto.randomBytes(32).toString('hex'); // Longer token for better security
-    const expirationTime = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const token = crypto.randomBytes(32).toString('hex'); 
+    const expirationTime = new Date(Date.now() + 24 * 60 * 60 * 1000); 
     
     const newProcess = await prisma.$transaction(async (tx) => {
       const newProcess = await tx.userProcess.create({

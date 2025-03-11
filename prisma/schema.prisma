@@ -113,7 +113,7 @@ model TransferAccount {
   id              String    @id @default(uuid())
   account_username String    @unique
   password        String
-  account_name    String
+  transfer_account    String
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
   players         Player[]

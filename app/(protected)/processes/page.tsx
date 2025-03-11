@@ -118,7 +118,7 @@ export default function ProcessManagementPage() {
 
   const startProcess = async () => {
     try {
-      const response = await fetch("/api/processes", {
+      const response = await fetch("/api/processes/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

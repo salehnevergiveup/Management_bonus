@@ -3,3 +3,12 @@ export interface CollectedUsers{
    amount: number,  
    currency: string
 }
+
+
+export interface IncomingUser {
+   username: string;
+   game: string;
+   turnover: number;
+   currency: string;
+   agent: string;
+ }

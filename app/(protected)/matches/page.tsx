@@ -183,6 +183,7 @@ export default function MatchManagementPage() {
       case ProcessStatus.PENDING:
         return AppColor.WARNING;
       default:
+        return AppColor.INFO;
     }
   };
 
@@ -195,6 +196,7 @@ export default function MatchManagementPage() {
       case "pending":
         return AppColor.WARNING;
       default:
+        return AppColor.INFO;
     }
   };
 
@@ -240,14 +242,14 @@ export default function MatchManagementPage() {
           endpoint = `/api/processes/${match.process_id}/resume`;
           break;
         case 'rematch-process':
-          endpoint = `/api/processes/${match.process_id}/rematch`;
+          endpoint = `/api/matches`;
           break;
         case 'rematch-single':
-          endpoint = `/api/matches/${match.id}/rematch`;
+          endpoint = `/api/matches/${match.id}`;
           break;
         case 'terminate':
           endpoint = `/api/processes/${match.process_id}/terminate`;
-          method = 'PUT';
+          method= 'DELETE'
           break;
         case 'restart':
           endpoint = `/api/processes/${match.process_id}/restart`;
@@ -554,7 +556,7 @@ export default function MatchManagementPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    process.matches.map((match) => (
+                    process.matches.map((match: any) => (
                       <TableRow key={match.id}>
                         <TableCell className="font-medium">{match.username}</TableCell>
                         <TableCell>

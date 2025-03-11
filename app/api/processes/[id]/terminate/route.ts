@@ -1,129 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { authOptions } from "@/app/api/auth/[...nextauth]/provider";
-import { getServerSession } from "next-auth";
 import { ProcessStatus } from "@/constants/processStatus";
-import crypto from 'crypto';
+import {ProcessCommand} from  "@/lib/processCommand"
+import { SessionValidation } from "@lib/sessionvalidation";
+import {GenerateToken,Signature } from "@/lib/verifyexternalrequest"
+
 
 const prisma = new PrismaClient();
 
-export async function PATCH(request: Request) {
+export async function DELETE(request: Request, {params}: {params: {id: string}}) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await SessionValidation();
     
-    if (!session) {
+    if (!auth) {
       return NextResponse.json(
-        { error: "Unauthorized: User must be logged in" },
+        { error: "Unauthorized request" },
         { status: 401 }
       );
     }
     
-    const requestClone = await request.clone().json();
-    const processId = requestClone.process_id as string;
+    const authId = auth.id;
+    const processId = params.id;
     
-    if (!processId) {
-      return NextResponse.json(
-        { error: "Missing process_id in request" },
-        { status: 400 }
-      );
-    }
+    const { token, timeStamp } = await GenerateToken(authId, processId);
     
-    // Get the process and its associated token
-    const databaseProcess = await prisma.userProcess.findUnique({
-      where: { id: processId }
-    });
-    
-    if (!databaseProcess) {
-      return NextResponse.json(
-        { error: "Process not found" },
-        { status: 404 }
-      );
-    }
-    
-    const token = await prisma.processToken.findFirst({
-      where: {
-        process_id: processId,
-        isComplete: false
-      }
-    });
-    
-    if (!token) {
-      return NextResponse.json(
-        { error: "No active token found for this process" },
-        { status: 400 }
-      );
-    }
-    
-    // Create the payload for the external app
-    const timestamp = Date.now().toString();
-    const payload = {
-      process_id: processId,
-      action: 'terminate',
-      user_id: session.user.id,
-      timestamp
+    const signaturePayload = {
+      processId,
+      authId,
+      action: "terminate"
     };
     
-    const payloadString = JSON.stringify(payload);
+    const signature = Signature(signaturePayload, token, timeStamp);
     
-    const signature = crypto
-      .createHmac('sha256', process.env.SHARED_SECRET || '')
-      .update(payloadString)
-      .digest('hex');
-    
-    // Send termination request to external app
     try {
-      const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}/api/process/shutdown`, {
-        method: 'POST',
-        headers: {
+      const externalResponse = await fetch(`${process.env.EXTERNAL_APP_ENDPOINT}/processes/${processId}` || '', {
+        method: "DELETE",
+        headers:  {  
           'Content-Type': 'application/json',
           'X-API-Key': process.env.API_KEY || '',
-          'X-Token': token.token,
-          'X-Timestamp': timestamp,
+          'X-Token': token,
+          'X-Timestamp': timeStamp,
           'X-Signature': signature
-        },
-        body: payloadString
+      },  
       });
       
       if (!externalResponse.ok) {
-        const errorText = await externalResponse.text();
-        return NextResponse.json(
-          { 
-            error: "Failed to terminate process with external service",
-            details: errorText
-          },
-          { status: 502 }
-        );
+        console.warn(`External terminate request returned status ${externalResponse.status}`);
       }
-      
-      await prisma.processToken.update({
-        where: { token: token.token },
-        data: { isComplete: true }
-      });
-      
-      const updatedProcess = await prisma.userProcess.update({
-        where: { id: processId },
-        data: {
-          status: ProcessStatus.FAILED,
-          end_time: new Date()
-        }
-      });
-      
-      return NextResponse.json({
-        success: true,
-        message: "Process terminated successfully",
-        process: updatedProcess
-      });
-    } catch (error) {
-      console.error("Error terminating process:", error);
-      return NextResponse.json(
-        { error: "Failed to communicate with external service" },
-        { status: 503 }
-      );
+    } catch (fetchError) {
+      console.error("Error sending external terminate request:", fetchError);
     }
+    
+    ProcessCommand["terminate"](authId, processId)
+      .catch(error => {
+        console.error(`Error in background terminate process for ${processId}:`, error);
+      });
+    
+    return NextResponse.json({
+      success: true,
+      message: "Process termination initiated",
+      processId
+    }, { status: 202 });
+    
   } catch (error) {
-    console.error("Error in process termination:", error);
+    console.error("Error initiating terminate process:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
       { status: 500 }
     );
   }

@@ -11,6 +11,7 @@ export const SeedTransferAccounts = async () => {
     for (let i = 1; i <= 5; i++) {
       const transferAccount = await prisma.transferAccount.create({
         data: {
+          transfer_account: `account name ${i}`,
           account_username: `transfer_account_${i}`,
           password: `password${i}`,
         }
