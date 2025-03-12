@@ -101,7 +101,7 @@ export const GenerateToken = async (userId: string,  processId :string) => {
   };
 };
 
-//generate sigature  
+//generate Signature  
 export const Signature =  (payload: any, token: string, timestamp: string) =>  {  
   const data = JSON.stringify({
    ...payload,  

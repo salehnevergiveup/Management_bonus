@@ -12,9 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
+import { fetchRequests, hasPermission, createRequest } from "@/lib/requstHandling";
 
 interface TransferAccount {
   id: string;
@@ -46,6 +48,19 @@ interface ApiResponse {
   message: string;
 }
 
+interface RequestData {
+  id: string;
+  model_name: string;
+  model_id: string;
+  action: string;
+  status: string;
+  message: string;
+  sender_id: string;
+  marked_admin_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function PlayerManagementPage() {
   const { auth, isLoading } = useUser();
   const [players, setPlayers] = useState<Player[]>([]);
@@ -61,10 +76,61 @@ export default function PlayerManagementPage() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const router = useRouter();
 
+  // Permission request states
+  const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestAction, setRequestAction] = useState<string>("");
+  const [requestMessage, setRequestMessage] = useState("");
+  const [completePermission, setCompletePermission] = useState<{modelId: string, action: string} | null>(null);
+
   // Form state for create/edit
   const [formUsername, setFormUsername] = useState("");
   const [formTransferAccountId, setFormTransferAccountId] = useState("");
   const [formErrors, setFormErrors] = useState<{ username?: string; transferAccountId?: string }>({});
+
+  // Load accepted permission requests
+  const loadPermissions = async () => {
+    if (!auth) return;
+    
+    try {
+      const map = await fetchRequests('Player', 'accepted');
+      setPermissionsMap(map);
+    } catch (error) {
+      console.error("Error loading permissions:", error);
+    }
+  };
+
+  const markPermissionComplete = async (modelId: string, action: string) => {
+    try {
+      let key ="";  
+      if(action == "create") {  
+        key = `new:${action}`;
+
+      }else {  
+        key = `${modelId}:${action}`;
+
+      }
+      const permission = permissionsMap.get(key);
+      
+      if (permission) {
+        const response = await fetch(`/api/requests/${permission.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          const newMap = new Map(permissionsMap);
+          newMap.delete(key);
+          setPermissionsMap(newMap);
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error completing permission:", error);
+      return false;
+    }
+  };
 
   const fetchPlayers = async () => {
     if (auth) {
@@ -115,10 +181,14 @@ export default function PlayerManagementPage() {
   };
 
   useEffect(() => {
-    fetchPlayers();
-    fetchTransferAccounts();
+    if (!isLoading && auth) {
+      fetchPlayers();
+      fetchTransferAccounts();
+      loadPermissions();
+    }
   }, [isLoading, auth, router, currentPage, pageSize]);
 
+  // Handle search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchTerm !== "") {
@@ -128,6 +198,19 @@ export default function PlayerManagementPage() {
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Handle permission completion
+  useEffect(() => {
+    if (completePermission) {
+      markPermissionComplete(completePermission.modelId, completePermission.action)
+        .then(success => {
+          if (success) {
+            toast.success("Permission used successfully");
+          }
+          setCompletePermission(null);
+        });
+    }
+  }, [completePermission]);
 
   const validateForm = () => {
     const errors: { username?: string; transferAccountId?: string } = {};
@@ -164,6 +247,13 @@ export default function PlayerManagementPage() {
         throw new Error(errorData.error || "Failed to create player");
       }
 
+      if (!auth?.can("players:create") && hasPermission(permissionsMap, "new", "create")) {
+        setCompletePermission({
+          modelId: "new",
+          action: "create"
+        });
+      }
+
       const result = await response.json();
       toast.success("Player created successfully");
       setFormUsername("");
@@ -171,7 +261,7 @@ export default function PlayerManagementPage() {
       setCreateDialogOpen(false);
       fetchPlayers();
     } catch (error) {
-      console.error("Error creating player:", error);
+      console.error("Error creating players:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create player");
     }
   };
@@ -198,12 +288,21 @@ export default function PlayerManagementPage() {
 
       const result = await response.json();
       toast.success("Player updated successfully");
+      
+      // If this was a permission-based edit, mark it as complete
+      if (!auth?.can("players:edit") && hasPermission(permissionsMap, selectedPlayer.id, "edit")) {
+        setCompletePermission({
+          modelId: selectedPlayer.id,
+          action: "edit"
+        });
+      }
+      
       setFormUsername("");
       setFormTransferAccountId("");
       setEditDialogOpen(false);
       fetchPlayers();
     } catch (error) {
-      console.error("Error updating player:", error);
+      console.error("Error updating players:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update player");
     }
   };
@@ -222,9 +321,18 @@ export default function PlayerManagementPage() {
       }
 
       toast.success("Player deleted successfully");
+      
+      // If this was a permission-based delete, mark it as complete
+      if (!auth?.can("players:delete") && hasPermission(permissionsMap, playerToDelete.id, "delete")) {
+        setCompletePermission({
+          modelId: playerToDelete.id,
+          action: "delete"
+        });
+      }
+      
       fetchPlayers();
     } catch (error) {
-      console.error("Error deleting player:", error);
+      console.error("Error deleting players:", error);
       toast.error(error instanceof Error ? error.message : "Failed to delete player");
     } finally {
       setDeleteDialogOpen(false);
@@ -233,6 +341,11 @@ export default function PlayerManagementPage() {
   };
 
   const handleCreate = () => {
+    if (!auth?.can("players:create") && !hasPermission(permissionsMap, "new", "create")) {
+      openRequestDialog("create");
+      return;
+    }
+    
     setFormUsername("");
     setFormTransferAccountId("");
     setFormErrors({});
@@ -245,6 +358,45 @@ export default function PlayerManagementPage() {
     setFormTransferAccountId(player.transfer_account_id);
     setFormErrors({});
     setEditDialogOpen(true);
+  };
+
+  const handleDelete = (player: Player) => {
+    setPlayerToDelete(player);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Open permission request dialog
+  const openRequestDialog = (action: string, player?: Player) => {
+    setRequestAction(action);
+    setSelectedPlayer(player || null);
+    setRequestMessage("");
+    setRequestDialogOpen(true);
+  };
+  
+  // Submit permission request
+  const submitPermissionRequest = async () => {
+    if (!auth || requestMessage.length < 10) return;
+    
+    try {
+      const modelId = selectedPlayer?.id || "new"; // Use "new" for create actions
+      const result = await createRequest(
+        "Player",
+        modelId,
+        requestAction,
+        requestMessage,
+        auth.id
+      );
+      
+      if (result.success) {
+        toast.success("Permission request submitted successfully");
+        setRequestDialogOpen(false);
+      } else {
+        toast.error(result.error || "Failed to submit request");
+      }
+    } catch (error) {
+      console.error("Error submitting permission request:", error);
+      toast.error("Failed to submit permission request");
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -263,9 +415,13 @@ export default function PlayerManagementPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Player Management</CardTitle>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-            <Button onClick={handleCreate} className="w-full sm:w-auto">
+            <Button 
+              onClick={handleCreate} 
+              className="w-full sm:w-auto"
+              variant={auth?.can("players:create") || hasPermission(permissionsMap, "new", "create") ? "default" : "outline"}
+            >
               <Plus className="mr-2 h-4 w-4" />
-              Create Player
+              {auth?.can("players:create") || hasPermission(permissionsMap, "new", "create") ? "Create Player" : "Request to Create Player"}
             </Button>
             <Select
               value={pageSize.toString()}
@@ -353,19 +509,35 @@ export default function PlayerManagementPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(player)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setPlayerToDelete(player);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
+                            {/* Edit option - show if user has permission or has accepted request */}
+                            {(auth?.can("players:edit") || hasPermission(permissionsMap, player.id, "edit")) ? (
+                              <DropdownMenuItem onClick={() => handleEdit(player)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                {hasPermission(permissionsMap, player.id, "edit") && !auth?.can("players:edit") 
+                                  ? "Execute Edit Permission" 
+                                  : "Edit"}
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => openRequestDialog("edit", player)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Request to Edit
+                              </DropdownMenuItem>
+                            )}
+                            
+                            {/* Delete option - show if user has permission or has accepted request */}
+                            {(auth?.can("players:delete") || hasPermission(permissionsMap, player.id, "delete")) ? (
+                              <DropdownMenuItem onClick={() => handleDelete(player)}>
+                                <Trash className="mr-2 h-4 w-4" />
+                                {hasPermission(permissionsMap, player.id, "delete") && !auth?.can("players:delete") 
+                                  ? "Execute Delete Permission" 
+                                  : "Delete"}
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => openRequestDialog("delete", player)}>
+                                <Trash className="mr-2 h-4 w-4" />
+                                Request to Delete
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -465,7 +637,7 @@ export default function PlayerManagementPage() {
                 <SelectContent>
                   {transferAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.account_username}
+                      {account.account_username} 
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -530,6 +702,49 @@ export default function PlayerManagementPage() {
               Cancel
             </Button>
             <Button onClick={updatePlayer}>Update</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permission Request Dialog */}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} Player
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {selectedPlayer && (
+              <div className="space-y-2">
+                <Label>Player</Label>
+                <p className="font-medium">{selectedPlayer.account_username}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="request_message">Reason for Request</Label>
+              <Textarea
+                id="request_message"
+                placeholder="Explain why you need this permission..."
+                value={requestMessage}
+                onChange={(e) => setRequestMessage(e.target.value)}
+                rows={4}
+              />
+              {requestMessage.length < 10 && requestMessage.length > 0 && (
+                <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submitPermissionRequest}
+              disabled={!requestMessage || requestMessage.length < 10}
+            >
+              Submit Request
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -33,13 +33,14 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
   const fetchNotifications = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch("/api/notifications/user-notifications");
       if (!res.ok) {
         throw new Error("Failed to fetch notifications");
       }
-      const data: Notification[] = await res.json();
-      setNotifications(data);
-      updateUnreadCount(data);
+      const notifications: Notification[] = await res.json();
+      
+      setNotifications(notifications);
+      updateUnreadCount(notifications);
     } catch (error) {
       console.error(error);
       toast.error("Failed to fetch notifications")
@@ -64,6 +65,7 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
         throw new Error("Failed to update notification");
       }
       const updatedNotification: Notification = await res.json();
+
       const updatedNotifications = notifications.map((n) =>
         n.id === id ? updatedNotification : n
       );

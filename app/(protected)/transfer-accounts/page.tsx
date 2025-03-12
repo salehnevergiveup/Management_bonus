@@ -14,12 +14,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
+import { fetchRequests, hasPermission, createRequest } from "@/lib/requstHandling";
 
 interface TransferAccount {
   id: string;
   account_username: string;
   password: string;
+  transfer_account: string;
   created_at: string;
   updated_at: string;
   player_count?: number;
@@ -41,6 +44,19 @@ interface ApiResponse {
   message: string;
 }
 
+interface RequestData {
+  id: string;
+  model_name: string;
+  model_id: string;
+  action: string;
+  status: string;
+  message: string;
+  sender_id: string;
+  marked_admin_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function TransferAccountManagementPage() {
   const { auth, isLoading } = useUser();
   const [accounts, setAccounts] = useState<TransferAccount[]>([]);
@@ -56,14 +72,64 @@ export default function TransferAccountManagementPage() {
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
+  // Permission request states
+  const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestAction, setRequestAction] = useState<string>("");
+  const [requestMessage, setRequestMessage] = useState("");
+  const [completePermission, setCompletePermission] = useState<{modelId: string, action: string} | null>(null);
+
   // Form state for create/edit
   const [formUsername, setFormUsername] = useState("");
   const [formPassword, setFormPassword] = useState("");
-  const [formErrors, setFormErrors] = useState<{ username?: string; password?: string }>({});
+  const [formTransferAccount, setFormTransferAccount] = useState("");  
+  const [formErrors, setFormErrors] = useState<{ username?: string; password?: string, transferAccount?: string }>({});
+
+  // Load accepted permission requests
+  const loadPermissions = async () => {
+    if (!auth) return;
+    
+    try {
+      const map = await fetchRequests('TransferAccount', 'accepted');
+      setPermissionsMap(map);
+    } catch (error) {
+      console.error("Error loading permissions:", error);
+    }
+  };
+
+  // Complete a permission after use
+  const markPermissionComplete = async (modelId: string, action: string) => {
+    try {
+      let key = "";  
+      if(action === "create") {  
+        key = `new:${action}`;
+      } else {  
+        key = `${modelId}:${action}`;
+      }
+      const permission = permissionsMap.get(key);
+      
+      if (permission) {
+        const response = await fetch(`/api/requests/${permission.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          const newMap = new Map(permissionsMap);
+          newMap.delete(key);
+          setPermissionsMap(newMap);
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error completing permission:", error);
+      return false;
+    }
+  };
 
   const fetchAccounts = async () => {
     if (auth) {
-      console.log(auth.models);
       if (!auth.canAccess("transfer-accounts")) {
         router.push("/dashboard");
         return;
@@ -95,7 +161,10 @@ export default function TransferAccountManagementPage() {
   };
 
   useEffect(() => {
-    fetchAccounts();
+    if (!isLoading && auth) {
+      fetchAccounts();
+      loadPermissions();
+    }
   }, [isLoading, auth, router, currentPage, pageSize]);
 
   // Debounced search
@@ -109,8 +178,21 @@ export default function TransferAccountManagementPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Handle permission completion
+  useEffect(() => {
+    if (completePermission) {
+      markPermissionComplete(completePermission.modelId, completePermission.action)
+        .then(success => {
+          if (success) {
+            toast.success("Permission used successfully");
+          }
+          setCompletePermission(null);
+        });
+    }
+  }, [completePermission]);
+
   const validateForm = () => {
-    const errors: { username?: string; password?: string } = {};
+    const errors: { username?: string; password?: string; transferAccount?: string } = {};
     
     if (!formUsername || formUsername.length < 3) {
       errors.username = "Username must be at least 3 characters";
@@ -118,6 +200,10 @@ export default function TransferAccountManagementPage() {
     
     if (!formPassword || formPassword.length < 6) {
       errors.password = "Password must be at least 6 characters";
+    }
+
+    if (!formTransferAccount) {
+      errors.transferAccount = "Transfer account is required";
     }
     
     setFormErrors(errors);
@@ -135,7 +221,8 @@ export default function TransferAccountManagementPage() {
         },
         body: JSON.stringify({
           account_username: formUsername,
-          password: formPassword
+          password: formPassword,
+          transfer_account: formTransferAccount
         }),
       });
 
@@ -144,10 +231,19 @@ export default function TransferAccountManagementPage() {
         throw new Error(errorData.error || "Failed to create transfer account");
       }
 
+      // If this was a permission-based create, mark it as complete
+      if (!auth?.can("transfer-accounts:create") && hasPermission(permissionsMap, "new", "create")) {
+        setCompletePermission({
+          modelId: "new",
+          action: "create"
+        });
+      }
+
       const result = await response.json();
       toast.success("Transfer account created successfully");
       setFormUsername("");
       setFormPassword("");
+      setFormTransferAccount(""); 
       setCreateDialogOpen(false);
       fetchAccounts();
     } catch (error) {
@@ -158,8 +254,9 @@ export default function TransferAccountManagementPage() {
 
   const updateAccount = async () => {
     if (!selectedAccount || !validateForm()) return;
-
+  
     try {
+      // Use the dynamic route structure with the ID in the path
       const response = await fetch(`/api/transfer-accounts/${selectedAccount.id}`, {
         method: "PUT",
         headers: {
@@ -167,19 +264,28 @@ export default function TransferAccountManagementPage() {
         },
         body: JSON.stringify({
           account_username: formUsername,
-          password: formPassword
+          password: formPassword,
+          transfer_account: formTransferAccount
         }),
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to update transfer account");
       }
-
+  
+      if (!auth?.can("transfer-accounts:edit") && hasPermission(permissionsMap, selectedAccount.id, "edit")) {
+        setCompletePermission({
+          modelId: selectedAccount.id,
+          action: "edit"
+        });
+      }
+  
       const result = await response.json();
       toast.success("Transfer account updated successfully");
       setFormUsername("");
       setFormPassword("");
+      setFormTransferAccount(""); 
       setEditDialogOpen(false);
       fetchAccounts();
     } catch (error) {
@@ -196,12 +302,25 @@ export default function TransferAccountManagementPage() {
         method: "DELETE",
       });
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 409) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to delete transfer account");
       }
 
-      toast.success("Transfer account deleted successfully");
+      // If this was a permission-based delete, mark it as complete
+      if (!auth?.can("transfer-accounts:delete") && hasPermission(permissionsMap, accountToDelete.id, "delete")) {
+        setCompletePermission({
+          modelId: accountToDelete.id,
+          action: "delete"
+        });
+      }
+      
+      if(response.status === 409) {  
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete transfer account");
+      }else {  
+        toast.success("Transfer account deleted successfully");
+      }
       fetchAccounts();
     } catch (error) {
       console.error("Error deleting transfer account:", error);
@@ -213,8 +332,14 @@ export default function TransferAccountManagementPage() {
   };
 
   const handleCreate = () => {
+    if (!auth?.can("transfer-accounts:create") && !hasPermission(permissionsMap, "new", "create")) {
+      openRequestDialog("create");
+      return;
+    }
+    
     setFormUsername("");
     setFormPassword("");
+    setFormTransferAccount("");
     setFormErrors({});
     setCreateDialogOpen(true);
   };
@@ -223,8 +348,48 @@ export default function TransferAccountManagementPage() {
     setSelectedAccount(account);
     setFormUsername(account.account_username);
     setFormPassword(account.password);
+    setFormTransferAccount(account.transfer_account || "");
     setFormErrors({});
     setEditDialogOpen(true);
+  };
+
+  const handleDelete = (account: TransferAccount) => {
+    setAccountToDelete(account);
+    setDeleteDialogOpen(true);
+  };
+
+  // Open permission request dialog
+  const openRequestDialog = (action: string, account?: TransferAccount) => {
+    setRequestAction(action);
+    setSelectedAccount(account || null);
+    setRequestMessage("");
+    setRequestDialogOpen(true);
+  };
+  
+  // Submit permission request
+  const submitPermissionRequest = async () => {
+    if (!auth || requestMessage.length < 10) return;
+    
+    try {
+      const modelId = selectedAccount?.id || "new"; // Use "new" for create actions
+      const result = await createRequest(
+        "TransferAccount",
+        modelId,
+        requestAction,
+        requestMessage,
+        auth.id
+      );
+      
+      if (result.success) {
+        toast.success("Permission request submitted successfully");
+        setRequestDialogOpen(false);
+      } else {
+        toast.error(result.error || "Failed to submit request");
+      }
+    } catch (error) {
+      console.error("Error submitting permission request:", error);
+      toast.error("Failed to submit permission request");
+    }
   };
 
   const togglePasswordVisibility = (accountId: string) => {
@@ -250,9 +415,14 @@ export default function TransferAccountManagementPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Transfer Account Management</CardTitle>
           <div className="flex items-center space-x-2">
-            <Button onClick={handleCreate}>
+            <Button 
+              onClick={handleCreate}
+              variant={auth?.can("transfer-accounts:create") || hasPermission(permissionsMap, "new", "create") ? "default" : "outline"}
+            >
               <Plus className="mr-2 h-4 w-4" />
-              Create Account
+              {auth?.can("transfer-accounts:create") || hasPermission(permissionsMap, "new", "create") 
+                ? "Create Account" 
+                : "Request to Create Account"}
             </Button>
             <Select
               value={pageSize.toString()}
@@ -306,6 +476,7 @@ export default function TransferAccountManagementPage() {
                 <TableRow>
                   <TableHead>Username</TableHead>
                   <TableHead>Password</TableHead>
+                  <TableHead>Transfer Account</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Updated At</TableHead>
                   <TableHead>Player Count</TableHead>
@@ -315,13 +486,13 @@ export default function TransferAccountManagementPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       Loading accounts...
                     </TableCell>
                   </TableRow>
                 ) : accounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       No transfer accounts found
                     </TableCell>
                   </TableRow>
@@ -347,6 +518,7 @@ export default function TransferAccountManagementPage() {
                           </Button>
                         </div>
                       </TableCell>
+                      <TableCell>{account.transfer_account || 'N/A'}</TableCell>
                       <TableCell>{formatDate(account.created_at)}</TableCell>
                       <TableCell>{formatDate(account.updated_at)}</TableCell>
                       <TableCell>{account.player_count || 0}</TableCell>
@@ -359,19 +531,35 @@ export default function TransferAccountManagementPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(account)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setAccountToDelete(account);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
+                            {/* Edit option - show if user has permission or has accepted request */}
+                            {(auth?.can("transfer-accounts:edit") || hasPermission(permissionsMap, account.id, "edit")) ? (
+                              <DropdownMenuItem onClick={() => handleEdit(account)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                {hasPermission(permissionsMap, account.id, "edit") && !auth?.can("transfer-accounts:edit") 
+                                  ? "Execute Edit Permission" 
+                                  : "Edit"}
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => openRequestDialog("edit", account)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Request to Edit
+                              </DropdownMenuItem>
+                            )}
+                            
+                            {/* Delete option - show if user has permission or has accepted request */}
+                            {(auth?.can("transfer-accounts:delete") || hasPermission(permissionsMap, account.id, "delete")) ? (
+                              <DropdownMenuItem onClick={() => handleDelete(account)}>
+                                <Trash className="mr-2 h-4 w-4" />
+                                {hasPermission(permissionsMap, account.id, "delete") && !auth?.can("transfer-accounts:delete") 
+                                  ? "Execute Delete Permission" 
+                                  : "Delete"}
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => openRequestDialog("delete", account)}>
+                                <Trash className="mr-2 h-4 w-4" />
+                                Request to Delete
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -456,6 +644,18 @@ export default function TransferAccountManagementPage() {
               )}
             </div>
             <div className="space-y-2">
+              <Label htmlFor="transfer_account">Transfer Account</Label>
+              <Input
+                id="transfer_account"
+                placeholder="Enter transfer account"
+                value={formTransferAccount}
+                onChange={(e) => setFormTransferAccount(e.target.value)}
+              />
+              {formErrors.transferAccount && (
+                <p className="text-sm text-red-500">{formErrors.transferAccount}</p>
+              )}
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="flex space-x-2">
                 <Input 
@@ -508,6 +708,18 @@ export default function TransferAccountManagementPage() {
               )}
             </div>
             <div className="space-y-2">
+              <Label htmlFor="edit_transfer_account">Transfer Account</Label>
+              <Input
+                id="edit_transfer_account"
+                placeholder="Enter transfer account"
+                value={formTransferAccount}
+                onChange={(e) => setFormTransferAccount(e.target.value)}
+              />
+              {formErrors.transferAccount && (
+                <p className="text-sm text-red-500">{formErrors.transferAccount}</p>
+              )}
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="edit_password">Password</Label>
               <div className="flex space-x-2">
                 <Input 
@@ -536,6 +748,49 @@ export default function TransferAccountManagementPage() {
               Cancel
             </Button>
             <Button onClick={updateAccount}>Update</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permission Request Dialog */}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} Transfer Account
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {selectedAccount && (
+              <div className="space-y-2">
+                <Label>Account</Label>
+                <p className="font-medium">{selectedAccount.account_username}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="request_message">Reason for Request</Label>
+              <Textarea
+                id="request_message"
+                placeholder="Explain why you need this permission..."
+                value={requestMessage}
+                onChange={(e) => setRequestMessage(e.target.value)}
+                rows={4}
+              />
+              {requestMessage.length < 10 && requestMessage.length > 0 && (
+                <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submitPermissionRequest}
+              disabled={!requestMessage || requestMessage.length < 10}
+            >
+              Submit Request
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

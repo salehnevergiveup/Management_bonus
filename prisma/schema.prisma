@@ -156,19 +156,20 @@ model Match {
 model Request {
   id              String    @id @default(uuid())
   sender_id       String
-  status          String    @default("pending") // "pending", "approved", "rejected"
+status          String    @default("pending") // "pending", "accepted", "rejected"
   message         String    @db.Text
   marked_admin_id String?
   model_name      String    // Polymorphic relationship - name of the model
-  model_id        String    // Polymorphic relationship - ID of the record
+  model_id        String?    // Polymorphic relationship - ID of the record
+  action          String    // The action being requested
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
-  
+
   // Relations
   sender          User      @relation("RequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
   admin           User?     @relation("RequestAdmin", fields: [marked_admin_id], references: [id], onDelete: SetNull)
 
   @@index([sender_id])
   @@index([marked_admin_id])
-  @@index([model_name, model_id]) // Index for the polymorphic lookup
+  @@index([model_name, model_id])
 }

@@ -41,7 +41,7 @@ interface PaginationData {
 }
 
 interface ApiResponse {
-  notifications: Notification[]
+  data: Notification[]
   pagination: PaginationData
 }
 
@@ -84,15 +84,15 @@ export default function NotificationsPage() {
       if (searchTerm) {
         queryParams.append("search", searchTerm)
       }
-      const response = await fetch(`/api/notifications/all?${queryParams.toString()}`)
+      const response = await fetch(`/api/notifications?${queryParams}`)
       
       if (!response.ok) {
         throw new Error("Failed to fetch notifications")
       }
 
-      const data: ApiResponse = await response.json()
-      setNotifications(data.notifications)
-      setPagination(data.pagination)
+      const result: ApiResponse = await response.json()
+      setNotifications(result.data)
+      setPagination(result.pagination)
     } catch (error) {
       console.error("Error fetching notifications:", error)
       toast.error("Failed to fetch notifications")

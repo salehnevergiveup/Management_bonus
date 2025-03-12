@@ -4,6 +4,7 @@ import { SessionValidation } from '@lib/sessionvalidation';
 import { Pagination } from "@/lib/pagination";
 import ProcessCommand from "@lib/processCommand";
 import { MatchStatus, ProcessStatus } from '@constants/processStatus';
+import { Roles } from '@constants/roles';
 
 const prisma = new PrismaClient();
 
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
                       status: {
                         in: [ProcessStatus.SEM_COMPLETED, ProcessStatus.PENDING]
                       }
+                    
                     }
                   },
                   include: {
@@ -30,7 +32,14 @@ export async function GET(request: Request) {
                     player: true
                   }
                 }
-
+  if(auth.role  !== Roles.Admin) {  
+    if (auth.role !== Roles.Admin) {
+      query.where.process = {
+        ...query.where.process,
+        user_id: auth.id  
+      }
+    }
+  }
   const total = await prisma.match.count();
 
   const paginationResult = await Pagination(

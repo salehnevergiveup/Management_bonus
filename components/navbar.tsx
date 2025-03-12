@@ -41,7 +41,7 @@ export function Navbar({ className, ...props }:  {className: any}) {
             throw new Error("Failed to fetch notifications");
           } 
           const data  = await res.json();
-
+          console.log(data); 
           if(!data?.count ==  undefined) {  
             throw new Error("Failed to fetch the count");
           }

@@ -7,6 +7,7 @@ import {SeedProcesses} from "./seeders/processes";
 import {SeedTransferAccounts} from "./seeders/transfer_accounts";
 import {SeedPlayers} from "./seeders/players";
 import {SeedMatches} from "./seeders/matches";
+import SeedRequests from "./seeders/request";
 
 
 
@@ -25,6 +26,7 @@ const main = async () => {
     await SeedTransferAccounts();
     await SeedPlayers(); 
     await SeedMatches(); 
+    await SeedRequests(); 
 
 
     console.log("✅ All seeders executed successfully.");

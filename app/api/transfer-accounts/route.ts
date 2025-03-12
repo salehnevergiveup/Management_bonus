@@ -18,7 +18,7 @@ export async function GET(request: Request) {
    const total = await prisma.transferAccount.count();
 
    const paginationResult = await Pagination(
-     prisma.player,
+     prisma.transferAccount,
      new URL(request.url), 
      total,
      {}
@@ -53,9 +53,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     
     // Validate required fields
-    if (!body.account_username || !body.password) {
+    if (!body.account_username || !body.password || !body.transfer_account) {
       return NextResponse.json(
-        { error: "Account username and password are required" }, 
+        { error: "Account username, password and transfer account name are required" }, 
         { status: 400 }
       );
     }
@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       data: {
         account_username: body.account_username,
         password: body.password,
+        transfer_account: body.transfer_account
       }
     });
     

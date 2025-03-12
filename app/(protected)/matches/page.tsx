@@ -12,8 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmationDialog } from "@/components/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/badge";
 import { AppColor } from "@/constants/colors";
+import { Roles } from "@/constants/roles";
+import { hasPermission, createRequest, fetchRequests } from "@/lib/requstHandling";
 
 import {
   Tooltip,
@@ -56,6 +61,19 @@ interface Match {
   process: Process;
 }
 
+interface RequestData {
+  id: string;
+  model_name: string;
+  model_id: string;
+  action: string;
+  status: string;
+  message: string;
+  sender_id: string;
+  marked_admin_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function MatchManagementPage() {
   const { auth, isLoading } = useUser();
   const [matches, setMatches] = useState<Match[]>([]);
@@ -68,6 +86,14 @@ export default function MatchManagementPage() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<null | { match: Match; action: string }>(null);
   const router = useRouter();
+
+  // Permission related states
+  const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestMessage, setRequestMessage] = useState("");
+  const [requestAction, setRequestAction] = useState("");
+  const [requestProcessId, setRequestProcessId] = useState("");
+  const [completePermission, setCompletePermission] = useState<{modelId: string, action: string} | null>(null);
 
   const fetchMatches = async () => {
     if (auth) {
@@ -92,9 +118,63 @@ export default function MatchManagementPage() {
     }
   };
 
+  // Load accepted permission requests
+  const loadPermissions = async () => {
+    if (!auth) return;
+    
+    try {
+      const map = await fetchRequests('Process', 'accepted');
+      setPermissionsMap(map);
+    } catch (error) {
+      console.error("Error loading permissions:", error);
+    }
+  };
+
+  // Complete a permission after use
+  const markPermissionComplete = async (modelId: string, action: string) => {
+    try {
+      const key = `${modelId}:${action}`;
+      const permission = permissionsMap.get(key);
+      
+      if (permission) {
+        const response = await fetch(`/api/requests/${permission.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          const newMap = new Map(permissionsMap);
+          newMap.delete(key);
+          setPermissionsMap(newMap);
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error completing permission:", error);
+      return false;
+    }
+  };
+
   useEffect(() => {
-    fetchMatches();
+    if (!isLoading && auth) {
+      fetchMatches();
+      loadPermissions();
+    }
   }, [isLoading, auth, router]);
+
+  // Handle permission completion
+  useEffect(() => {
+    if (completePermission) {
+      markPermissionComplete(completePermission.modelId, completePermission.action)
+        .then(success => {
+          if (success) {
+            toast.success("Permission used successfully");
+          }
+          setCompletePermission(null);
+        });
+    }
+  }, [completePermission]);
 
   // Filter matches based on search term, status, and tab
   useEffect(() => {
@@ -201,6 +281,19 @@ export default function MatchManagementPage() {
   };
 
   const handleProcessAction = (process: { id: string, status: string }, action: string) => {
+    // Check if user has permission for restricted actions (restart, terminate)
+    const needsPermission = (action === 'restart' || action === 'terminate') && 
+                            auth?.role !== Roles.Admin;
+    
+    if (needsPermission && !hasPermission(permissionsMap, process.id, action)) {
+      // Open request permission dialog
+      setRequestAction(action);
+      setRequestProcessId(process.id);
+      setRequestMessage("");
+      setRequestDialogOpen(true);
+      return;
+    }
+
     // Use the first match of the process as a reference
     const matchForProcess = matches.find(m => m.process_id === process.id);
     if (matchForProcess) {
@@ -214,17 +307,41 @@ export default function MatchManagementPage() {
     setConfirmDialogOpen(true);
   };
 
-  const canPerformProcessAction = (processStatus: string, action: string) => {
-    switch (action) {
-      case 'resume':
-        return processStatus === ProcessStatus.PENDING;
-      case 'restart':
-        return processStatus === ProcessStatus.SEM_COMPLETED;
-      case 'rematch':
-        return processStatus !== ProcessStatus.PROCESSING;
-      case 'terminate':
-        return processStatus !== ProcessStatus.PROCESSING;
-      break
+  // Submit permission request
+  const submitPermissionRequest = async () => {
+    if (!auth || requestMessage.length < 10) return;
+    
+    try {
+      const result = await createRequest(
+        "Process",
+        requestProcessId,
+        requestAction,
+        requestMessage,
+        auth.id
+      );
+      
+      if (result.success) {
+        toast.success("Permission request submitted successfully");
+        setRequestDialogOpen(false);
+      } else {
+        toast.error(result.error || "Failed to submit request");
+      }
+    } catch (error) {
+      console.error("Error submitting permission request:", error);
+      toast.error("Failed to submit permission request");
+    }
+  };
+
+  const canShowProcessAction = (processStatus: string, action: string) => {
+    switch (processStatus) {
+      case ProcessStatus.PENDING:
+        return (action === 'resume' || action === 'rematch' || action === 'terminate');
+      case ProcessStatus.SEM_COMPLETED:
+        return (action === 'restart' || action === 'rematch' || action === 'terminate');
+      case ProcessStatus.PROCESSING:
+        return false; // No actions while processing
+      default:
+        return false;
     }
   };
 
@@ -249,7 +366,7 @@ export default function MatchManagementPage() {
           break;
         case 'terminate':
           endpoint = `/api/processes/${match.process_id}/terminate`;
-          method= 'DELETE'
+          method = 'DELETE';
           break;
         case 'restart':
           endpoint = `/api/processes/${match.process_id}/restart`;
@@ -266,6 +383,15 @@ export default function MatchManagementPage() {
 
       if (!response.ok) {
         throw new Error(`Failed to ${action} match`);
+      }
+
+      // If this was a permission-based action, mark it as complete
+      const needsPermission = (action === 'restart' || action === 'terminate');
+      if (needsPermission && auth?.role !== Roles.Admin) {
+        setCompletePermission({
+          modelId: match.process_id,
+          action: action.split('-')[0] // Extract base action name
+        });
       }
 
       toast.success(`Successfully performed ${action.replace('-', ' ')} action`);
@@ -435,6 +561,47 @@ export default function MatchManagementPage() {
           ? selectedAction.action.split('-')[0].charAt(0).toUpperCase() + selectedAction.action.split('-')[0].slice(1) 
           : 'Confirm'}
       />
+
+      {/* Permission Request Dialog */}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} Process
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Process ID</Label>
+              <p className="font-medium">{requestProcessId}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="request_message">Reason for Request</Label>
+              <Textarea
+                id="request_message"
+                placeholder="Explain why you need this permission..."
+                value={requestMessage}
+                onChange={(e) => setRequestMessage(e.target.value)}
+                rows={4}
+              />
+              {requestMessage.length < 10 && requestMessage.length > 0 && (
+                <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submitPermissionRequest}
+              disabled={!requestMessage || requestMessage.length < 10}
+            >
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
@@ -460,76 +627,85 @@ export default function MatchManagementPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <TooltipProvider>
-                    {canPerformProcessAction(process.status, 'resume') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleProcessAction(process, 'resume')}
-                          >
-                            <PlayCircle className="h-4 w-4 mr-1" />
-                            Resume
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Complete the pending process</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    
-                    {canPerformProcessAction(process.status, 'restart') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleProcessAction(process, 'restart')}
-                          >
-                            <RotateCcw className="h-4 w-4 mr-1" />
-                            Restart
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Rerun the process for failed matches</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    
-                    {canPerformProcessAction(process.status, 'rematch') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleProcessAction(process, 'rematch-process')}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-1" />
-                            Rematch All
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Update the matched users for this process</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    
-                    {canPerformProcessAction(process.status, 'terminate') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleProcessAction(process, 'terminate')}
-                          >
-                            <Square className="h-4 w-4 mr-1" />
-                            Terminate
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>End the process entirely</p>
-                        </TooltipContent>
-                      </Tooltip>
+                    {/* Only show buttons if process is not in PROCESSING state */}
+                    {process.status !== ProcessStatus.PROCESSING && (
+                      <>
+                        {/* Resume button - only for PENDING */}
+                        {canShowProcessAction(process.status, 'resume') && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleProcessAction(process, 'resume')}
+                              >
+                                <PlayCircle className="h-4 w-4 mr-1" />
+                                Resume
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Complete the pending process</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        {/* Restart button - only for SEM_COMPLETED */}
+                        {canShowProcessAction(process.status, 'restart') && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleProcessAction(process, 'restart')}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-1" />
+                                Restart
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Rerun the process for failed matches</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        {/* Rematch button - for both PENDING and SEM_COMPLETED */}
+                        {canShowProcessAction(process.status, 'rematch') && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleProcessAction(process, 'rematch-process')}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-1" />
+                                Rematch All
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Update the matched users for this process</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        {/* Terminate button - for both PENDING and SEM_COMPLETED */}
+                        {canShowProcessAction(process.status, 'terminate') && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleProcessAction(process, 'terminate')}
+                              >
+                                <Square className="h-4 w-4 mr-1" />
+                                Terminate
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>End the process entirely</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </>
                     )}
                   </TooltipProvider>
                 </div>

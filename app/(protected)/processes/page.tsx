@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, Play, Square, MoreHorizontal, Search } from "lucide-react";
+import { Eye, Play, Square, MoreHorizontal, Search, Calendar } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,18 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmationDialog } from "@/components/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
 import { Progress } from "@/components/ui/progress";
 import { ProcessStatus } from "@/constants/processStatus";
-import  {AppColor} from  "@/constants/colors"
-
+import { AppColor } from "@/constants/colors";
+import { hasPermission, createRequest, fetchRequests } from "@/lib/requstHandling";
+import { Roles } from "@/constants/roles";
 
 interface User {
   id: string;
@@ -36,6 +41,8 @@ interface Process {
   isActive: boolean;
   user_id: string;
   user: User;
+  from_date?: string;
+  to_date?: string;
 }
 
 interface PaginationData {
@@ -55,8 +62,20 @@ interface ApiResponse {
   message: string;
 }
 
+interface RequestData {
+  id: string;
+  model_name: string;
+  model_id: string;
+  action: string;
+  status: string;
+  message: string;
+  sender_id: string;
+  marked_admin_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function ProcessManagementPage() {
-  
   const { auth, isLoading } = useUser();
   const [processes, setProcesses] = useState<Process[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
@@ -67,7 +86,64 @@ export default function ProcessManagementPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [hasActiveProcess, setHasActiveProcess] = useState(true);
+  // Set default to true to prevent button from showing on initial load
+  const [hasPendingOrProcessing, setHasPendingOrProcessing] = useState(true);
   const router = useRouter();
+
+  // Permissions related states
+  const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestMessage, setRequestMessage] = useState("");
+  const [completePermission, setCompletePermission] = useState<{modelId: string, action: string} | null>(null);
+
+  // Date selection states
+  const [startProcessDialogOpen, setStartProcessDialogOpen] = useState(false);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [dateErrors, setDateErrors] = useState<{fromDate?: string; toDate?: string}>({});
+
+  // Load accepted permission requests
+  const loadPermissions = async () => {
+    if (!auth) return;
+    
+    try {
+      const map = await fetchRequests('Process', 'accepted');
+      setPermissionsMap(map);
+    } catch (error) {
+      console.error("Error loading permissions:", error);
+    }
+  };
+
+  // Complete a permission after use
+  const markPermissionComplete = async (modelId: string, action: string) => {
+    try {
+      let key = "";  
+      if(action === "create") {  
+        key = `new:${action}`;
+      } else {  
+        key = `${modelId}:${action}`;
+      }
+      const permission = permissionsMap.get(key);
+      
+      if (permission) {
+        const response = await fetch(`/api/requests/${permission.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          const newMap = new Map(permissionsMap);
+          newMap.delete(key);
+          setPermissionsMap(newMap);
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error completing permission:", error);
+      return false;
+    }
+  };
 
   const fetchProcesses = async () => {
     if (auth) {
@@ -76,66 +152,184 @@ export default function ProcessManagementPage() {
         return;
       }
     }
+    
     try {
-      // Build query parameters
+      setHasPendingOrProcessing(true);
+      
       const queryParams = new URLSearchParams();
       queryParams.append("page", currentPage.toString());
       queryParams.append("limit", pageSize.toString());
-
+  
       const response = await fetch(`/api/processes?${queryParams.toString()}`);
-
+  
       if (!response.ok) {
         throw new Error("Failed to fetch processes");
       }
-
+  
       const data: ApiResponse = await response.json();
       
-      // Map the API response to our Process interface
       const mappedData = data.data.map(p => ({
         ...p,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
-        // Determine active status (a process is active if status is "running")
         isActive: p.status.toLowerCase() === "running"
       }));
       
       setProcesses(mappedData);
       setPagination(data.pagination);
-
-
+  
       // Check if there's any active process
       setHasActiveProcess(data.activeProcess);
-
+  
+      const hasActiveOrSemCompletedProcess = mappedData.some(p => 
+        p.status === ProcessStatus.PENDING || 
+        p.status === ProcessStatus.PROCESSING ||
+        p.status === ProcessStatus.SEM_COMPLETED
+      );
+      
+      setHasPendingOrProcessing(hasActiveOrSemCompletedProcess);
+  
     } catch (error) {
       console.error("Error fetching processes:", error);
       toast.error("Failed to fetch processes");
+      setHasPendingOrProcessing(true);
     }
   };
 
   useEffect(() => {
-    fetchProcesses();
+    if (!isLoading && auth) {
+      fetchProcesses();
+      loadPermissions();
+    } else {
+      // Keep the button hidden while loading by setting this to true
+      setHasPendingOrProcessing(true);
+    }
   }, [isLoading, auth, router, currentPage, pageSize]);
 
+  // Handle permission completion
+  useEffect(() => {
+    if (completePermission) {
+      markPermissionComplete(completePermission.modelId, completePermission.action)
+        .then(success => {
+          if (success) {
+            toast.success("Permission used successfully");
+          }
+          setCompletePermission(null);
+        });
+    }
+  }, [completePermission]);
+
+  const validateDateRange = () => {
+    const errors: {fromDate?: string; toDate?: string} = {};
+    
+    // Validate from date
+    if (!fromDate) {
+      errors.fromDate = "Start date is required";
+    } else {
+      const fromDateObj = new Date(fromDate);
+      const minDate = new Date("2020-01-01");
+      
+      if (fromDateObj < minDate) {
+        errors.fromDate = "Start date cannot be before 2020";
+      }
+    }
+    
+    // Validate to date
+    if (!toDate) {
+      errors.toDate = "End date is required";
+    } else if (fromDate) {
+      const fromDateObj = new Date(fromDate);
+      const toDateObj = new Date(toDate);
+      
+      if (toDateObj < fromDateObj) {
+        errors.toDate = "End date must be after the start date";
+      }
+      
+      // Check if date range is more than 3 months
+      const threeMonthsInMs = 3 * 30 * 24 * 60 * 60 * 1000; // Approximate 3 months in milliseconds
+      if (toDateObj.getTime() - fromDateObj.getTime() > threeMonthsInMs) {
+        errors.toDate = "Date range cannot exceed 3 months";
+      }
+    }
+    
+    setDateErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleStartProcessClick = () => {
+    if (auth?.role === Roles.Admin || hasPermission(permissionsMap, "new", "create")) {
+      // Reset form
+      setFromDate("");
+      setToDate("");
+      setDateErrors({});
+      setStartProcessDialogOpen(true);
+    } else {
+      // Open request dialog
+      setRequestMessage("");
+      setRequestDialogOpen(true);
+    }
+  };
+
   const startProcess = async () => {
+    if (!validateDateRange()) return;
+
     try {
       const response = await fetch("/api/processes/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          from_date: fromDate,
+          to_date: toDate
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to start process");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to start process");
+      }
+
+      // If this was a permission-based create, mark it as complete
+      if (auth?.role !== Roles.Admin && hasPermission(permissionsMap, "new", "create")) {
+        setCompletePermission({
+          modelId: "new",
+          action: "create"
+        });
       }
 
       const result = await response.json();
       toast.success("Process started successfully");
+      setStartProcessDialogOpen(false);
       fetchProcesses(); // Refresh the list
     } catch (error) {
       console.error("Error starting process:", error);
-      toast.error("Failed to start process");
+      toast.error(error instanceof Error ? error.message : "Failed to start process");
+    }
+  };
+
+  // Submit permission request
+  const submitPermissionRequest = async () => {
+    if (!auth || requestMessage.length < 10) return;
+    
+    try {
+      const result = await createRequest(
+        "Process",
+        "new",
+        "create",
+        requestMessage,
+        auth.id
+      );
+      
+      if (result.success) {
+        toast.success("Permission request submitted successfully");
+        setRequestDialogOpen(false);
+      } else {
+        toast.error(result.error || "Failed to submit request");
+      }
+    } catch (error) {
+      console.error("Error submitting permission request:", error);
+      toast.error("Failed to submit permission request");
     }
   };
 
@@ -201,10 +395,12 @@ export default function ProcessManagementPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Process Management</CardTitle>
           <div className="flex items-center space-x-2">
-            {!hasActiveProcess && (
-              <Button onClick={startProcess}>
+            {!hasPendingOrProcessing && (
+              <Button onClick={handleStartProcessClick}>
                 <Play className="mr-2 h-4 w-4" />
-                Create Process
+                {auth?.role === Roles.Admin || hasPermission(permissionsMap, "new", "create") 
+                  ? "Create Process" 
+                  : "Request to Create Process"}
               </Button>
             )}
             <Select
@@ -235,6 +431,7 @@ export default function ProcessManagementPage() {
                   <TableHead>User</TableHead>
                   <TableHead>Process ID</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Date Range</TableHead>
                   <TableHead>Progress</TableHead>
                   <TableHead>Started At</TableHead>
                   <TableHead>Last Updated</TableHead>
@@ -244,13 +441,13 @@ export default function ProcessManagementPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                       Loading processes...
                     </TableCell>
                   </TableRow>
                 ) : processes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                       No processes found
                     </TableCell>
                   </TableRow>
@@ -286,6 +483,17 @@ export default function ProcessManagementPage() {
                         </span>
                       </TableCell>
                       <TableCell>
+                        {process.from_date && process.to_date ? (
+                          <div className="text-sm">
+                            <div>{new Date(process.from_date).toLocaleDateString()}</div>
+                            <div className="text-muted-foreground">to</div>
+                            <div>{new Date(process.to_date).toLocaleDateString()}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Not specified</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="w-full">
                           <Progress value={process.progress} className="h-2" />
                           <div className="text-xs text-right mt-1">{process.progress}%</div>
@@ -306,7 +514,7 @@ export default function ProcessManagementPage() {
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
-                            {process.status ==  ProcessStatus.PROCESSING && (
+                            {process.status === ProcessStatus.PROCESSING && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setProcessToStop(process);
@@ -381,6 +589,95 @@ export default function ProcessManagementPage() {
         </CardContent>
       </Card>
 
+      {/* Start Process Dialog */}
+      <Dialog open={startProcessDialogOpen} onOpenChange={setStartProcessDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Process</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="from_date">From Date</Label>
+              <div className="relative">
+                <Input
+                  id="from_date"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  min="2020-01-01"
+                  max={toDate || undefined}
+                />
+                <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              </div>
+              {dateErrors.fromDate && (
+                <p className="text-sm text-red-500">{dateErrors.fromDate}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="to_date">To Date</Label>
+              <div className="relative">
+                <Input
+                  id="to_date"
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  min={fromDate || "2020-01-01"}
+                />
+                <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              </div>
+              {dateErrors.toDate && (
+                <p className="text-sm text-red-500">{dateErrors.toDate}</p>
+              )}
+            </div>
+            <div className="text-sm text-muted-foreground mt-2">
+              <p>Note: Date range cannot exceed 3 months and must be after 2020.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStartProcessDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={startProcess}>Start Process</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permission Request Dialog */}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Request Permission to Create Process</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="request_message">Reason for Request</Label>
+              <Textarea
+                id="request_message"
+                placeholder="Explain why you need to create a process..."
+                value={requestMessage}
+                onChange={(e) => setRequestMessage(e.target.value)}
+                rows={4}
+              />
+              {requestMessage.length < 10 && requestMessage.length > 0 && (
+                <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submitPermissionRequest}
+              disabled={!requestMessage || requestMessage.length < 10}
+            >
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stop Process Dialog */}
       <ConfirmationDialog
         isOpen={stopDialogOpen}
         onClose={() => setStopDialogOpen(false)}
@@ -390,6 +687,7 @@ export default function ProcessManagementPage() {
         confirmText="Terminate"
       />
 
+      {/* View Process Dialog */}
       <ConfirmationDialog
         isOpen={viewDialogOpen}
         onClose={() => setViewDialogOpen(false)}
@@ -417,6 +715,14 @@ export default function ProcessManagementPage() {
             </div>
             
             <p className="font-medium">Process ID: {selectedProcess.id}</p>
+            
+            {selectedProcess.from_date && selectedProcess.to_date && (
+              <div className="mt-2">
+                <p className="text-sm font-medium mb-1">Date Range:</p>
+                <p className="text-sm">From: {new Date(selectedProcess.from_date).toLocaleDateString()}</p>
+                <p className="text-sm">To: {new Date(selectedProcess.to_date).toLocaleDateString()}</p>
+              </div>
+            )}
             
             <div className="mt-2">
               <p className="text-sm font-medium mb-1">Progress:</p>
