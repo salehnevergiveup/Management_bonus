@@ -5,7 +5,7 @@ import {GenerateToken,Signature } from "@/lib/verifyexternalrequest"
 import { prisma } from '@/lib/prisma';
 
 
-export async function DELETE(request: Request, {params}: {params: {id: string}}) {
+export async function DELETE(request: Request, {params}: { params: Promise<{ id: string }> }) {
   try {
     const auth = await SessionValidation();
     
@@ -17,7 +17,7 @@ export async function DELETE(request: Request, {params}: {params: {id: string}})
     }
     
     const authId = auth.id;
-    const processId = params.id;
+    const {id: processId} = await params;
     
     const { token, timeStamp } = await GenerateToken(authId, processId);
     

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { SessionValidation } from '@lib/sessionvalidation';
 import {prisma} from "@/lib/prisma";
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }:{ params: Promise<{ id: string }> }) {
   
   const auth = await SessionValidation(); 
   
@@ -19,9 +19,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         { status: 400 }
       );
     }
-    
+    const  {id} = await params;
     const player = await prisma.player.findUnique({
-      where: { id: params.id }
+      where: { id: id}
     });
     
     if (!player) {
@@ -44,8 +44,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }
     }
     
+    const { id: id1 } = await params;
+    
     const updatedPlayer = await prisma.player.update({
-      where: { id: params.id },
+      where: { id: id1 },
       data: {
         ...(body.account_username && { account_username: body.account_username }),
         ...(body.transfer_account_id && { transfer_account_id: body.transfer_account_id })
@@ -67,15 +69,15 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await SessionValidation(); 
   
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  
+  const {id} = await params; 
   try {
-    const player = await prisma.player.findUnique({ where: { id: params.id } }); 
+    const player = await prisma.player.findUnique({ where: { id: id} }); 
     if (!player) {
       return NextResponse.json(
         { error: "Player not found" },
@@ -83,7 +85,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       );
     }
     
-    await prisma.player.delete({ where: { id: params.id } }); 
+    await prisma.player.delete({ where: { id: id} }); 
     
     return NextResponse.json(
       {

@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowLeft, Upload } from "lucide-react"
 import { Badge } from "@/components/badge"
 import { AppColor,UserStatus } from "@/constants/enums"
-import type { User } from "@types/user.types";
+import type { User } from "@/types/user.types";
 
 
 interface Role {

@@ -5,7 +5,7 @@ import {prisma} from "@/lib/prisma";
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await SessionValidation();
@@ -16,7 +16,7 @@ export async function PUT(
       );
     }
 
-    const requestId = params.id;
+    const {id: requestId} = await params;
     if (!requestId) {
       return NextResponse.json(
         { error: "Request ID is required" },
@@ -85,7 +85,7 @@ export async function PUT(
                 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await SessionValidation();
@@ -96,7 +96,7 @@ export async function DELETE(
       );
     }
 
-    const requestId = params.id;
+    const {id: requestId} = await params;
     if (!requestId) {
       return NextResponse.json(
         { error: "Request ID is required" },

@@ -17,27 +17,25 @@ export async function GET(request: Request) {
     );
   }
 
-  const query  = {
-                  where: {
-                    process: {
-                      status: {
-                        in: [ProcessStatus.SEM_COMPLETED, ProcessStatus.PENDING]
-                      }
-                    
-                    }
-                  },
-                  include: {
-                    process: true,
-                    player: true
-                  }
-                }
-  if(auth.role  !== Roles.Admin) {  
-    if (auth.role !== Roles.Admin) {
-      query.where.process = {
-        ...query.where.process,
-        user_id: auth.id  
+  const query = {
+    where: {
+      process: {
+        status: {
+          in: [ProcessStatus.SEM_COMPLETED, ProcessStatus.PENDING]
+        }
       }
+    },
+    include: {
+      process: true,
+      player: true
     }
+  };
+  
+  if (auth.role !== Roles.Admin) {
+    query.where.process = {
+      ...query.where.process,  
+      user_id: auth.id
+    } as any;
   }
   const total = await prisma.match.count();
 

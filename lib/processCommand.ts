@@ -1,5 +1,5 @@
 import { MatchStatus, ProcessStatus,NotificationType,Roles} from "@constants/enums";  
-import { CollectedUsers, IncomingUser } from "@types/collected-users.types";  
+import { CollectedUsers, IncomingUser } from "@/types/collected-users.types";  
 import { eventEmitter } from "@/lib/eventemitter";
 import { prisma } from '@/lib/prisma';
 

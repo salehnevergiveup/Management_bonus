@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link"
 import { MoreHorizontal, Search, Eye, Pencil, Trash2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import type { User } from "@types/user.types";
+import type { User } from "@/types/user.types";
 // Define the User type
 
 

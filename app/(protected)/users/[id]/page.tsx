@@ -6,7 +6,7 @@ import { UserProfile } from "../../../../components/user-profile";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { useUser } from "@/contexts/usercontext";
 import { UserStatus } from "@/constants/enums";
-import type { User } from "@types/user.types";
+import type { User } from "@/types/user.types";
 
 
 

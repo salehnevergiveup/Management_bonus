@@ -5,7 +5,7 @@ import {GenerateToken,Signature } from "@/lib/verifyexternalrequest"
 import { ProcessStatus } from "@constants/enums";
 import { prisma } from '@/lib/prisma';
 
-export async function POST(request: Request, {params} : {params: {id: string}}){ 
+export async function POST(request: Request, {params} : { params: Promise<{ id: string }> }){ 
 
  try {  
      const auth  =  await SessionValidation(); 
@@ -18,7 +18,7 @@ export async function POST(request: Request, {params} : {params: {id: string}}){
     }
     
     //set the data  
-    const processId = params.id;  
+    const {id:processId} = await params;  
     const authId = auth.id;  
     
     if(!processId) {  

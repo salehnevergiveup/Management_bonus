@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import ProcessCommand from "@lib/processCommand";
 
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     
     const auth = await SessionValidation();
@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       );
     }
 
-    const id = params.id;
+    const { id } = await params;
     
 
     if (!id) {

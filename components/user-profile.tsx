@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Badge } from "@/components/badge";
 import {AppColor,UserStatus,Roles} from "@/constants/enums";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { User } from "@types/user.types";
+import type { User } from "@/types/user.types";
 
 interface UserProfileProps {
   user: User;
