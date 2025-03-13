@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowLeft, Upload, Save } from "lucide-react"
 import { Badge } from "@/components/badge"
-import { AppColor } from "@/constants/colors"
-import { UserStatus } from "@/constants/userStatus"
+import { AppColor, UserStatus } from "@/constants/enums"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface Role {

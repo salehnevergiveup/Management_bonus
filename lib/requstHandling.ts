@@ -1,27 +1,5 @@
-/**
- * Permission request data interface
- */
-interface RequestData {
-    id: string;
-    model_name: string;
-    model_id: string;
-    action: string;
-    status: string;
-    message: string;
-    sender_id: string;
-    marked_admin_id: string | null;
-    created_at: string;
-    updated_at: string;
-  }
-  
-  /**
-   * Result of permission operations
-   */
-  interface OperationResult {
-    success: boolean;
-    data?: any;
-    error?: string;
-  }
+import {RequestData} from   "@/types/request-data.type" 
+import { RequestOperationResult } from "@/types/request-operation-result.type";
   
   export const fetchRequests = async (
     model: string, 
@@ -70,7 +48,7 @@ export const hasPermission = (
     action: string,
     message: string,
     authId: string
-  ): Promise<OperationResult> => {
+  ): Promise<RequestOperationResult> => {
     try {
       const response = await fetch(`/api/requests`, {
         method: 'POST',

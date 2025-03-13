@@ -1,10 +1,7 @@
-// app/api/invitations/accept/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { UserStatus } from '@/constants/userStatus';
+import {prisma} from "@/lib/prisma";
+import { UserStatus } from '@/constants/enums';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -17,7 +14,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find invitation
     const invitation = await prisma.userInvitation.findUnique({
       where: { token },
       include: { user: true }
@@ -30,7 +26,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if invitation has expired
     if (invitation.expires_at < new Date()) {
       return NextResponse.json(
         { error: "Invitation has expired" }, 
@@ -38,7 +33,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if already accepted
     if (invitation.accepted_at) {
       return NextResponse.json(
         { error: "Invitation has already been accepted" }, 
@@ -46,7 +40,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if username is already taken
     const existingUser = await prisma.user.findUnique({
       where: { username }
     });
@@ -58,10 +51,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Update user information
     await prisma.user.update({
       where: { id: invitation.user_id },
       data: {
@@ -71,7 +62,6 @@ export async function POST(request: Request) {
       }
     });
 
-    // Mark invitation as accepted
     await prisma.userInvitation.update({
       where: { id: invitation.id },
       data: {

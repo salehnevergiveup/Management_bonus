@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/provider';
-import { ProcessStatus } from "@/constants/processStatus"
-
+import { ProcessStatus } from "@/constants/enums"
+import {prisma} from "@/lib/prisma";
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
+import { SessionValidation } from '@lib/sessionvalidation';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await SessionValidation();
+      
+      if (!auth) {
+        return NextResponse.json(
+          {}, 
+          {status: 401}
+        );
+      }
     
-    if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized: User must be logged in" },
-        { status: 401 }
-      );
-    }
-    
-    const userId = session.user.id;
+    const userId = auth.id;
     
     const { identifier, password, verificationMethod } = await request.json();
     

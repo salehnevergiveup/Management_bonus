@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { SessionValidation } from '@lib/sessionvalidation';
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import {prisma} from "@/lib/prisma";
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  
   const auth = await SessionValidation(); 
   
   if (!auth) {

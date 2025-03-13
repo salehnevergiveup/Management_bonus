@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';import { toast } from 'react-toastify';
-import { NotificationType } from "@constants/notifications";
+import { NotificationType } from "@constants/enums";
 
 const LiveNotification = ({ data }: {data: any}) => {
   useEffect(() => {

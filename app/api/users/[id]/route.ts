@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 
-export const runtime = "nodejs";
-
-const prisma = new PrismaClient();
 
 export async function GET(
   request: Request, 
@@ -48,7 +45,6 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       }
     }
 
-    // Prepare update data
     const updateData: any = {
       name: data.name,
       username: data.username,
@@ -60,12 +56,6 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     if (data.role_id) updateData.role_id = data.role_id;
     if (data.profile_img !== undefined) updateData.profile_img = data.profile_img || null;
     if (data.password && data.password.trim() !== '') updateData.password = data.password;
-
-    console.log("Updating user with data:", {
-      id,
-      ...updateData,
-      password: updateData.password ? "[REDACTED]" : undefined
-    });
 
     const updatedUser = await prisma.user.update({
       where: { id },

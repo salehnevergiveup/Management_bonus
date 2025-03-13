@@ -1,29 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/provider';
 import crypto from 'crypto';
-import { ProcessStatus } from "@/constants/processStatus"
-
-const prisma = new PrismaClient();
+import { ProcessStatus } from "@/constants/enums"
+import {prisma} from "@/lib/prisma";
+import { SessionValidation } from '@lib/sessionvalidation';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify user is authenticated
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-
+    const auth = await SessionValidation();
+      
+    if (!auth) {
       return NextResponse.json(
-        { error: "Unauthorized: User must be logged in" },
-        { status: 401 }
+        {}, 
+        {status: 401}
       );
     }
+
+    const userId = auth.id;
     
-    // Get user ID from session
-    const userId = session.user.id;
-    
-    // Parse request body
     const { code } = await request.json();
     
     if (!code) {
@@ -59,7 +52,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get the active token for this process
     const token = userProcess.tokens[0].token;
     
     // Prepare the payload for Application B

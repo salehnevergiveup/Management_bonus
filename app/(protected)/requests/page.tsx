@@ -14,15 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ConfirmationDialog } from "@/components/dialog";
 import { Badge } from "@/components/badge";
 import { Label } from "@/components/ui/label";
-import { AppColor } from "@/constants/colors";
+import { AppColor,RequestStatus } from "@/constants/enums";
 import toast from "react-hot-toast";
-
-// Enum for request status
-enum RequestStatus {
-  PENDING = "pending",
-  ACCEPTED = "accepted",
-  REJECTED = "rejected"
-}
+import {PaginationData} from  "@/types/pagination-data.type"
+import   {GetResponse} from "@/types/get-response.type" 
 
 interface User {
   id: string;
@@ -42,22 +37,6 @@ interface Request {
   updated_at: string;
   sender: User;
   admin: User | null;
-}
-
-interface PaginationData {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-}
-
-interface ApiResponse {
-  data: Request[];
-  success: boolean;
-  pagination: PaginationData;
-  message: string;
 }
 
 export default function RequestManagementPage() {
@@ -98,7 +77,7 @@ export default function RequestManagementPage() {
         throw new Error("Failed to fetch requests");
       }
 
-      const data: ApiResponse = await response.json();
+      const data: GetResponse = await response.json();
       setAllRequests(data.data);
     } catch (error) {
       console.error("Error fetching requests:", error);
@@ -236,7 +215,7 @@ export default function RequestManagementPage() {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case RequestStatus.ACCEPTED.toLowerCase():
+      case RequestStatus.ACCEPTED:
         return AppColor.SUCCESS;
       case RequestStatus.REJECTED.toLowerCase():
         return AppColor.ERROR;

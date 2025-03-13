@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-import { NotificationStatus, NotificationType } from "@/constants/notifications";
+import {prisma} from "@/lib/prisma";
+import { NotificationStatus, NotificationType } from "@/constants/enums";
 
-const prisma = new PrismaClient();
 
 export const SeedNotifications = async () => {
   console.log("Seeding notifications...");

@@ -1,13 +1,12 @@
-import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { SessionValidation } from '@lib/sessionvalidation';
-
-const prisma = new PrismaClient();
+import {prisma} from "@/lib/prisma"
 
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+
   const auth = await SessionValidation();
   
   if (!auth) {
@@ -36,12 +35,11 @@ export async function PUT(
       );
     }
     
-    // If updating username, check for uniqueness, but only if the username is different
     if (body.account_username && body.account_username !== existingAccount.account_username) {
       const duplicateUsername = await prisma.transferAccount.findFirst({
         where: { 
           account_username: body.account_username,
-          id: { not: id } // Important: exclude the current account from the check
+          id: { not: id } 
         }
       });
       
@@ -79,6 +77,7 @@ export async function PUT(
 
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+
   const auth = await SessionValidation();
   
   if (!auth) {
@@ -106,7 +105,6 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       );
     }
     
-    // Check if the account has associated players
     const playerCount = await prisma.player.count({
       where: { transfer_account_id: id }
     });

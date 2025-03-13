@@ -18,10 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
 import { Progress } from "@/components/ui/progress";
-import { ProcessStatus } from "@/constants/processStatus";
-import { AppColor } from "@/constants/colors";
+import { ProcessStatus,AppColor, Roles } from "@/constants/enums";
 import { hasPermission, createRequest, fetchRequests } from "@/lib/requstHandling";
-import { Roles } from "@/constants/roles";
+import {PaginationData} from  "@/types/pagination-data.type"
+import {RequestData} from "@/types/request-data.type" 
 
 interface User {
   id: string;
@@ -44,35 +44,12 @@ interface Process {
   from_date?: string;
   to_date?: string;
 }
-
-interface PaginationData {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-}
-
 interface ApiResponse {
   data: Process[];
   success: boolean;
   pagination: PaginationData;
   activeProcess: boolean;
   message: string;
-}
-
-interface RequestData {
-  id: string;
-  model_name: string;
-  model_id: string;
-  action: string;
-  status: string;
-  message: string;
-  sender_id: string;
-  marked_admin_id: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export default function ProcessManagementPage() {

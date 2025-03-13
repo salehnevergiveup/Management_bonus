@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { eventEmitter } from "@/lib/eventemitter";
-import { FormType, EventOptionType } from "@/constants/eventOptionType";
+import { FormType, EventOptionType } from "@/constants/enums";
 import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
-import { PrismaClient } from "@prisma/client";
-
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {

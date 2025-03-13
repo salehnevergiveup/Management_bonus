@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import {prisma} from "@/lib/prisma";
 
 const actions = ["view", "create", "delete", "edit"];
 const models = ["players", "users", "profiles", "bonus", "processes", "requests", "transfer-accounts", "notifications"];

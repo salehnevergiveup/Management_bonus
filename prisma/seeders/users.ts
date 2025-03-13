@@ -1,9 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import {prisma} from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { UserStatus } from "@/constants/userStatus";
-import { Roles } from "@/constants/roles";
-
-const prisma = new PrismaClient();
+import { UserStatus, Roles } from "@/constants/enums";
 
 export const SeedAdminUser = async () => {
   console.log("Seeding admin user...");

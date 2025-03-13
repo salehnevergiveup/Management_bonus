@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Check, Info, AlertTriangle, Bell, Eye, Trash2 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/dialog";
-import { NotificationStatus, NotificationType } from "@/constants/notifications";
+import { NotificationStatus, NotificationType } from "@/constants/enums";
 import { Notification } from "@/types/notification";
 import toast from 'react-hot-toast';
 

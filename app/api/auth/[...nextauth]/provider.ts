@@ -1,24 +1,11 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import AuthUser from "./authUser";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { JWT } from "next-auth/jwt";
-import { UserStatus } from "@/constants/userStatus";
+import { UserStatus } from "@/constants/enums";
+import {CustomJWT} from  "@/types/custom-jwt.type"
+import {prisma} from "@/lib/prisma"
 
-
-const prisma = new PrismaClient();
-
-interface CustomJWT extends JWT {
-  id?: string;
-  name?: string;
-  email?: string;
-  picture?: string;
-  status?: string;
-  username?: string;
-  role?: string;
-  permissions?: string[];
-}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -101,7 +88,7 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60, 
   },
 
   secret: process.env.NEXTAUTH_SECRET,

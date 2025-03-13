@@ -10,9 +10,8 @@ import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/usercontext";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/badge";
-import { AppColor } from "@/constants/colors";
-import { UserStatus } from "@/constants/userStatus";
-import { Roles } from "@/constants/roles";
+import { AppColor,UserStatus, Roles } from "@/constants/enums";
+
 import {
   Table,
   TableBody,
@@ -37,6 +36,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ConfirmationDialog } from "@/components/dialog";
 import type { User } from "@/types/user";
+import { GetResponse } from "@/types/get-response.type";
 
 export default function UsersPage() {
   const { auth, isLoading } = useUser();
@@ -66,7 +66,9 @@ export default function UsersPage() {
           if (!res.ok) throw new Error("Failed to fetch users");
           return res.json();
         })
-        .then((data: User[]) => setUsers(data))
+        .then((data: GetResponse) => {
+          const result : GetResponse = data;   
+          setUsers(result.data) })
         .catch((err) => console.error("Failed to fetch users:", err));
       
     }

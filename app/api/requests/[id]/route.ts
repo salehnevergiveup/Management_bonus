@@ -1,12 +1,7 @@
-import { PrismaClient } from "@prisma/client";
-import { eventEmitter } from "@/lib/eventemitter";
 import { SessionValidation } from "@lib/sessionvalidation";
 import { NextResponse } from "next/server";
-import { Roles } from "@constants/roles";
-import { RequestStatus } from "@constants/requestStatus";
-import { NotificationType } from "@constants/notifications";
-
-const prisma = new PrismaClient();
+import { Roles,NotificationType ,RequestStatus } from "@constants/enums";
+import {prisma} from "@/lib/prisma";
 
 export async function PUT(
   request: Request,
@@ -29,7 +24,6 @@ export async function PUT(
       );
     }
 
-    // Check if the request exists
     const existingRequest = await prisma.request.findUnique({
       where: { id: requestId }
     });
@@ -41,7 +35,6 @@ export async function PUT(
       );
     }
 
-    // Only admins can update request status
     if (auth.role !== Roles.Admin) {
       return NextResponse.json(
         { error: "Only administrators can update request status" },
@@ -49,10 +42,8 @@ export async function PUT(
       );
     }
 
-    // Parse the request body
     const body = await request.json();
     
-    // Update the request
     const updatedRequest = await prisma.request.update({
       where: { id: requestId },
       data: {
@@ -65,13 +56,12 @@ export async function PUT(
       }
     });
 
-    // Create notification for the request owner
     await prisma.notification.create({
       data: {
         user_id: updatedRequest.sender_id,
         message: `Your request has been ${body.status}`,
-        type: body.status === 'accepted' ? NotificationType.SUCCESS : 
-              body.status === 'rejected' ? NotificationType.ERROR : 
+        type: body.status === RequestStatus.ACCEPTED ? NotificationType.SUCCESS : 
+              body.status === RequestStatus.REJECTED ? NotificationType.ERROR : 
               NotificationType.INFO
       }
     });

@@ -1,0 +1,8 @@
+import { PaginationData } from "./pagination-data.type";
+
+export interface GetResponse {
+  data: any[];
+  success: boolean;
+  pagination: PaginationData;
+  message: string;
+}

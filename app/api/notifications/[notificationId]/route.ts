@@ -1,23 +1,24 @@
-// app/api/notifications/[notificationId]/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from '@prisma/client';
-import { authOptions } from "@/app/api/auth/[...nextauth]/provider";
-import { getServerSession } from "next-auth";
-import { Roles } from "@/constants/roles";
-
-const prisma = new PrismaClient();
+import { Roles } from "@/constants/enums";
+import {prisma} from "@/lib/prisma";
+import { SessionValidation } from "@lib/sessionvalidation";
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ notificationId: string }> }
 ) {
+
   const { notificationId } = await params;
 
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await SessionValidation();
   
+  if (!auth) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   const { status } = await request.json(); 
   
   const notification = await prisma.notification.findUnique({
@@ -27,11 +28,10 @@ export async function PATCH(
   if (!notification) {
     return NextResponse.json({ error: "Notification not found" }, { status: 404 });
   }
-  if (notification.user_id !== session?.user?.id) {
+  if (notification.user_id !== auth.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Update the notification's status
   const updatedNotification = await prisma.notification.update({
     where: { id: notificationId },
     data: { status },
@@ -46,13 +46,17 @@ export async function DELETE(
 ) {
   const { notificationId } = await params;
 
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await SessionValidation();
   
+  if (!auth) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
-    // Find the notification first to check permissions
+
     const notification = await prisma.notification.findUnique({
       where: { id: notificationId },
     });
@@ -61,15 +65,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Notification not found" }, { status: 404 });
     }
     
-    // Check permissions: only allow users to delete their own notifications or admins to delete any
-    const isAdmin = session.user?.role === Roles.Admin;
-    const isOwner = notification.user_id === session.user?.id;
+    const isAdmin = auth.role === Roles.Admin;
+    const isOwner = notification.user_id === auth.id;
     
     if (!isAdmin && !isOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     
-    // Delete the notification
     await prisma.notification.delete({
       where: { id: notificationId },
     });

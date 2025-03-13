@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import {prisma} from "@/lib/prisma";
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 const PROCESS_STATUSES = ['pending', 'processing', 'completed', 'sem-completed', 'failed'];
 

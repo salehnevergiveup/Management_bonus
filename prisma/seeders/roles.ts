@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-import {Roles}  from  "@/constants/roles"
+import {Roles}  from  "@/constants/enums"
+import {prisma} from "@/lib/prisma";
 
-const prisma = new PrismaClient();
 
 export const SeedRoles = async () => {
   console.log("Seeding roles...");

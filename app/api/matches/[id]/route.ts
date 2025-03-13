@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import { SessionValidation } from "@lib/sessionvalidation";
 import { NextResponse } from "next/server";
 import ProcessCommand from "@lib/processCommand";
 
-const prisma = new PrismaClient();
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {

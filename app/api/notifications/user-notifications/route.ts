@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from '@prisma/client';
 import { SessionValidation } from "@lib/sessionvalidation";
-
-
-const prisma = new PrismaClient(); 
+import {prisma} from "@/lib/prisma";
 
 export async function GET() {
   const auth = await SessionValidation();

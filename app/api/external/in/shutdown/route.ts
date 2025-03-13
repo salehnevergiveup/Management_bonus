@@ -1,10 +1,8 @@
-import { PrismaClient } from "@prisma/client";
 import { ProcessCommand } from "@/lib/processCommand";
 import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
 import { NextResponse } from "next/server";
-import { ProcessStatus } from "@constants/processStatus";
-
-const prisma = new PrismaClient();
+import { ProcessStatus } from "@constants/enums";
+import {prisma} from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {

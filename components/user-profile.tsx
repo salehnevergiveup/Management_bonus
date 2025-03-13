@@ -7,9 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Pencil, Loader2, Send } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/badge";
-import { AppColor } from "@/constants/colors";
-import { UserStatus } from "@/constants/userStatus";
-import { Roles } from "@/constants/roles";
+import {AppColor,UserStatus,Roles} from "@/constants/enums";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { User } from "@/types/user";
 

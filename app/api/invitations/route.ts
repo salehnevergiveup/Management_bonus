@@ -1,18 +1,14 @@
-// app/api/invitations/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { UserStatus } from '@/constants/userStatus';
+import {prisma} from "@/lib/prisma";
+import { UserStatus } from '@/constants/enums';
 import crypto from 'crypto';
 import { sendInvitationEmail } from '@/lib/email';
 
-const prisma = new PrismaClient();
-
-// Create or resend invitation API endpoint
 export async function POST(request: Request) {
   try {
+    
     const { email, role_id, resend = false } = await request.json();
     
-    // Validate input
     if (!email || !role_id) {
       return NextResponse.json(
         { error: "Email and role are required" }, 
@@ -20,7 +16,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find existing user by email
     const existingUser = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -31,7 +26,6 @@ export async function POST(request: Request) {
       }
     });
 
-    // Generate a new token and expiration date
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24); // Token expires in 24 hours
@@ -40,7 +34,6 @@ export async function POST(request: Request) {
     let invitation;
 
     if (existingUser) {
-      // If we're not explicitly resending and the user is already active, return an error
       if (!resend && existingUser.status === UserStatus.ACTIVE) {
         return NextResponse.json(
           { error: "A user with this email already exists and is active" }, 
@@ -48,7 +41,6 @@ export async function POST(request: Request) {
         );
       }
 
-      // Create a new invitation for the existing user
       invitation = await prisma.userInvitation.create({
         data: {
           token,
@@ -59,7 +51,6 @@ export async function POST(request: Request) {
 
       user = existingUser;
     } else {
-      // Check if role exists
       const roleExists = await prisma.role.findUnique({
         where: { id: role_id }
       });
@@ -71,10 +62,8 @@ export async function POST(request: Request) {
         );
       }
 
-      // Create user with temporary username and INACTIVE status
       const tempUsername = `user_${crypto.randomBytes(4).toString('hex')}`;
       
-      // Create new user in the database with inactive status
       user = await prisma.user.create({
         data: {
           email,
@@ -86,7 +75,6 @@ export async function POST(request: Request) {
         }
       });
 
-      // Create invitation for the new user
       invitation = await prisma.userInvitation.create({
         data: {
           token,
@@ -96,20 +84,16 @@ export async function POST(request: Request) {
       });
     }
 
-    // Generate invitation link
     const invitationLink = `/accept-invitation?token=${token}`;
 
-    // Send email to the user
     try {
       await sendInvitationEmail(email, invitationLink);
     } catch (emailError) {
       console.error("Failed to send invitation email:", emailError);
-      // Continue anyway since the invitation was created
     }
 
     return NextResponse.json({
       message: resend ? "Invitation resent successfully" : "Invitation sent successfully",
-      // In development, include the link for testing
       ...(process.env.NODE_ENV !== 'production' && { invitationLink }),
       userId: user.id
     });

@@ -1,37 +1,27 @@
-import {PrismaClient} from  "@prisma/client";  
-import { NextResponse } from "next/server";
-import { authOptions } from "@/app/api/auth/[...nextauth]/provider";
-import { getServerSession } from "next-auth";
-import  {NotificationStatus} from "@/constants/notifications"
-
-const prisma = new PrismaClient();  
+import {NextResponse } from "next/server";
+import  {NotificationStatus} from "@/constants/enums"
+import {SessionValidation} from "@lib/sessionvalidation";
+import {prisma} from "@/lib/prisma";
 
 export async function GET(request:  Request) {  
-   const session  = await getServerSession(authOptions); 
 
-   if(!session) {  
+  const auth = await SessionValidation();
+  
+  if (!auth) {
     return NextResponse.json(
-        {error: "Unauthorized"},  
-        {status: 401}
-    );  
-   }
-
-   const user  = session.user;  
-   if(!user) {  
-    return  NextResponse.json(
-        {error: "Unauthorized"},
-        {status:  401}
-    )
-   }
+    { success: false, message: "Unauthorized" },
+      { status: 401 }
+    );
+  }
    
-   const notificationCount = await prisma.notification.count({
+  const notificationCount = await prisma.notification.count({
     where: {
       status: NotificationStatus.UNREAD,
-      user_id: user.id  
+      user_id: auth.id  
     },
   });
 
-   return NextResponse.json({
+  return NextResponse.json({
       "count": notificationCount
    });
 }

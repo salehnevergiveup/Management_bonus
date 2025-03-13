@@ -15,8 +15,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ConfirmationDialog } from "@/components/dialog"
 import toast from 'react-hot-toast';
 import {Notification} from  "@/types/notification"
-import  {AppColor} from  "@/constants/colors"
-import  {NotificationType, NotificationStatus} from  "@/constants/notifications"
+import  {AppColor,NotificationType, NotificationStatus} from  "@/constants/enums"
+import {PaginationData} from  "@/types/pagination-data.type"
+import   {GetResponse} from "@/types/get-response.type" 
 
 interface SelectedNotification {
   id: string
@@ -29,20 +30,6 @@ interface SelectedNotification {
   status: string,
   type: string,
   createdAt: Date,
-}
-
-interface PaginationData {
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-  hasNextPage: boolean
-  hasPreviousPage: boolean
-}
-
-interface ApiResponse {
-  data: Notification[]
-  pagination: PaginationData
 }
 
 export default function NotificationsPage() {
@@ -90,7 +77,7 @@ export default function NotificationsPage() {
         throw new Error("Failed to fetch notifications")
       }
 
-      const result: ApiResponse = await response.json()
+      const result: GetResponse = await response.json()
       setNotifications(result.data)
       setPagination(result.pagination)
     } catch (error) {
@@ -102,13 +89,13 @@ export default function NotificationsPage() {
   }
 
   useEffect(() => {
-    // if (!loading && user) {
-    //   if (!user.canAccess("notifications")) {
-    //     router.push("/dashboard")
-      // } else {
+    if (!isLoading && auth) {
+      if (!auth.canAccess("notifications")) {
+        router.push("/dashboard")
+      } else {
         fetchNotifications()
-    //   }
-    // }
+      }
+    }
   }, [isLoading, auth, router, currentPage, typeFilter, statusFilter, pageSize])
 
   // Debounced search

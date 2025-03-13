@@ -1,12 +1,7 @@
-import { PrismaClient } from "@prisma/client"; 
-import { MatchStatus, ProcessStatus } from "@constants/processStatus";  
+import { MatchStatus, ProcessStatus,NotificationType,Roles} from "@constants/enums";  
 import { CollectedUsers, IncomingUser } from "@/types/collected-users";  
-import { NotificationType } from "@constants/notifications";
 import { eventEmitter } from "@/lib/eventemitter";
-import { Roles } from "@constants/roles";  
-import { IncomingMessage } from "http";
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 
 const filter = async (users: IncomingUser[]): Promise<CollectedUsers[]> => {

@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
-import { ProcessStatus } from '@/constants/processStatus';
+import { ProcessStatus } from '@/constants/enums';
 import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
 import { NextResponse } from "next/server";
-
-const prisma = new PrismaClient();
+import {prisma} from "@/lib/prisma";
 
 export async function PATCH(request: Request) {
   try {
@@ -23,14 +21,12 @@ export async function PATCH(request: Request) {
       isAuthenticated = true;
     } 
     
-    // Return error if not authenticated
     if (!isAuthenticated) {
       return NextResponse.json(
         { error: "Unauthorized: Authentication required" },
         { status: 401 }
       );
     }
-      //extract the token and the process id
       const {processId, token}  = externalVerification;  
 
       const body = await request.json();

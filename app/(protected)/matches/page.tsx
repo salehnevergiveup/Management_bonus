@@ -16,9 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/badge";
-import { AppColor } from "@/constants/colors";
-import { Roles } from "@/constants/roles";
+import { AppColor,Roles, ProcessStatus } from "@/constants/enums";
 import { hasPermission, createRequest, fetchRequests } from "@/lib/requstHandling";
+import {RequestData} from "@/types/request-data.type" 
 
 import {
   Tooltip,
@@ -28,14 +28,6 @@ import {
 } from "@/components/ui/tooltip";
 import toast from "react-hot-toast";
 
-// Enum for process status
-enum ProcessStatus {
-  PENDING = "pending",
-  PROCESSING = "processing",
-  COMPLETED = "completed",
-  SEM_COMPLETED = "sem-completed",
-  FAILED = "failed"
-}
 
 interface Player {
   id: string;
@@ -61,18 +53,7 @@ interface Match {
   process: Process;
 }
 
-interface RequestData {
-  id: string;
-  model_name: string;
-  model_id: string;
-  action: string;
-  status: string;
-  message: string;
-  sender_id: string;
-  marked_admin_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
+
 
 export default function MatchManagementPage() {
   const { auth, isLoading } = useUser();
@@ -103,7 +84,6 @@ export default function MatchManagementPage() {
       }
     }
     try {
-      // Fetch all matches at once for client-side pagination
       const response = await fetch("/api/matches?all=true");
 
       if (!response.ok) {

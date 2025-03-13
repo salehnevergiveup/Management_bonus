@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { ProcessStatus } from "@/constants/processStatus";
+import { ProcessStatus } from "@/constants/enums";
 import { SessionValidation } from "@/lib/sessionvalidation";
 import { GenerateToken, Signature } from "@/lib/verifyexternalrequest";
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {

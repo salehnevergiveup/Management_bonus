@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import {prisma} from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +13,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Find invitation
     const invitation = await prisma.userInvitation.findUnique({
       where: { token },
       include: { user: true }
@@ -28,7 +25,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Check if invitation has expired
     if (invitation.expires_at < new Date()) {
       return NextResponse.json(
         { error: "Invitation has expired" }, 
@@ -36,7 +32,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Check if already accepted
     if (invitation.accepted_at) {
       return NextResponse.json(
         { error: "Invitation has already been accepted" }, 

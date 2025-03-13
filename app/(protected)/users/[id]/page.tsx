@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { UserProfile } from "../../../../components/user-profile";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { useUser } from "@/contexts/usercontext";
-import { UserStatus } from "@/constants/userStatus";
+import { UserStatus } from "@/constants/enums";
 import type { User } from "@/types/user";
 
 
@@ -15,7 +15,6 @@ export default function ViewUserPage() {
   const params = useParams();
   const router = useRouter();
   const userId = params.id as string; 
-  // State to store the fetched user
   const [fetchedUser, setFetchedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { auth, isLoading } = useUser();
@@ -66,7 +65,6 @@ export default function ViewUserPage() {
       </div>
     );
   }
-  console.log(fetchedUser.status); 
   return (
     <div className="container mx-auto py-6">
       <Breadcrumb

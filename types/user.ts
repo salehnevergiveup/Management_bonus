@@ -1,8 +1,3 @@
-// src/types/user.ts
-import { UserStatus } from "@/constants/userStatus";
-import { Roles } from "@/constants/roles";
-
-
 interface Role {
   id: string
   name: string

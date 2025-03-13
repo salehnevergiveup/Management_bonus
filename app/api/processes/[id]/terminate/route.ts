@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { ProcessStatus } from "@/constants/processStatus";
 import {ProcessCommand} from  "@/lib/processCommand"
 import { SessionValidation } from "@lib/sessionvalidation";
 import {GenerateToken,Signature } from "@/lib/verifyexternalrequest"
+import { prisma } from '@/lib/prisma';
 
-
-const prisma = new PrismaClient();
 
 export async function DELETE(request: Request, {params}: {params: {id: string}}) {
   try {

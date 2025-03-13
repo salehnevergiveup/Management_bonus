@@ -17,12 +17,14 @@ import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import { fetchRequests, hasPermission, createRequest } from "@/lib/requstHandling";
+import {PaginationData} from  "@/types/pagination-data.type"
+import {GetResponse} from "@/types/get-response.type" 
+import {RequestData} from "@/types/request-data.type" 
 
 interface TransferAccount {
   id: string;
   account_username: string;
 }
-
 interface Player {
   id: string;
   account_username: string;
@@ -30,35 +32,6 @@ interface Player {
   created_at: string;
   updated_at: string;
   transfer_account: TransferAccount;
-}
-
-interface PaginationData {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-}
-
-interface ApiResponse {
-  data: Player[];
-  success: boolean;
-  pagination: PaginationData;
-  message: string;
-}
-
-interface RequestData {
-  id: string;
-  model_name: string;
-  model_id: string;
-  action: string;
-  status: string;
-  message: string;
-  sender_id: string;
-  marked_admin_id: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export default function PlayerManagementPage() {
@@ -155,7 +128,7 @@ export default function PlayerManagementPage() {
         throw new Error("Failed to fetch players");
       }
 
-      const data: ApiResponse = await response.json();
+      const data: GetResponse = await response.json();
       setPlayers(data.data);
       setPagination(data.pagination);
     } catch (error) {

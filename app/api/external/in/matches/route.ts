@@ -1,11 +1,9 @@
-import { PrismaClient } from "@prisma/client";
 import { ProcessCommand } from "@/lib/processCommand";
 import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
 import { NextResponse } from "next/server";
-import { ProcessStatus } from "@constants/processStatus";
+import { ProcessStatus } from "@constants/enums";
 import {IncomingUser} from "@/types/collected-users"
-
-const prisma = new PrismaClient();
+import {prisma} from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
@@ -35,10 +33,8 @@ export async function POST(request: Request) {
       );
     }
     
-    // Parse request body
     const body = await request.json();
     
-    // Validate input
     if (!body.users || !Array.isArray(body.users) || body.users.length === 0) {
       return NextResponse.json(
         { error: "Invalid input: 'users' must be a non-empty array" },
@@ -59,7 +55,6 @@ export async function POST(request: Request) {
       data: { status: ProcessStatus.PENDING }
     });
     
-    // Start processing pipeline in the background (fire and forget)
     processUsers(authId, processId, body.users)
       .then(result => {
         if (!result.success) {
