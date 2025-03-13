@@ -2,7 +2,7 @@ import { ProcessCommand } from "@/lib/processCommand";
 import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
 import { NextResponse } from "next/server";
 import { ProcessStatus } from "@constants/enums";
-import {IncomingUser} from "@/types/collected-users"
+import {IncomingUser} from "@types/collected-users.types"
 import {prisma} from "@/lib/prisma";
 
 export async function POST(request: Request) {

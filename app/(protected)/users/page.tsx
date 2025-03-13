@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ConfirmationDialog } from "@/components/dialog";
-import type { User } from "@/types/user";
+import type { User } from "@types/user.types";
 import { GetResponse } from "@/types/get-response.type";
 
 export default function UsersPage() {

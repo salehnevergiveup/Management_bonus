@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ConfirmationDialog } from "@/components/dialog"
 import toast from 'react-hot-toast';
-import {Notification} from  "@/types/notification"
+import {Notification} from  "@types/notification.types"
 import  {AppColor,NotificationType, NotificationStatus} from  "@/constants/enums"
 import {PaginationData} from  "@/types/pagination-data.type"
 import   {GetResponse} from "@/types/get-response.type" 
