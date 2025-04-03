@@ -6,14 +6,14 @@ export enum AppColor {
 }
 
 export enum EventOptionType {
-    MFA = "mfa",
+    TFA = "tfa",
     OTP = "otp",
     EMAIL = "email",
     SMS = "sms",
 }
 
 export enum FormType {
-    credential = "credential",
+    verification_method = "verification_method",
     verification = "verification",
 }
   

@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const { code, thread_id } = await request.json();
-
-    if (!code) {
+    const { verificationMethod, thread_id } = await request.json();
+    
+    if (!verificationMethod) {
       return NextResponse.json(
-        { error: "Missing verification code" },
+        { error: "Missing required field: verificationMethod is required" },
         { status: 400 }
       );
     }
@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
     let userProcess = null;
     
     if (auth.role === Roles.Admin) {
-      // For admin: find the first active process in the system
       userProcess = await prisma.userProcess.findFirst({
         where: {
           status: ProcessStatus.PROCESSING
@@ -44,7 +43,6 @@ export async function POST(request: NextRequest) {
         }
       });
     } else {
-      // For regular user: find their own active process
       userProcess = await prisma.userProcess.findFirst({
         where: {
           user_id: auth.id,
@@ -75,19 +73,23 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    console.log("this  is the process id sent back: ", userProcess.id)
+    // Prepare headers
     const headers = await preparePythonBackendHeaders(
-      userProcess.user_id,
+      userProcess.user_id, // Use the process owner's user ID, not always the current user
       userProcess.id,
       role
     );
-    
+
+    // Prepare request data - only sending verification_method now
     const requestData = {
-      verification_code: code,  
+      verification_method: verificationMethod,  
       thread_id: thread_id
     };
     
     try {
-      const backendResponse = await fetch(`http://127.0.0.1:8000/api/submit-verification`, {
+      // Send request to Python backend with updated endpoint
+      const backendResponse = await fetch(`http://127.0.0.1:8000/api/submit-verification-method`, {
         method: 'POST',
         headers: {
           ...headers,
@@ -105,8 +107,8 @@ export async function POST(request: NextRequest) {
         }
         
         return NextResponse.json(
-          { 
-            error: "Failed to submit verification code to backend service",
+          {
+            error: "Failed to submit verification method to backend service",
             details: errorDetails
           },
           { status: backendResponse.status }
@@ -117,23 +119,23 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json({
         success: true,
-        message: "Verification code submitted successfully",
+        message: "Verification method submitted successfully",
         process_id: userProcess.id,
         details: responseData
       });
     } catch (error: any) {
-      console.error("Error submitting verification code:", error);
+      console.error("Error submitting verification method:", error);
       
       return NextResponse.json(
-        { 
-          error: "Failed to communicate with backend service", 
-          message: error.message 
+        {
+          error: "Failed to communicate with backend service",
+          message: error.message
         },
         { status: 503 }
       );
     }
   } catch (error: any) {
-    console.error("Error processing verification submission:", error);
+    console.error("Error processing verification method submission:", error);
     
     return NextResponse.json(
       { error: "Internal server error", message: error.message },

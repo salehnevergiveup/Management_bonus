@@ -1,38 +1,41 @@
 import { NextResponse } from "next/server";
 import { eventEmitter } from "@/lib/eventemitter";
 import { FormType, EventOptionType } from "@/constants/enums";
-import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
+import { verifyApi } from "@/lib/apikeysHandling";
 
 export async function POST(request: Request) {
   try {
 
     const apiKey = request.headers.get('X-API-Key'); 
     let isAuthenticated = false;
+    let userId = null;  
+    let processId = null;  
     
     if (apiKey) {
-      const externalVerification = await verifyExternalRequest(request.clone());
+      const externalVerification = await verifyApi(request.clone(), "automation");
       
       if (!externalVerification.valid) {
+        if(!externalVerification.expired)
         return NextResponse.json(
           { error: externalVerification.error },
           { status: 401 }
         );
       }
-      
+      userId = externalVerification.userId;  
+      processId= externalVerification.processId
       isAuthenticated = true;
     } 
-
+    
     if (!isAuthenticated) {
       return NextResponse.json(
         { error: "Unauthorized: Authentication required" },
         { status: 401 }
       );
     }
-      // Request is authenticated, proceed with business logic
       const body = await request.clone().json();
-      const { user_id, options, type } = body;
+      const {options, type,thread_id } = body;
       
-      if (!user_id || !options || !type) {
+      if (!userId || !options || !type) {
         return NextResponse.json(
           { error: "Missing required fields" },
           { status: 400 }
@@ -46,21 +49,22 @@ export async function POST(request: Request) {
         );
       }
       
-      // Process the request
       const validOptionTypes = Object.values(EventOptionType);
       const validOptions = options.filter(option => 
         typeof option === 'string' && 
         validOptionTypes.includes(option.toLowerCase() as EventOptionType)
       );
       
+      console.log("this is the process ID: ",  processId);  
       const optionsString = validOptions.join(',');
       const formData = {
         options: optionsString,
-        type: type
+        type: type,  
+        thread_id: thread_id,  
+        processId: processId 
       };
       
-      // Emit the event to notify connected clients
-      eventEmitter.emit(user_id, 'forms', formData);
+      eventEmitter.emit(userId, 'forms', formData);
       
       return NextResponse.json({ 
         success: true,

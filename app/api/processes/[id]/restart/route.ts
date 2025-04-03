@@ -1,7 +1,7 @@
 import {ProcessCommand} from  "@/lib/processCommand"
 import { SessionValidation } from "@lib/sessionvalidation";
 import { NextResponse } from "next/server";
-import {GenerateToken,Signature } from "@/lib/verifyexternalrequest"
+import {GenerateToken,Signature } from "@lib/apikeysHandling"
 import { ProcessStatus } from "@constants/enums";
 import { prisma } from '@/lib/prisma';
 

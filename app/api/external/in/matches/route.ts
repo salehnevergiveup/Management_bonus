@@ -1,5 +1,5 @@
 import { ProcessCommand } from "@/lib/processCommand";
-import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
+import { verifyApiKey } from "@/lib/apikeysHandling";
 import { NextResponse } from "next/server";
 import { ProcessStatus } from "@constants/enums";
 import {IncomingUser} from "@/types/collected-users.types"
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     
     if (apiKey) {
       
-      const externalVerification = await verifyExternalRequest(request.clone());
+      const externalVerification = await verifyApiKey(request.clone(), "automation");
       
       if (!externalVerification.valid) {
         return NextResponse.json(
@@ -23,8 +23,6 @@ export async function POST(request: Request) {
         );
       }
 
-      authId = externalVerification.userId;
-      processId = externalVerification.processId;
 
     } else {
       return NextResponse.json(
@@ -34,7 +32,10 @@ export async function POST(request: Request) {
     }
     
     const body = await request.json();
-    
+
+    authId = body.userId;
+    processId = body.processId;
+
     if (!body.users || !Array.isArray(body.users) || body.users.length === 0) {
       return NextResponse.json(
         { error: "Invalid input: 'users' must be a non-empty array" },
@@ -76,7 +77,6 @@ export async function POST(request: Request) {
         }).catch(e => console.error("Failed to update process status:", e));
       });
     
-    // Return immediate response
     return NextResponse.json({
       success: true,
       message: "User processing initiated",

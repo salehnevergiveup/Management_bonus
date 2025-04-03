@@ -1,13 +1,15 @@
 import { ProcessCommand } from "@/lib/processCommand";
-import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
+import { verifyApi } from "@/lib/apikeysHandling";
 import { NextResponse } from "next/server";
-import { ProcessStatus } from "@constants/enums";
-import {prisma} from "@/lib/prisma";
+import { ProcessStatus } from "@/constants/enums";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
     // Authenticate the external request
     const apiKey = request.headers.get('X-API-Key');
+    const userId = request.headers.get('X-User-ID');
+    const processId = request.headers.get('X-Process-ID');
     
     if (!apiKey) {
       return NextResponse.json(
@@ -16,8 +18,15 @@ export async function POST(request: Request) {
       );
     }
     
+    if (!userId || !processId) {
+      return NextResponse.json(
+        { error: "Bad Request: Missing required headers" },
+        { status: 400 }
+      );
+    }
+    
     // Verify the external request
-    const externalVerification = await verifyExternalRequest(request.clone());
+    const externalVerification = await verifyApi(request.clone(), "automation");
     
     if (!externalVerification.valid) {
       return NextResponse.json(
@@ -26,43 +35,44 @@ export async function POST(request: Request) {
       );
     }
     
-    // Extract authenticated user ID and process ID from verification
-    const authId = externalVerification.userId;
-    const processId = externalVerification.processId;
+    // Verify that the process exists and belongs to the user
+    const userProcess = await prisma.userProcess.findFirst({
+      where: {
+        id: processId,
+        user_id: userId
+      }
+    });
     
-    if(!authId || !processId) {  
+    if (!userProcess) {
       return NextResponse.json(
-          { error: "Invalid request" },
-          { status: 400 }
-        );
-    }
-
-    try {
-      await prisma.processToken.update({
-        where: { token: externalVerification.token },
-        data: { isComplete: true }
-      });
-    } catch (tokenError) {
-      console.error("Error completing token:", tokenError);
+        { error: "Not Found: Process not found or does not belong to user" },
+        { status: 404 }
+      );
     }
     
+    // Update process status to FAILED
     await prisma.userProcess.update({
       where: { id: processId },
-      data: { status: ProcessStatus.FAILED }
+      data: { 
+        status: ProcessStatus.FAILED,
+        end_time: new Date()
+      }
     });
     
     // Execute the terminate command
-    const result = await ProcessCommand["terminate"](authId, processId);
+    const result = await ProcessCommand["terminate"](userId, processId);
     
     return NextResponse.json({
       success: true,
       message: "Process terminated successfully",
-      processId,
-      deletedMatches: result
+      process_id: processId,
+      status: ProcessStatus.FAILED,
+      details: result
     });
     
   } catch (error) {
     console.error("Error processing termination request:", error);
+    
     return NextResponse.json(
       { 
         error: "Internal server error",

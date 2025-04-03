@@ -1,7 +1,7 @@
 import {prisma} from "@/lib/prisma";
-import crypto from 'crypto';
 
-const PROCESS_STATUSES = ['pending', 'processing', 'completed', 'sem-completed', 'failed'];
+
+const PROCESS_STATUSES = ['pending', 'completed', 'completed', 'failed', 'failed'];
 
 function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -37,7 +37,6 @@ export const SeedProcesses = async () => {
     
     const pendingProcess = await prisma.userProcess.create({
       data: {
-        id:  crypto.randomBytes(16).toString('hex'),
         user_id: user1.id,
         status: 'pending',
         progress: 0
@@ -48,7 +47,6 @@ export const SeedProcesses = async () => {
     
     const processingProcess = await prisma.userProcess.create({
       data: {
-        id:  crypto.randomBytes(16).toString('hex'),
         user_id: user2.id,
         status: 'processing',
         progress: getRandomInt(20, 80)
@@ -59,7 +57,6 @@ export const SeedProcesses = async () => {
     
     const completedProcess = await prisma.userProcess.create({
       data: {
-        id:  crypto.randomBytes(16).toString('hex'),
         user_id: user2.id,
         status: 'completed',
         progress: 100,
@@ -71,7 +68,6 @@ export const SeedProcesses = async () => {
     
     const failedProcess = await prisma.userProcess.create({
       data: {
-        id:  crypto.randomBytes(16).toString('hex'),
         user_id: user3.id,
         status: 'failed',
         progress: getRandomInt(10, 50),

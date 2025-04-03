@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { NotificationType } from "@/constants/enums";
 import { eventEmitter } from '@/lib/eventemitter';
-import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
+import { verifyApiKey } from "@/lib/apikeysHandling";
 import {prisma} from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     let isAuthenticated = false;
 
     if (apiKey) {
-      const externalVerification = await verifyExternalRequest(request.clone());
+      const externalVerification = await verifyApiKey(request.clone(), "automation");
         console.log(externalVerification);
       if (!externalVerification.valid) {
         return NextResponse.json(

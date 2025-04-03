@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { ProcessStatus } from "@/constants/enums";
 import { SessionValidation } from "@/lib/sessionvalidation";
-import { GenerateToken, Signature } from "@/lib/verifyexternalrequest";
 import { prisma } from '@/lib/prisma';
+import { preparePythonBackendHeaders } from '@/lib/apikeysHandling';
+
+let processId = ""; 
 
 export async function POST(request: Request) {
+  
   try {
     const auth = await SessionValidation();
     
@@ -19,6 +22,9 @@ export async function POST(request: Request) {
     const fromDate = body.from_date ? new Date(body.from_date) : null;
     const toDate = body.to_date ? new Date(body.to_date) : null;
     
+    console.log("this is from date: ", fromDate);  
+    console.log("this is to date: ", toDate);  
+
     if (!fromDate || !toDate) {
       return NextResponse.json(
         { error: "Both from_date and to_date are required" },
@@ -69,63 +75,56 @@ export async function POST(request: Request) {
       );
     }
 
-    const processId = crypto.randomUUID();
-    
-    const { token, timeStamp } = await GenerateToken(auth.id, processId);
-    
     const newProcess = await prisma.$transaction(async (tx) => {
       const newProcess = await tx.userProcess.create({
         data: {
-          id: processId,
           user_id: auth.id,
           status: ProcessStatus.PENDING,
           progress: 0,
         }
       });
-      
-      await tx.processToken.create({
-        data: {
-          token,
-          process_id: newProcess.id,
-          user_id: auth.id,
-          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          isComplete: false
-        }
-      });
-      
       return newProcess;
     });
 
-    const requestData = {
-      process_id: processId,
-      user_id: auth.id,
-      from_date: fromDate.toISOString(),
-      to_date: toDate.toISOString()
-    };
-    
-    const signature = Signature(requestData, token, timeStamp);
-
+    processId = newProcess.id; 
+    console.log(processId)
+    console.log("date starting: ",  fromDate.toISOString());  
+    console.log("date ending: ",  toDate.toISOString());
     try {
-      const externalResponse = await fetch(`http://127.0.0.1:8000/api/testing`, {
+      // I MESS UNDERSTAND THE REQUIREMENT AT THE START I WILL LATER CREATE MODULE FOR THIS ACCOUNTS FOR TESTING 
+      // I MAKE IT MANUAL FOR NOW 
+      const requestData = {
+        from_date: fromDate.toISOString(),
+        to_date: toDate.toISOString(),
+        accounts: [
+          {
+            username: "wglobal5sub1",//later fetch from the backend 
+            password: "abc123"
+          },
+          {
+            username: "wglobal6sub1",//later fetch from the backend 
+            password: "abc123"
+          }
+        ]
+      };
+      
+      const headers = await preparePythonBackendHeaders(
+        auth.id, 
+        processId,  
+        auth.role
+      );
+
+      console.log("Calling external service with prepared headers");
+      const externalResponse = await fetch(`http://127.0.0.1:8000/start-process`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.API_KEY || '',
-          'X-Token': token,
-          'X-Timestamp': timeStamp,
-          'X-Signature': signature
-        },
+        headers,
         body: JSON.stringify(requestData)
       });
 
       if (!externalResponse.ok) {
-        await prisma.userProcess.update({
-          where: { id: processId },
-          data: { 
-            status: ProcessStatus.FAILED,
-            end_time: new Date()
-          }
-        });
+        console.error("External service returned error:", externalResponse.status);
+        
+        await cleanupProcess(processId);
         
         let errorDetails;
         try {
@@ -145,6 +144,7 @@ export async function POST(request: Request) {
       }
 
       const responseData = await externalResponse.json();
+      console.log("External service response:", responseData);
       
       await prisma.userProcess.update({
         where: { id: processId },
@@ -159,29 +159,47 @@ export async function POST(request: Request) {
         details: responseData
       });
     } catch (error) {
-      console.error("Error communicating with external service:", error);
+      console.error("Error calling external service:", error);
       
-      await prisma.userProcess.update({
-        where: { id: processId },
-        data: { 
-          status: ProcessStatus.FAILED,
-          end_time: new Date()
-        }
-      });
+      await cleanupProcess(processId);
       
       return NextResponse.json(
         { 
           error: "Failed to connect to external service",
+          details: error,
           process_id: processId 
         },
-        { status: 503 } 
+        { status: 500 } 
       );
     }
   } catch (error) {
     console.error("Error creating process:", error);
+    
+    if (processId) {
+      await cleanupProcess(processId);
+    }
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error },
       { status: 500 }
     );
+  }
+}
+
+async function cleanupProcess(processId: string) {
+  try {
+    console.log(`Cleaning up process ${processId} due to failure`);
+    
+    const deletedProcess = await prisma.userProcess.delete({
+      where: {
+        id: processId
+      }
+    });
+    
+    console.log(`Cleaned up process ${processId}`);
+    return true;
+  } catch (cleanupError) {
+    console.error(`Failed to clean up process ${processId}:`, cleanupError);
+    return false;
   }
 }

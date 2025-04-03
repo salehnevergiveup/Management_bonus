@@ -7,6 +7,7 @@ import {SeedTransferAccounts} from "./seeders/transfer_accounts";
 import {SeedPlayers} from "./seeders/players";
 import {SeedMatches} from "./seeders/matches";
 import SeedRequests from "./seeders/request";
+import { AutomationApiKey } from "./seeders/api_key";
 
 
 const main = async () => {
@@ -15,6 +16,7 @@ const main = async () => {
   try {
     await SeedPermissions(); 
     await SeedRoles(); 
+    await AutomationApiKey();
     await SeedAdminUser(); 
     await SeedManagementUsers(); 
     await SeedNotifications(); 

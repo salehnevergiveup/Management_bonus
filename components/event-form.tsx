@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-interface CredentialPayload {
-  identifier: string
-  password: string
-  verificationMethod?: string
+interface VerificationMethodPayload {
+  verificationMethod: string
+  thread_id: string
 }
 
 interface EventFormProps {
@@ -20,9 +19,7 @@ interface EventFormProps {
   onClose: () => void
 }
 
-const CredentialForm = ({ data, onClose }: { data: any; onClose: () => void }) => {
-  const [identifier, setIdentifier] = useState("")
-  const [password, setPassword] = useState("")
+const VerificationMethodForm = ({ data, onClose }: { data: any; onClose: () => void }) => {
   const [verificationMethod, setVerificationMethod] = useState("")
 
   const parseOptions = (optionsData: any): string[] => {
@@ -40,79 +37,51 @@ const CredentialForm = ({ data, onClose }: { data: any; onClose: () => void }) =
   const options = parseOptions(data.options)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    console.log('handle submit testing');
     e.preventDefault()
-    const payload: CredentialPayload = { identifier, password }
-
-    if (options.length > 0) {
-      payload.verificationMethod = verificationMethod
-    }
+    const thread_id  = data.thread_id;  
+    const payload: VerificationMethodPayload = { verificationMethod, thread_id }
 
     try {
-      const res = await fetch("/api/external/out/submit-credential", {
-        
+      const res = await fetch("/api/external/out/submit-verification-method", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      console.log("triggered");
+      
       if (!res.ok) {
-        throw new Error("Failed to submit credentials")
+        throw new Error("Failed to submit verification method")
       }
       const result = await res.json()
-      console.log("Credentials submitted successfully:", result)
+      console.log("Verification method submitted successfully:", result)
       onClose()
     } catch (error) {
-      console.error("Error submitting credentials:", error)
+      console.error("Error submitting verification method:", error)
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="username">Username/Email</Label>
-        <Input
-          id="username"
-          type="text"
-          value={identifier}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setIdentifier(e.target.value)}
-          required
-        />
+        <Label htmlFor="verificationMethod">Verification Method</Label>
+        <Select value={verificationMethod} onValueChange={setVerificationMethod} required>
+          <SelectTrigger id="verificationMethod">
+            <SelectValue placeholder="Select a method" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option, index) => (
+              <SelectItem key={index} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-          required
-        />
-      </div>
-
-      {options.length > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="verificationMethod">Verification Method</Label>
-          <Select value={verificationMethod} onValueChange={setVerificationMethod}>
-            <SelectTrigger id="verificationMethod">
-              <SelectValue placeholder="Select a method" />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((option, index) => (
-                <SelectItem key={index} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
 
       <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit">Submit Credentials</Button>
+        <Button type="submit" disabled={!verificationMethod}>Submit</Button>
       </div>
     </form>
   )
@@ -123,11 +92,12 @@ const VerificationForm = ({ data, onClose }: { data: any; onClose: () => void })
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const thread_id = data.thread_id
     try {
       const res = await fetch("/api/external/out/submit-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, thread_id }),
       })
       if (!res.ok) {
         throw new Error("Failed to submit verification code")
@@ -165,8 +135,8 @@ const VerificationForm = ({ data, onClose }: { data: any; onClose: () => void })
 
 const EventForm = ({ data, isOpen, onClose }: EventFormProps) => {
   const getFormTitle = () => {
-    if (data.type === FormType.credential) {
-      return "Enter Credentials"
+    if (data.type === FormType.verification_method) {
+      return "Select Verification Method"
     } else if (data.type === FormType.verification) {
       return data.label || "Enter Verification Code"
     }
@@ -174,8 +144,8 @@ const EventForm = ({ data, isOpen, onClose }: EventFormProps) => {
   }
 
   const renderForm = () => {
-    if (data.type === FormType.credential) {
-      return <CredentialForm data={data} onClose={onClose} />
+    if (data.type === FormType.verification_method) {
+      return <VerificationMethodForm data={data} onClose={onClose} />
     } else if (data.type === FormType.verification) {
       return <VerificationForm data={data} onClose={onClose} />
     }

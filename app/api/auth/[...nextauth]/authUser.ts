@@ -8,7 +8,6 @@ email: string;
 username: string;
 role: string;
 permissions: string[]; 
-models: string[]; 
 picture: string;
 status: string;
 
@@ -23,31 +22,11 @@ constructor(userdata: any) {
   this.permissions = userdata?.role.permissions.map(
     (perm: any) => perm.permission?.name
   );
-  this.models = [...new Set(this.permissions?.map((per) => per.split(":")[1].toLocaleLowerCase()))];
 }
 
- isA(): string  { 
-    return  this.role;  
- }
 
- getPermissions():string[]  {  
-    return this.permissions;  
- }
 
- getId(): string {  
-    return this.id;  
- }
-
- can(permission: string):boolean
- {  
-    return this.permissions.includes(permission)
- }
-
- canAccess(model: string): boolean   {  
-   return this.models.includes(model.toLocaleLowerCase());  
- }
-
-  static async findByIdentifier(identifier: string): Promise<AuthUser | null> {
+static async findByIdentifier(identifier: string): Promise<AuthUser | null> {
     const user = await prisma.user.findFirst({
       where: {
         OR: [

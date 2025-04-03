@@ -1,5 +1,5 @@
 import { ProcessStatus } from '@/constants/enums';
-import { verifyExternalRequest } from "@/lib/verifyexternalrequest";
+import { verifyApiKey } from "@/lib/apikeysHandling";
 import { NextResponse } from "next/server";
 import {prisma} from "@/lib/prisma";
 
@@ -8,7 +8,7 @@ export async function PATCH(request: Request) {
     
     const apiKey = request.headers.get('X-API-Key');
     let isAuthenticated = false;
-    const externalVerification = await verifyExternalRequest(request.clone());
+    const externalVerification = await verifyApiKey(request.clone(), "automation");
 
     if (apiKey) {
       
@@ -27,11 +27,11 @@ export async function PATCH(request: Request) {
         { status: 401 }
       );
     }
-      const {processId, token}  = externalVerification;  
 
       const body = await request.json();
       const { progress, status } = body;
-
+      const processId = body.processId; 
+      
       if (progress === undefined && !status) {
         return NextResponse.json(
           { error: "Missing required fields: progress or status" },
@@ -63,10 +63,7 @@ export async function PATCH(request: Request) {
           
             updateData.end_time = new Date();
             
-            await prisma.processToken.update({
-              where: { token: token },
-              data: { isComplete: true }
-            });
+    
           }
         }
         

@@ -22,7 +22,7 @@ model UserInvitation {
 
 
 model UserProcess {
-  id          String         @id
+  id          String         @id @default(uuid())
   user_id     String
   user        User?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   status      String
@@ -32,27 +32,36 @@ model UserProcess {
   result      Json?          @default("{}")
   created_at  DateTime       @default(now())
   updated_at  DateTime       @updatedAt
-  
-  tokens      ProcessToken[]
+
   matches     Match[]
 
   @@index([user_id])
   @@index([status])
 }
 
-model ProcessToken {
-  token       String      @id
-  process_id  String
-  user_id     String
-  expires     DateTime
-  isComplete  Boolean     @default(false)
-  created_at  DateTime    @default(now())
+model APIKey {
+  id           String   @id @default(uuid())  // Unique ID
+  application  String   @unique               // Unique application name
+  token        String   @unique               // Secure API key
+  expires_at   DateTime                       // Expiration date
+  is_revoked   Boolean  @default(false)       // If true, key is disabled
+  created_at   DateTime @default(now())       // When the key was created
   
-  // Relation to UserProcess
-  process     UserProcess @relation(fields: [process_id], references: [id])
+  APIKeyPermission APIKeyPermission[]
+}
 
-  @@index([process_id])
-  @@index([user_id])
+
+
+model APIKeyPermission {
+  apikey_id     String
+  permission_id String
+
+  apikey        APIKey     @relation(fields: [apikey_id], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([apikey_id, permission_id])
+  @@index([apikey_id])
+  @@index([permission_id])
 }
 
 model Notification {
@@ -96,6 +105,7 @@ model Permission {
   id    String           @id @default(uuid())  
   name  String           @unique  
   roles RolePermission[] 
+  APIKeyPermission APIKeyPermission[]
 }
 
 model RolePermission {

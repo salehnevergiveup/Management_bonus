@@ -9,6 +9,7 @@ import {
   Wallet,
   FileText,
   Bell, 
+  Key,
   Home,
   LogOut,
   ChevronDown,
@@ -50,6 +51,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
       { name: "Matches", icon: <UserCheck className="h-4 w-4" /> },
       { name: "Transfer Accounts", icon: <Wallet className="h-4 w-4" /> },
       { name: "Requests", icon: <FileText className="h-4 w-4" /> },
+      {name: "Api Keys", icon: <Key className="h-4 w-4" />  }
     ]
 
     return sections
