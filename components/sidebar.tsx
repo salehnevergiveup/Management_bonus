@@ -3,11 +3,13 @@ import type * as React from "react"
 import { cn } from "@/lib/utils" // Make sure you have this utility
 import Link from 'next/link';
 import {
-  Users,
-  UserCheck,
+  User,
+  Target,
   BarChart3,
   Wallet,
   FileText,
+  Users, 
+  CircleDollarSign,
   Bell, 
   Key,
   Home,
@@ -15,6 +17,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Gamepad2
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { useUser } from "@/contexts/usercontext";
@@ -44,22 +47,24 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
   const renderManagementMenuItems = () => {
     const sections = [
       { name: "Users", icon: <Users className="h-4 w-4" /> },
-      { name: "Players", icon: <UserCheck className="h-4 w-4" /> },
       { name: "Notifications", icon: <Bell className="h-4 w-4" /> },
-      { name: "Bonus", icon: <BarChart3 className="h-4 w-4" /> },
-      { name: "Processes", icon: <BarChart3 className="h-4 w-4" /> },
-      { name: "Matches", icon: <UserCheck className="h-4 w-4" /> },
-      { name: "Transfer Accounts", icon: <Wallet className="h-4 w-4" /> },
       { name: "Requests", icon: <FileText className="h-4 w-4" /> },
-      {name: "Api Keys", icon: <Key className="h-4 w-4" />  }
+      {name: "Api Keys", icon: <Key className="h-4 w-4" />  },
+      { name: "Processes", icon: <BarChart3 className="h-4 w-4" /> },
+      { name: "Agent Accounts" , icon: <User className="h-4 w-4"/>}, 
+      { name: "Transfer Accounts", icon: <Wallet className="h-4 w-4" /> },
+      { name: "Players", icon: <Gamepad2 className="h-4 w-4" /> },
+      { name: "Bonus", icon: <CircleDollarSign className="h-4 w-4" /> },
+      { name: "Matches", icon: <Target className="h-4 w-4" /> },
     ]
 
     return sections
       .map((section) => {
          const permissionName = section.name.toLowerCase().replace(/\s+/g, "-");
+         console.log("before: "+  permissionName)
         if (auth && auth.canAccess(permissionName)) {
           const href = `/${section.name.toLowerCase().replace(/\s+/g, "-")}`
-
+          console.log("after: "+  permissionName)
           return (
             <SidebarMenuItem key={section.name}>
               <SidebarMenuButton asChild>
