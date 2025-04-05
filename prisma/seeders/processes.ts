@@ -1,7 +1,7 @@
 import {prisma} from "@/lib/prisma";
+import { ProcessStatus } from "@constants/enums";
 
-
-const PROCESS_STATUSES = ['pending', 'completed', 'completed', 'failed', 'failed'];
+const processStatusList =  Object.values(ProcessStatus).filter((process) => process !== ProcessStatus.PENDING && process !== ProcessStatus.PROCESSING)
 
 function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -9,8 +9,9 @@ function getRandomInt(min: number, max: number): number {
 
 export const SeedProcesses = async () => {
   console.log('Starting Process seeding...');
-  
+  const seededProcesses  = []; 
   try {
+ 
     const user1 = await prisma.user.findFirst({
       where: { username: 'user1' }
     });
@@ -32,53 +33,34 @@ export const SeedProcesses = async () => {
         console.error('Required users (user1, user2, user3) not found. Please create these users first.');
         throw new Error('Required users not found');
       }
+    
+    const usersList =  [  
+      user1,  
+      user2,  
+      user3
+    ]
+    
+    const processCount = 10;  
 
-    const processes = [];
+    for(let i =1;  i  <= processCount; i++) {  
+
+      const randomUser  = getRandomInt(0, usersList.length-1);
+      const randomProcess = getRandomInt(0, processStatusList.length-1);  
+
+      const status =  processStatusList[randomProcess];  
+      const user = usersList[randomUser];  
+
+      const process = await prisma.userProcess.create({  
+        data: {  
+          user_id: user.id,  
+          status: status, 
+          end_time: new Date() 
+        }
+      })
+      seededProcesses.push(process)
+      console.log(`Process seeding completed successfully! Created ${seededProcesses.length} processes.`);
+    }
     
-    const pendingProcess = await prisma.userProcess.create({
-      data: {
-        user_id: user1.id,
-        status: 'pending',
-        progress: 0
-      }
-    });
-    processes.push(pendingProcess);
-    console.log(`Created pending process for user1: ${pendingProcess.id}`);
-    
-    const processingProcess = await prisma.userProcess.create({
-      data: {
-        user_id: user2.id,
-        status: 'processing',
-        progress: getRandomInt(20, 80)
-      }
-    });
-    processes.push(processingProcess);
-    console.log(`Created processing process for user2: ${processingProcess.id}`);
-    
-    const completedProcess = await prisma.userProcess.create({
-      data: {
-        user_id: user2.id,
-        status: 'completed',
-        progress: 100,
-        end_time: new Date()
-      }
-    });
-    processes.push(completedProcess);
-    console.log(`Created completed process for user2: ${completedProcess.id}`);
-    
-    const failedProcess = await prisma.userProcess.create({
-      data: {
-        user_id: user3.id,
-        status: 'failed',
-        progress: getRandomInt(10, 50),
-        end_time: new Date()
-      }
-    });
-    processes.push(failedProcess);
-    console.log(`Created failed process for user3: ${failedProcess.id}`);
-    
-    console.log(`Process seeding completed successfully! Created ${processes.length} processes.`);
-    return processes;
   } catch (error) {
     console.error('Error during Process seeding:', error);
     throw error;

@@ -1,10 +1,20 @@
 import {prisma} from "@/lib/prisma";
+import { TransferAccountTypes } from "@constants/enums";
 
 export const SeedPlayers = async () =>  {
   console.log('Starting Player seeding...');
   
   try {
-    const transferAccounts = await prisma.transferAccount.findMany();
+    
+    const transferAccounts = await prisma.transferAccount.findMany(
+     { 
+        where: {
+              type: {
+                not: TransferAccountTypes.MAIN_ACCOUNT
+              }
+        } 
+    } 
+    );
     
     if (transferAccounts.length === 0) {
       throw new Error('No transfer accounts found. Please seed transfer accounts first.');

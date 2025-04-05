@@ -8,24 +8,27 @@ import {SeedPlayers} from "./seeders/players";
 import {SeedMatches} from "./seeders/matches";
 import SeedRequests from "./seeders/request";
 import { AutomationApiKey } from "./seeders/api_key";
+import SeedAgentAccounts from "./seeders/agent_accounts";
+import TruncateSeeder from "./seeders/truncate";
 
 
 const main = async () => {
   console.log("Running Seeders...");
   
   try {
-    await SeedPermissions(); 
-    await SeedRoles(); 
-    await AutomationApiKey();
-    await SeedAdminUser(); 
-    await SeedManagementUsers(); 
-    await SeedNotifications(); 
-    await SeedProcesses();
-    await SeedTransferAccounts();
-    await SeedPlayers(); 
-    await SeedMatches(); 
-    await SeedRequests(); 
-
+        await TruncateSeeder(); 
+        await SeedPermissions(); 
+        await SeedRoles(); 
+        await AutomationApiKey();
+        await SeedAdminUser(); 
+        await SeedManagementUsers(); 
+        await SeedNotifications(); 
+        await SeedProcesses();
+        await SeedAgentAccounts(); 
+        await SeedTransferAccounts();
+        await SeedPlayers(); 
+        await SeedMatches(); 
+        await SeedRequests(); 
 
     console.log("✅ All seeders executed successfully.");
   } catch (error) {

@@ -22,6 +22,21 @@ Admin = "admin",
 Management = "management"
 }
 
+export enum AgentAccountStatus  {  
+NO_PROCESS= "no process",  
+UNDER_PROCESS = "under process"
+}
+
+export enum TransferAccountStatus {  
+NO_PROCESS =  "no process",  
+UNDER_PROCESS = "under process"
+}
+
+export enum TransferAccountTypes {  
+    MAIN_ACCOUNT = "main_account",  
+    SUB_ACCOUNT =  "sub_account"
+}
+
 export enum NotificationStatus {
     READ = "read",
     UNREAD = "unread",
@@ -35,10 +50,9 @@ export enum NotificationType {
 }
 
 export enum ProcessStatus {
-    PENDING = "pending",
-    PROCESSING = "processing",
+    PENDING = "pending", // one the process finished the stage one and not start the stage two 
+    PROCESSING = "processing", // while the process is under processing 
     COMPLETED = "completed",
-    SEM_COMPLETED = "sem-completed",
     FAILED = "failed"
 }
   

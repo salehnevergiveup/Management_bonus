@@ -7,6 +7,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id              String           @id @default(uuid())
+  name            String
+  username        String           @unique
+  email           String           @unique
+  password        String
+  phone           String?          @unique
+  profile_img     String?          @db.LongText
+  status          String?          @default("inactive")
+  updated_at      DateTime         @updatedAt
+  role_id         String
+  role            Role             @relation(fields: [role_id], references: [id])
+  invitations     UserInvitation[]
+  notifications   Notification[]
+  user_processes  UserProcess[]
+  sender_requests Request[]        @relation("RequestSender")
+  admin_requests  Request[]        @relation("RequestAdmin")
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id               String             @id @default(uuid())
+  name             String             @unique
+  roles            RolePermission[]
+  APIKeyPermission APIKeyPermission[]
+}
+
+model RolePermission {
+  role_id       String
+  permission_id String
+  role          Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+}
 
 model UserInvitation {
   id          String    @id @default(uuid())
@@ -20,44 +61,95 @@ model UserInvitation {
   @@index([user_id])
 }
 
-
 model UserProcess {
-  id          String         @id @default(uuid())
-  user_id     String
-  user        User?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  status      String
-  progress    Float          @default(0)
-  start_time  DateTime       @default(now())
-  end_time    DateTime?
-  result      Json?          @default("{}")
-  created_at  DateTime       @default(now())
-  updated_at  DateTime       @updatedAt
+  id         String    @id @default(uuid())
+  user_id    String
+  user       User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  status     String    @default("pending")
+  start_time DateTime  @default(now())
+  end_time   DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
 
-  matches     Match[]
+  matches          Match[]
+  agent_account    agentAccount[]
+  transferAccounts TransferAccount[]
 
   @@index([user_id])
   @@index([status])
 }
 
-model APIKey {
-  id           String   @id @default(uuid())  // Unique ID
-  application  String   @unique               // Unique application name
-  token        String   @unique               // Secure API key
-  expires_at   DateTime                       // Expiration date
-  is_revoked   Boolean  @default(false)       // If true, key is disabled
-  created_at   DateTime @default(now())       // When the key was created
-  
-  APIKeyPermission APIKeyPermission[]
+model TransferAccount {
+  id               String       @id @default(uuid())
+  username String       @unique
+  status           String       @default("no process")
+  progress         Int?
+  password         String
+  type             String       @default("sub_account")
+  process_id       String?
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  players          Player[]
+  process          UserProcess? @relation(fields: [process_id], references: [id], onDelete: SetNull)
+  Match            Match[]
 }
 
+model agentAccount {
+  id         String       @id @default(uuid())
+  username   String       @unique
+  password   String
+  status     String       @default("no process")
+  progress   Int?
+  process_id String?
+  process    UserProcess? @relation(fields: [process_id], references: [id], onDelete: SetNull)
+}
 
+model Player {
+  id                  String   @id @default(uuid())
+  account_username    String   @unique
+  transfer_account_id String
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  transferAccount TransferAccount? @relation(fields: [transfer_account_id], references: [id], onDelete: Cascade)
+
+  @@index([transfer_account_id])
+}
+
+model Match {
+  id                  String   @id @default(uuid())
+  username            String
+  transfer_account_id String?
+  process_id          String
+  status              String   @default("pending") // "pending", "failed", "success"
+  amount              Float
+  currency            String // "USD" or "MYR"
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  transfer_account TransferAccount? @relation(fields: [transfer_account_id], references: [id], onDelete: SetNull)
+  process          UserProcess      @relation(fields: [process_id], references: [id], onDelete: Cascade)
+
+  @@index([process_id])
+}
+
+model APIKey {
+  id          String   @id @default(uuid()) // Unique ID
+  application String   @unique // Unique application name
+  token       String   @unique // Secure API key
+  expires_at  DateTime // Expiration date
+  is_revoked  Boolean  @default(false) // If true, key is disabled
+  created_at  DateTime @default(now()) // When the key was created
+
+  APIKeyPermission APIKeyPermission[]
+}
 
 model APIKeyPermission {
   apikey_id     String
   permission_id String
 
-  apikey        APIKey     @relation(fields: [apikey_id], references: [id], onDelete: Cascade)
-  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+  apikey     APIKey     @relation(fields: [apikey_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
 
   @@id([apikey_id, permission_id])
   @@index([apikey_id])
@@ -66,118 +158,30 @@ model APIKeyPermission {
 
 model Notification {
   id        String   @id @default(uuid())
-  user_id   String?  
+  user_id   String?
   user      User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
   message   String
-  status    String   @default("unread") 
+  status    String   @default("unread")
   type      String   @default("info")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model User {
-  id               String           @id @default(uuid())
-  name             String
-  username         String           @unique
-  email            String           @unique
-  password         String
-  phone            String?          @unique
-  profile_img      String?          @db.LongText
-  status           String?          @default("inactive")
-  updated_at       DateTime         @updatedAt
-  role_id          String
-  role             Role             @relation(fields: [role_id], references: [id])
-  invitations      UserInvitation[]
-  notifications    Notification[]
-  user_processes   UserProcess[]
-  sender_requests  Request[]        @relation("RequestSender")
-  admin_requests   Request[]        @relation("RequestAdmin")
-}
-
-model Role {  
-  id          String           @id @default(uuid())  
-  name        String           @unique  
-  users       User[]  
-  permissions RolePermission[] 
-}
-
-model Permission {  
-  id    String           @id @default(uuid())  
-  name  String           @unique  
-  roles RolePermission[] 
-  APIKeyPermission APIKeyPermission[]
-}
-
-model RolePermission {
-  role_id       String
-  permission_id String
-  role          Role        @relation(fields: [role_id], references: [id], onDelete: Cascade)
-  permission    Permission  @relation(fields: [permission_id], references: [id], onDelete: Cascade)
-
-  @@id([role_id, permission_id])
-}
-
-
-
-model TransferAccount {
-  id              String    @id @default(uuid())
-  account_username String    @unique
-  password        String
-  transfer_account    String
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  players         Player[]
-}
-
-model Player {
-  id                  String           @id @default(uuid())
-  account_username    String           @unique
-  transfer_account_id String
-  created_at          DateTime         @default(now())
-  updated_at          DateTime         @updatedAt
-
-  transfer_account    TransferAccount  @relation(fields: [transfer_account_id], references: [id], onDelete: Cascade)
-  
-
-  matches             Match[]
-
-  @@index([transfer_account_id])
-}
-
-model Match {
-  id          String      @id @default(uuid())
-  username    String
-  player_id   String?
-  process_id  String
-  status      String      @default("pending") // "pending", "failed", "finished"
-  amount      Float
-  currency    String      // "USD" or "MYR"
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
-  
-
-  player      Player?     @relation(fields: [player_id], references: [id], onDelete: SetNull)
-  process     UserProcess @relation(fields: [process_id], references: [id], onDelete: Cascade)
-
-  @@index([player_id])
-  @@index([process_id])
-}
-
 model Request {
-  id              String    @id @default(uuid())
+  id              String   @id @default(uuid())
   sender_id       String
-status          String    @default("pending") // "pending", "accepted", "rejected"
-  message         String    @db.Text
+  status          String   @default("pending") // "pending", "accepted", "rejected"
+  message         String   @db.Text
   marked_admin_id String?
-  model_name      String    // Polymorphic relationship - name of the model
-  model_id        String?    // Polymorphic relationship - ID of the record
-  action          String    // The action being requested
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
+  model_name      String // Polymorphic relationship - name of the model
+  model_id        String? // Polymorphic relationship - ID of the record
+  action          String // The action being requested
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
   // Relations
-  sender          User      @relation("RequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
-  admin           User?     @relation("RequestAdmin", fields: [marked_admin_id], references: [id], onDelete: SetNull)
+  sender User  @relation("RequestSender", fields: [sender_id], references: [id], onDelete: Cascade)
+  admin  User? @relation("RequestAdmin", fields: [marked_admin_id], references: [id], onDelete: SetNull)
 
   @@index([sender_id])
   @@index([marked_admin_id])
