@@ -38,6 +38,7 @@ export const SeedTransferAccounts = async () => {
           const data  =  {         
             type:  TransferAccountTypes.SUB_ACCOUNT,  
             status:  TransferAccountStatus.NO_PROCESS,  
+            parent_id: mainAccount.id,
             ...subAccount,
           }
 

@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   
    
    const query  = {
-     include: {transfer_account: true}
+     include: {transferAccount: true}
    }
 
    const total = await prisma.player.count();

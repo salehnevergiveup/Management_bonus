@@ -62,15 +62,14 @@ model UserInvitation {
 }
 
 model UserProcess {
-  id         String    @id @default(uuid())
-  user_id    String
-  user       User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  status     String    @default("pending")
-  start_time DateTime  @default(now())
-  end_time   DateTime?
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-
+  id               String         @id @default(uuid())
+  user_id          String
+  user             User?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  status           String         @default("pending")
+  from_date        DateTime?      // Added field for date range start
+  to_date          DateTime?      // Added field for date range end
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
   matches          Match[]
   agent_account    agentAccount[]
   transferAccounts TransferAccount[]
@@ -80,17 +79,22 @@ model UserProcess {
 }
 
 model TransferAccount {
-  id               String       @id @default(uuid())
-  username String       @unique
-  status           String       @default("no process")
+  id               String           @id @default(uuid())
+  username         String           @unique
+  status           String           @default("no process")
   progress         Int?
   password         String
-  type             String       @default("sub_account")
+  type             String           @default("sub_account")
   process_id       String?
-  created_at       DateTime     @default(now())
-  updated_at       DateTime     @updatedAt
+  parent_id        String?         // ID of the parent account
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+  
+  parent           TransferAccount? @relation("AccountHierarchy", fields: [parent_id], references: [id], onDelete: SetNull)
+  sub_accounts     TransferAccount[] @relation("AccountHierarchy")
+  
   players          Player[]
-  process          UserProcess? @relation(fields: [process_id], references: [id], onDelete: SetNull)
+  process          UserProcess?     @relation(fields: [process_id], references: [id], onDelete: SetNull)
   Match            Match[]
 }
 
@@ -100,6 +104,8 @@ model agentAccount {
   password   String
   status     String       @default("no process")
   progress   Int?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
   process_id String?
   process    UserProcess? @relation(fields: [process_id], references: [id], onDelete: SetNull)
 }
@@ -111,7 +117,7 @@ model Player {
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
 
-  transferAccount TransferAccount? @relation(fields: [transfer_account_id], references: [id], onDelete: Cascade)
+  transferAccount TransferAccount @relation(fields: [transfer_account_id], references: [id], onDelete: Cascade)
 
   @@index([transfer_account_id])
 }

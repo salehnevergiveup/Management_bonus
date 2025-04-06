@@ -54,7 +54,8 @@ export const SeedProcesses = async () => {
         data: {  
           user_id: user.id,  
           status: status, 
-          end_time: new Date() 
+          from_date: new Date(),  
+          to_date: new Date()
         }
       })
       seededProcesses.push(process)

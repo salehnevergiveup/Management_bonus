@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { SessionValidation } from '@lib/sessionvalidation';
 import { Pagination } from "@/lib/pagination";
-import {GetResponse} from "@/types/get-response.type" 
-import {prisma} from "@/lib/prisma"
+import { GetResponse } from "@/types/get-response.type";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
-
   const auth = await SessionValidation();
   
   if (!auth) {
@@ -15,27 +14,40 @@ export async function GET(request: Request) {
     );
   }
 
-  const total = await prisma.transferAccount.count();
+  const url = new URL(request.url);
+  const type = url.searchParams.get('type');
+  const parentId = url.searchParams.get('parent_id');
+  
+  const where: any = {};
+  
+  if (type) {
+    where.type = type;
+  }
+  
+  if (parentId) {
+    where.parent_id = parentId;
+  }
+
+  const total = await prisma.transferAccount.count({ where });
 
   const paginationResult = await Pagination(
     prisma.transferAccount,
-    new URL(request.url), 
+    url, 
     total,
-    {}
+    { where }
   );
 
-  const Res : GetResponse = { 
+  const Res: GetResponse = { 
     data: paginationResult.data,  
-    pagination:  paginationResult.pagination, 
+    pagination: paginationResult.pagination, 
     success: true,  
     message: "data fetched successfully"
-  }
+  };
 
   return NextResponse.json(Res, {status: 200});
 }
 
 export async function POST(request: Request) {
-
   const auth = await SessionValidation();
   
   if (!auth) {
@@ -48,15 +60,15 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    if (!body.account_username || !body.password || !body.transfer_account) {
+    if (!body.username || !body.password) {
       return NextResponse.json(
-        { error: "Account username, password and transfer account name are required" }, 
+        { error: "Account username and password are required" }, 
         { status: 400 }
       );
     }
     
     const existingAccount = await prisma.transferAccount.findUnique({
-      where: { account_username: body.account_username }
+      where: { username: body.username }
     });
     
     if (existingAccount) {
@@ -66,11 +78,29 @@ export async function POST(request: Request) {
       );
     }
     
+    // Validate parent_id if provided
+    if (body.parent_id) {
+      const parentAccount = await prisma.transferAccount.findUnique({
+        where: { id: body.parent_id }
+      });
+      
+      if (!parentAccount) {
+        return NextResponse.json(
+          { error: "Parent account not found" }, 
+          { status: 404 }
+        );
+      }
+    }
+    
     const newAccount = await prisma.transferAccount.create({
       data: {
-        account_username: body.account_username,
+        username: body.username,
         password: body.password,
-        transfer_account: body.transfer_account
+        status: body.status || "no process",
+        progress: body.progress,
+        type: body.type || "sub_account",
+        parent_id: body.parent_id,
+        process_id: body.process_id
       }
     });
     

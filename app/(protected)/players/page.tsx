@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Edit, Trash, MoreHorizontal, Plus, Search } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,14 +16,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
-import { fetchRequests, hasPermission, createRequest } from "@/lib/requstHandling";
-import {PaginationData} from  "@/types/pagination-data.type"
-import {GetResponse} from "@/types/get-response.type" 
-import {RequestData} from "@/types/request-data.type" 
+import { TransferAccountTypes } from "@constants/enums";
 
 interface TransferAccount {
   id: string;
-  account_username: string;
+  username: string;
 }
 interface Player {
   id: string;
@@ -31,14 +28,13 @@ interface Player {
   transfer_account_id: string;
   created_at: string;
   updated_at: string;
-  transfer_account: TransferAccount;
+  transferAccount: TransferAccount;
 }
 
 export default function PlayerManagementPage() {
   const { auth, isLoading } = useUser();
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [transferAccounts, setTransferAccounts] = useState<TransferAccount[]>([]);
-  const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,61 +45,31 @@ export default function PlayerManagementPage() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const router = useRouter();
 
-  // Permission request states
-  const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [requestAction, setRequestAction] = useState<string>("");
-  const [requestMessage, setRequestMessage] = useState("");
-  const [completePermission, setCompletePermission] = useState<{modelId: string, action: string} | null>(null);
-
   // Form state for create/edit
   const [formUsername, setFormUsername] = useState("");
   const [formTransferAccountId, setFormTransferAccountId] = useState("");
   const [formErrors, setFormErrors] = useState<{ username?: string; transferAccountId?: string }>({});
 
-  // Load accepted permission requests
-  const loadPermissions = async () => {
-    if (!auth) return;
+  // Filter and paginate players on the client side
+  const filteredPlayers = useMemo(() => {
+    if (!searchTerm) return allPlayers;
     
-    try {
-      const map = await fetchRequests('Player', 'accepted');
-      setPermissionsMap(map);
-    } catch (error) {
-      console.error("Error loading permissions:", error);
-    }
-  };
+    return allPlayers.filter(player => 
+      player.account_username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      player.transferAccount?.username?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [allPlayers, searchTerm]);
 
-  const markPermissionComplete = async (modelId: string, action: string) => {
-    try {
-      let key ="";  
-      if(action == "create") {  
-        key = `new:${action}`;
+  // Calculate pagination
+  const paginatedPlayers = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredPlayers.slice(startIndex, startIndex + pageSize);
+  }, [filteredPlayers, currentPage, pageSize]);
 
-      }else {  
-        key = `${modelId}:${action}`;
-
-      }
-      const permission = permissionsMap.get(key);
-      
-      if (permission) {
-        const response = await fetch(`/api/requests/${permission.id}`, {
-          method: 'DELETE'
-        });
-        
-        if (response.ok) {
-          const newMap = new Map(permissionsMap);
-          newMap.delete(key);
-          setPermissionsMap(newMap);
-          return true;
-        }
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Error completing permission:", error);
-      return false;
-    }
-  };
+  const totalPages = useMemo(() => 
+    Math.max(1, Math.ceil(filteredPlayers.length / pageSize)), 
+    [filteredPlayers, pageSize]
+  );
 
   const fetchPlayers = async () => {
     if (auth) {
@@ -113,24 +79,15 @@ export default function PlayerManagementPage() {
       }
     }
     try {
-      // Build query parameters
-      const queryParams = new URLSearchParams();
-      queryParams.append("page", currentPage.toString());
-      queryParams.append("limit", pageSize.toString());
-
-      if (searchTerm) {
-        queryParams.append("search", searchTerm);
-      }
-
-      const response = await fetch(`/api/players?${queryParams.toString()}`);
+      // Fetch all players at once
+      const response = await fetch(`/api/players?all=true`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch players");
       }
 
-      const data: GetResponse = await response.json();
-      setPlayers(data.data);
-      setPagination(data.pagination);
+      const data = await response.json();
+      setAllPlayers(data.data);
     } catch (error) {
       console.error("Error fetching players:", error);
       toast.error("Failed to fetch players");
@@ -146,7 +103,8 @@ export default function PlayerManagementPage() {
       }
 
       const data = await response.json();
-      setTransferAccounts(data.data);
+      const transferAccounts = data.data.filter((account: any) => account.type  != TransferAccountTypes.MAIN_ACCOUNT ) 
+      setTransferAccounts(transferAccounts);
     } catch (error) {
       console.error("Error fetching transfer accounts:", error);
       toast.error("Failed to fetch transfer accounts");
@@ -157,33 +115,13 @@ export default function PlayerManagementPage() {
     if (!isLoading && auth) {
       fetchPlayers();
       fetchTransferAccounts();
-      loadPermissions();
     }
-  }, [isLoading, auth, router, currentPage, pageSize]);
+  }, [isLoading, auth, router]);
 
-  // Handle search with debounce
+  // Reset to first page when search term or page size changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm !== "") {
-        fetchPlayers();
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Handle permission completion
-  useEffect(() => {
-    if (completePermission) {
-      markPermissionComplete(completePermission.modelId, completePermission.action)
-        .then(success => {
-          if (success) {
-            toast.success("Permission used successfully");
-          }
-          setCompletePermission(null);
-        });
-    }
-  }, [completePermission]);
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
 
   const validateForm = () => {
     const errors: { username?: string; transferAccountId?: string } = {};
@@ -218,13 +156,6 @@ export default function PlayerManagementPage() {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to create player");
-      }
-
-      if (!auth?.can("players:create") && hasPermission(permissionsMap, "new", "create")) {
-        setCompletePermission({
-          modelId: "new",
-          action: "create"
-        });
       }
 
       const result = await response.json();
@@ -262,14 +193,6 @@ export default function PlayerManagementPage() {
       const result = await response.json();
       toast.success("Player updated successfully");
       
-      // If this was a permission-based edit, mark it as complete
-      if (!auth?.can("players:edit") && hasPermission(permissionsMap, selectedPlayer.id, "edit")) {
-        setCompletePermission({
-          modelId: selectedPlayer.id,
-          action: "edit"
-        });
-      }
-      
       setFormUsername("");
       setFormTransferAccountId("");
       setEditDialogOpen(false);
@@ -294,15 +217,6 @@ export default function PlayerManagementPage() {
       }
 
       toast.success("Player deleted successfully");
-      
-      // If this was a permission-based delete, mark it as complete
-      if (!auth?.can("players:delete") && hasPermission(permissionsMap, playerToDelete.id, "delete")) {
-        setCompletePermission({
-          modelId: playerToDelete.id,
-          action: "delete"
-        });
-      }
-      
       fetchPlayers();
     } catch (error) {
       console.error("Error deleting players:", error);
@@ -314,8 +228,7 @@ export default function PlayerManagementPage() {
   };
 
   const handleCreate = () => {
-    if (!auth?.can("players:create") && !hasPermission(permissionsMap, "new", "create")) {
-      openRequestDialog("create");
+    if (!auth?.can("players:create")) {
       return;
     }
     
@@ -326,6 +239,10 @@ export default function PlayerManagementPage() {
   };
 
   const handleEdit = (player: Player) => {
+    if (!auth?.can("players:edit")) {
+      return;
+    }
+    
     setSelectedPlayer(player);
     setFormUsername(player.account_username);
     setFormTransferAccountId(player.transfer_account_id);
@@ -334,42 +251,12 @@ export default function PlayerManagementPage() {
   };
 
   const handleDelete = (player: Player) => {
+    if (!auth?.can("players:delete")) {
+      return;
+    }
+    
     setPlayerToDelete(player);
     setDeleteDialogOpen(true);
-  };
-  
-  // Open permission request dialog
-  const openRequestDialog = (action: string, player?: Player) => {
-    setRequestAction(action);
-    setSelectedPlayer(player || null);
-    setRequestMessage("");
-    setRequestDialogOpen(true);
-  };
-  
-  // Submit permission request
-  const submitPermissionRequest = async () => {
-    if (!auth || requestMessage.length < 10) return;
-    
-    try {
-      const modelId = selectedPlayer?.id || "new"; // Use "new" for create actions
-      const result = await createRequest(
-        "Player",
-        modelId,
-        requestAction,
-        requestMessage,
-        auth.id
-      );
-      
-      if (result.success) {
-        toast.success("Permission request submitted successfully");
-        setRequestDialogOpen(false);
-      } else {
-        toast.error(result.error || "Failed to submit request");
-      }
-    } catch (error) {
-      console.error("Error submitting permission request:", error);
-      toast.error("Failed to submit permission request");
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -380,6 +267,12 @@ export default function PlayerManagementPage() {
     setCurrentPage(page);
   };
 
+  // Calculate pagination display values
+  const startItem = filteredPlayers.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, filteredPlayers.length);
+  const hasPreviousPage = currentPage > 1;
+  const hasNextPage = currentPage < totalPages;
+
   return (
     <div className="container mx-auto py-6">
       <Breadcrumb items={[{ label: "Player Management" }]} />
@@ -388,19 +281,19 @@ export default function PlayerManagementPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Player Management</CardTitle>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-            <Button 
-              onClick={handleCreate} 
-              className="w-full sm:w-auto"
-              variant={auth?.can("players:create") || hasPermission(permissionsMap, "new", "create") ? "default" : "outline"}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {auth?.can("players:create") || hasPermission(permissionsMap, "new", "create") ? "Create Player" : "Request to Create Player"}
-            </Button>
+            {auth?.can("players:create") && (
+              <Button 
+                onClick={handleCreate} 
+                className="w-full sm:w-auto"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Player
+              </Button>
+            )}
             <Select
               value={pageSize.toString()}
               onValueChange={(val) => {
                 setPageSize(Number(val));
-                setCurrentPage(1);
               }}
             >
               <SelectTrigger className="w-[120px]">
@@ -425,19 +318,7 @@ export default function PlayerManagementPage() {
                 placeholder="Search players..."
                 className="pl-8"
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  if (e.target.value === "") {
-                    setCurrentPage(1);
-                    fetchPlayers();
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setCurrentPage(1);
-                    fetchPlayers();
-                  }
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -450,7 +331,9 @@ export default function PlayerManagementPage() {
                   <TableHead>Transfer Account</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Updated At</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {(auth?.can("players:edit") || auth?.can("players:delete")) && (
+                    <TableHead className="text-right">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -460,60 +343,46 @@ export default function PlayerManagementPage() {
                       Loading players...
                     </TableCell>
                   </TableRow>
-                ) : players.length === 0 ? (
+                ) : paginatedPlayers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
                       No players found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  players.map((player) => (
+                  paginatedPlayers.map((player) => (
                     <TableRow key={player.id}>
                       <TableCell className="font-medium">{player.account_username}</TableCell>
-                      <TableCell>{player.transfer_account?.account_username || 'Unknown'}</TableCell>
+                      <TableCell>{player.transferAccount?.username || 'Unknown'}</TableCell>
                       <TableCell>{formatDate(player.created_at)}</TableCell>
                       <TableCell>{formatDate(player.updated_at)}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {/* Edit option - show if user has permission or has accepted request */}
-                            {(auth?.can("players:edit") || hasPermission(permissionsMap, player.id, "edit")) ? (
-                              <DropdownMenuItem onClick={() => handleEdit(player)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                {hasPermission(permissionsMap, player.id, "edit") && !auth?.can("players:edit") 
-                                  ? "Execute Edit Permission" 
-                                  : "Edit"}
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={() => openRequestDialog("edit", player)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Request to Edit
-                              </DropdownMenuItem>
-                            )}
-                            
-                            {/* Delete option - show if user has permission or has accepted request */}
-                            {(auth?.can("players:delete") || hasPermission(permissionsMap, player.id, "delete")) ? (
-                              <DropdownMenuItem onClick={() => handleDelete(player)}>
-                                <Trash className="mr-2 h-4 w-4" />
-                                {hasPermission(permissionsMap, player.id, "delete") && !auth?.can("players:delete") 
-                                  ? "Execute Delete Permission" 
-                                  : "Delete"}
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={() => openRequestDialog("delete", player)}>
-                                <Trash className="mr-2 h-4 w-4" />
-                                Request to Delete
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      {(auth?.can("players:edit") || auth?.can("players:delete")) && (
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {auth?.can("players:edit") && (
+                                <DropdownMenuItem onClick={() => handleEdit(player)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                              )}
+                              
+                              {auth?.can("players:delete") && (
+                                <DropdownMenuItem onClick={() => handleDelete(player)}>
+                                  <Trash className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
@@ -521,22 +390,20 @@ export default function PlayerManagementPage() {
             </Table>
           </div>
 
-          {pagination && (
+          {filteredPlayers.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-                <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{" "}
-                of <span className="font-medium">{pagination.total}</span> players
+                Showing <span className="font-medium">{startItem}</span> to{" "}
+                <span className="font-medium">{endItem}</span>{" "}
+                of <span className="font-medium">{filteredPlayers.length}</span> players
               </div>
               
-              {pagination.totalPages > 1 && (
+              {totalPages > 1 && (
                 <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(1)} 
-                    disabled={isLoading || !pagination.hasPreviousPage}
+                    disabled={isLoading || !hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -545,19 +412,19 @@ export default function PlayerManagementPage() {
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(currentPage - 1)} 
-                    disabled={isLoading || !pagination.hasPreviousPage}
+                    disabled={isLoading || !hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
                     Previous
                   </Button>
                   <span className="px-2 text-sm">
-                    Page {pagination.page} of {pagination.totalPages}
+                    Page {currentPage} of {totalPages}
                   </span>
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(currentPage + 1)} 
-                    disabled={isLoading || !pagination.hasNextPage}
+                    disabled={isLoading || !hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -565,8 +432,8 @@ export default function PlayerManagementPage() {
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={() => goToPage(pagination.totalPages)} 
-                    disabled={isLoading || !pagination.hasNextPage}
+                    onClick={() => goToPage(totalPages)} 
+                    disabled={isLoading || !hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -610,7 +477,7 @@ export default function PlayerManagementPage() {
                 <SelectContent>
                   {transferAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.account_username} 
+                      {account.username} 
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -660,7 +527,7 @@ export default function PlayerManagementPage() {
                 <SelectContent>
                   {transferAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.account_username}
+                      {account.username}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -675,49 +542,6 @@ export default function PlayerManagementPage() {
               Cancel
             </Button>
             <Button onClick={updatePlayer}>Update</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Permission Request Dialog */}
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} Player
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {selectedPlayer && (
-              <div className="space-y-2">
-                <Label>Player</Label>
-                <p className="font-medium">{selectedPlayer.account_username}</p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="request_message">Reason for Request</Label>
-              <Textarea
-                id="request_message"
-                placeholder="Explain why you need this permission..."
-                value={requestMessage}
-                onChange={(e) => setRequestMessage(e.target.value)}
-                rows={4}
-              />
-              {requestMessage.length < 10 && requestMessage.length > 0 && (
-                <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={submitPermissionRequest}
-              disabled={!requestMessage || requestMessage.length < 10}
-            >
-              Submit Request
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

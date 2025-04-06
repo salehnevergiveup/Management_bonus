@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ProcessStatus } from "@/constants/enums";
+import { AgentAccountStatus, ProcessStatus } from "@/constants/enums";
 import { SessionValidation } from "@/lib/sessionvalidation";
 import { prisma } from '@/lib/prisma';
 import { preparePythonBackendHeaders } from '@/lib/apikeysHandling';
@@ -21,10 +21,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     const fromDate = body.from_date ? new Date(body.from_date) : null;
     const toDate = body.to_date ? new Date(body.to_date) : null;
+    const agentAccounts = body.agent_accounts || [];
     
-    console.log("this is from date: ", fromDate);  
-    console.log("this is to date: ", toDate);  
+    console.log("From date:", fromDate);  
+    console.log("To date:", toDate);  
+    console.log("Agent accounts:", agentAccounts);
 
+    // Validate dates
     if (!fromDate || !toDate) {
       return NextResponse.json(
         { error: "Both from_date and to_date are required" },
@@ -55,6 +58,45 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate agent accounts
+    if (!Array.isArray(agentAccounts) || agentAccounts.length === 0) {
+      return NextResponse.json(
+        { error: "At least one agent account is required" },
+        { status: 400 }
+      );
+    }
+
+    // Get agent accounts for the specified agent usernames
+    const accounts = await prisma.agentAccount.findMany({
+      where: {
+        username: {
+          in: agentAccounts
+        }
+      },
+      select: {
+        id: true, // Added ID for later update
+        username: true,
+        password: true
+      }
+    });
+    
+    console.log("Found agent accounts:", accounts.length); 
+    
+    // Check if all requested agent accounts exist
+    const foundUsernames = accounts.map(account => account.username);
+    const missingAccounts = agentAccounts.filter(username => !foundUsernames.includes(username));
+    
+    if (missingAccounts.length > 0) {
+      return NextResponse.json(
+        { 
+          error: "Some agent accounts were not found", 
+          missing_accounts: missingAccounts 
+        },
+        { status: 404 }
+      );
+    }
+
+    // Check for active process
     const activeProcess = await prisma.userProcess.findFirst({
       where: {
         user_id: auth.id,
@@ -75,37 +117,32 @@ export async function POST(request: Request) {
       );
     }
 
+    // Create new process
     const newProcess = await prisma.$transaction(async (tx) => {
       const newProcess = await tx.userProcess.create({
         data: {
           user_id: auth.id,
-          status: ProcessStatus.PENDING,
-          progress: 0,
+          from_date: fromDate.toISOString(),
+          to_date: toDate.toISOString(),
+          status: ProcessStatus.PENDING
         }
       });
       return newProcess;
     });
 
     processId = newProcess.id; 
-    console.log(processId)
-    console.log("date starting: ",  fromDate.toISOString());  
-    console.log("date ending: ",  toDate.toISOString());
+    console.log("Process ID:", processId);
+    console.log("Date range:", fromDate.toISOString(), "to", toDate.toISOString());
+    
     try {
-      // I MESS UNDERSTAND THE REQUIREMENT AT THE START I WILL LATER CREATE MODULE FOR THIS ACCOUNTS FOR TESTING 
-      // I MAKE IT MANUAL FOR NOW 
+      // Prepare request data with actual account credentials
       const requestData = {
         from_date: fromDate.toISOString(),
         to_date: toDate.toISOString(),
-        accounts: [
-          {
-            username: "wglobal5sub1",//later fetch from the backend 
-            password: "abc123"
-          },
-          {
-            username: "wglobal6sub1",//later fetch from the backend 
-            password: "abc123"
-          }
-        ]
+        accounts: accounts.map(acc => ({
+          username: acc.username,
+          password: acc.password
+        }))
       };
       
       const headers = await preparePythonBackendHeaders(
@@ -113,9 +150,12 @@ export async function POST(request: Request) {
         processId,  
         auth.role
       );
-
+      
+      console.log("Request data prepared:", JSON.stringify(requestData));
       console.log("Calling external service with prepared headers");
-      const externalResponse = await fetch(`http://127.0.0.1:8000/start-process`, {
+      
+      // making request to selenium to start the process  
+      const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}/start-process`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestData)
@@ -146,17 +186,37 @@ export async function POST(request: Request) {
       const responseData = await externalResponse.json();
       console.log("External service response:", responseData);
       
+      // Update process status to PROCESSING
       await prisma.userProcess.update({
         where: { id: processId },
         data: { status: ProcessStatus.PROCESSING }
       });
+      
+      const accountIds = accounts.map(acc => acc.id);
+      
+      await prisma.agentAccount.updateMany({
+        where: {
+          id: {
+            in: accountIds
+          }
+        },
+        data: {
+          process_id: processId,
+          status: AgentAccountStatus.UNDER_PROCESS,  
+          progress: 0,
+          updated_at: new Date()
+        }
+      });
+      
+      console.log(`Updated ${accountIds.length} agent accounts with process ID ${processId}`);
       
       return NextResponse.json({
         success: true,
         message: "Process created and initiated successfully",
         process_id: processId,
         status: ProcessStatus.PROCESSING,
-        details: responseData
+        agent_accounts: accounts.length
+        // details: responseData
       });
     } catch (error) {
       console.error("Error calling external service:", error);
@@ -188,8 +248,20 @@ export async function POST(request: Request) {
 
 async function cleanupProcess(processId: string) {
   try {
-    console.log(`Cleaning up process ${processId} due to failure`);
     
+    await prisma.agentAccount.updateMany({
+      where: {
+        process_id: processId
+      },
+      data: {
+        process_id: null,
+        status: AgentAccountStatus.NO_PROCESS,// Reset to default status
+        progress: null,  
+        updated_at: new Date()
+      }
+    });
+    
+    // Then delete the process
     const deletedProcess = await prisma.userProcess.delete({
       where: {
         id: processId

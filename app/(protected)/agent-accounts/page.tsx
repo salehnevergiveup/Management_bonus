@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Edit, Trash, MoreHorizontal, Plus, Search } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,8 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
-import { PaginationData } from "@/types/pagination-data.type";
-import { GetResponse } from "@/types/get-response.type";
 
 interface AgentAccount {
   id: string;
@@ -31,8 +29,7 @@ interface AgentAccount {
 
 export default function AgentAccountManagementPage() {
   const { auth, isLoading } = useUser();
-  const [agentAccounts, setAgentAccounts] = useState<AgentAccount[]>([]);
-  const [pagination, setPagination] = useState<PaginationData | null>(null);
+  const [allAgentAccounts, setAllAgentAccounts] = useState<AgentAccount[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,6 +48,28 @@ export default function AgentAccountManagementPage() {
   const [formProcessId, setFormProcessId] = useState("");
   const [formErrors, setFormErrors] = useState<{ username?: string; password?: string }>({});
 
+  // Filter and paginate accounts on the client side
+  const filteredAccounts = useMemo(() => {
+    if (!searchTerm) return allAgentAccounts;
+    
+    return allAgentAccounts.filter(account => 
+      account.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (account.status && account.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (account.process_id && account.process_id.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [allAgentAccounts, searchTerm]);
+
+  // Calculate pagination
+  const paginatedAccounts = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredAccounts.slice(startIndex, startIndex + pageSize);
+  }, [filteredAccounts, currentPage, pageSize]);
+
+  const totalPages = useMemo(() => 
+    Math.max(1, Math.ceil(filteredAccounts.length / pageSize)), 
+    [filteredAccounts, pageSize]
+  );
+
   const fetchAgentAccounts = async () => {
     if (auth) {
       if (!auth.canAccess("agent-accounts")) {
@@ -59,24 +78,15 @@ export default function AgentAccountManagementPage() {
       }
     }
     try {
-      // Build query parameters
-      const queryParams = new URLSearchParams();
-      queryParams.append("page", currentPage.toString());
-      queryParams.append("limit", pageSize.toString());
-
-      if (searchTerm) {
-        queryParams.append("search", searchTerm);
-      }
-
-      const response = await fetch(`/api/agent-accounts?${queryParams.toString()}`);
+      // Fetch all accounts at once
+      const response = await fetch(`/api/agent-accounts?all=true`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch agent accounts");
       }
 
-      const data: GetResponse = await response.json();
-      setAgentAccounts(data.data);
-      setPagination(data.pagination);
+      const data = await response.json();
+      setAllAgentAccounts(data.data);
     } catch (error) {
       console.error("Error fetching agent accounts:", error);
       toast.error("Failed to fetch agent accounts");
@@ -87,18 +97,12 @@ export default function AgentAccountManagementPage() {
     if (!isLoading && auth) {
       fetchAgentAccounts();
     }
-  }, [isLoading, auth, router, currentPage, pageSize]);
+  }, [isLoading, auth, router]);
 
-  // Handle search with debounce
+  // Reset to first page when search term or page size changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm !== "") {
-        fetchAgentAccounts();
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
 
   const validateForm = (isCreate = true) => {
     const errors: { username?: string; password?: string } = {};
@@ -258,6 +262,12 @@ export default function AgentAccountManagementPage() {
     setCurrentPage(page);
   };
 
+  // Calculate pagination display values
+  const startItem = filteredAccounts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, filteredAccounts.length);
+  const hasPreviousPage = currentPage > 1;
+  const hasNextPage = currentPage < totalPages;
+
   return (
     <div className="container mx-auto py-6">
       <Breadcrumb items={[{ label: "Agent Account Management" }]} />
@@ -277,7 +287,6 @@ export default function AgentAccountManagementPage() {
               value={pageSize.toString()}
               onValueChange={(val) => {
                 setPageSize(Number(val));
-                setCurrentPage(1);
               }}
             >
               <SelectTrigger className="w-[120px]">
@@ -302,19 +311,7 @@ export default function AgentAccountManagementPage() {
                 placeholder="Search agent accounts..."
                 className="pl-8"
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  if (e.target.value === "") {
-                    setCurrentPage(1);
-                    fetchAgentAccounts();
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setCurrentPage(1);
-                    fetchAgentAccounts();
-                  }
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -339,14 +336,14 @@ export default function AgentAccountManagementPage() {
                       Loading agent accounts...
                     </TableCell>
                   </TableRow>
-                ) : agentAccounts.length === 0 ? (
+                ) : paginatedAccounts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
                       No agent accounts found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  agentAccounts.map((account) => (
+                  paginatedAccounts.map((account) => (
                     <TableRow key={account.id}>
                       <TableCell className="font-medium">{account.username}</TableCell>
                       <TableCell>{account.status || 'N/A'}</TableCell>
@@ -381,22 +378,20 @@ export default function AgentAccountManagementPage() {
             </Table>
           </div>
 
-          {pagination && (
+          {filteredAccounts.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-                <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{" "}
-                of <span className="font-medium">{pagination.total}</span> agent accounts
+                Showing <span className="font-medium">{startItem}</span> to{" "}
+                <span className="font-medium">{endItem}</span>{" "}
+                of <span className="font-medium">{filteredAccounts.length}</span> agent accounts
               </div>
               
-              {pagination.totalPages > 1 && (
+              {totalPages > 1 && (
                 <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(1)} 
-                    disabled={isLoading || !pagination.hasPreviousPage}
+                    disabled={isLoading || !hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -405,19 +400,19 @@ export default function AgentAccountManagementPage() {
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(currentPage - 1)} 
-                    disabled={isLoading || !pagination.hasPreviousPage}
+                    disabled={isLoading || !hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
                     Previous
                   </Button>
                   <span className="px-2 text-sm">
-                    Page {pagination.page} of {pagination.totalPages}
+                    Page {currentPage} of {totalPages}
                   </span>
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(currentPage + 1)} 
-                    disabled={isLoading || !pagination.hasNextPage}
+                    disabled={isLoading || !hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -425,8 +420,8 @@ export default function AgentAccountManagementPage() {
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={() => goToPage(pagination.totalPages)} 
-                    disabled={isLoading || !pagination.hasNextPage}
+                    onClick={() => goToPage(totalPages)} 
+                    disabled={isLoading || !hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >

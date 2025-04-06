@@ -18,7 +18,7 @@ export async function PUT(
     
     const body = await request.json();
     
-    const updatedAgentAccountData: Record<string, any> = {};
+    const updatedAgentAccountData: Record<string, any> = {updated_at: new Date()};
     
     if (body.username) updatedAgentAccountData.username = body.username;
     if (body.password) updatedAgentAccountData.password = body.password;

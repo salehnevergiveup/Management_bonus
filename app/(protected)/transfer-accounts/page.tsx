@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Eye, EyeOff, Edit, Trash, MoreHorizontal, Plus, Search } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,25 +18,27 @@ import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
 import { fetchRequests, hasPermission, createRequest } from "@/lib/requstHandling";
 import {PaginationData} from  "@/types/pagination-data.type"
-import   {GetResponse} from "@/types/get-response.type" 
-import {RequestData} from   "@/types/request-data.type" 
+import {GetResponse} from "@/types/get-response.type" 
+import {RequestData} from "@/types/request-data.type" 
 
 interface TransferAccount {
   id: string;
-  account_username: string;
+  username: string;
   password: string;
-  transfer_account: string;
+  status: string;
+  progress: number | null;
+  type: string;
+  process_id: string | null;
+  parent_id: string | null;
   created_at: string;
   updated_at: string;
   player_count?: number;
 }
 
-
-
 export default function TransferAccountManagementPage() {
   const { auth, isLoading } = useUser();
-  const [accounts, setAccounts] = useState<TransferAccount[]>([]);
-  const [pagination, setPagination] = useState<PaginationData | null>(null);
+  const [allAccounts, setAllAccounts] = useState<TransferAccount[]>([]); // Store all accounts
+  const [displayedAccounts, setDisplayedAccounts] = useState<TransferAccount[]>([]); // Accounts to display
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +48,12 @@ export default function TransferAccountManagementPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<TransferAccount | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [parentAccounts, setParentAccounts] = useState<TransferAccount[]>([]);
   const router = useRouter();
+
+  // Front-end pagination state
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Permission request states
   const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
@@ -58,8 +65,15 @@ export default function TransferAccountManagementPage() {
   // Form state for create/edit
   const [formUsername, setFormUsername] = useState("");
   const [formPassword, setFormPassword] = useState("");
-  const [formTransferAccount, setFormTransferAccount] = useState("");  
-  const [formErrors, setFormErrors] = useState<{ username?: string; password?: string, transferAccount?: string }>({});
+  const [formType, setFormType] = useState("sub_account");
+  const [formParentId, setFormParentId] = useState("");
+  const [formErrors, setFormErrors] = useState<{ username?: string; password?: string, parentId?: string }>({});
+
+  // Account types
+  const accountTypes = [
+    { value: "main_account", label: "Main Account" },
+    { value: "sub_account", label: "Sub Account" }
+  ];
 
   // Load accepted permission requests
   const loadPermissions = async () => {
@@ -70,6 +84,23 @@ export default function TransferAccountManagementPage() {
       setPermissionsMap(map);
     } catch (error) {
       console.error("Error loading permissions:", error);
+    }
+  };
+
+  // Fetch potential parent accounts (only main accounts)
+  const fetchParentAccounts = async () => {
+    try {
+      const response = await fetch(`/api/transfer-accounts?type=main_account&limit=100`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch parent accounts");
+      }
+      
+      const data = await response.json();
+      setParentAccounts(data.data);
+    } catch (error) {
+      console.error("Error fetching parent accounts:", error);
+      toast.error("Failed to fetch parent accounts");
     }
   };
 
@@ -104,7 +135,8 @@ export default function TransferAccountManagementPage() {
     }
   };
 
-  const fetchAccounts = async () => {
+  // Fetch all accounts data once
+  const fetchAllAccounts = async () => {
     if (auth) {
       if (!auth.canAccess("transfer-accounts")) {
         router.push("/dashboard");
@@ -112,15 +144,10 @@ export default function TransferAccountManagementPage() {
       }
     }
     try {
-      // Build query parameters
+      // Request all accounts without pagination
       const queryParams = new URLSearchParams();
-      queryParams.append("page", currentPage.toString());
-      queryParams.append("limit", pageSize.toString());
-
-      if (searchTerm) {
-        queryParams.append("search", searchTerm);
-      }
-
+      queryParams.append("limit", "1000"); // Request a large amount
+      
       const response = await fetch(`/api/transfer-accounts?${queryParams.toString()}`);
 
       if (!response.ok) {
@@ -128,31 +155,53 @@ export default function TransferAccountManagementPage() {
       }
 
       const data: GetResponse = await response.json();
-      setAccounts(data.data);
-      setPagination(data.pagination);
+      setAllAccounts(data.data);
+      setTotalItems(data.data.length);
+      
+      // Initial filtering by search term
+      filterAndPaginateAccounts(data.data, searchTerm, currentPage, pageSize);
     } catch (error) {
       console.error("Error fetching transfer accounts:", error);
       toast.error("Failed to fetch transfer accounts");
     }
   };
 
+  // Filter and paginate accounts on the client-side
+  const filterAndPaginateAccounts = (accounts: TransferAccount[], search: string, page: number, size: number) => {
+    // First filter accounts by search term
+    let filtered = accounts;
+    if (search.trim() !== "") {
+      const searchLower = search.toLowerCase();
+      filtered = accounts.filter(account => 
+        account.username.toLowerCase().includes(searchLower) ||
+        account.type?.toLowerCase().includes(searchLower) ||
+        account.status?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Calculate total pages
+    const calculatedTotalPages = Math.ceil(filtered.length / size);
+    setTotalPages(calculatedTotalPages > 0 ? calculatedTotalPages : 1);
+    setTotalItems(filtered.length);
+    
+    // Paginate the filtered results
+    const start = (page - 1) * size;
+    const end = start + size;
+    setDisplayedAccounts(filtered.slice(start, end));
+  };
+
   useEffect(() => {
     if (!isLoading && auth) {
-      fetchAccounts();
+      fetchAllAccounts();
+      fetchParentAccounts();
       loadPermissions();
     }
-  }, [isLoading, auth, router, currentPage, pageSize]);
+  }, [isLoading, auth, router]);
 
-  // Debounced search
+  // Apply filtering and pagination whenever relevant state changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm !== "") {
-        fetchAccounts();
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    filterAndPaginateAccounts(allAccounts, searchTerm, currentPage, pageSize);
+  }, [searchTerm, currentPage, pageSize, allAccounts]);
 
   // Handle permission completion
   useEffect(() => {
@@ -168,7 +217,7 @@ export default function TransferAccountManagementPage() {
   }, [completePermission]);
 
   const validateForm = () => {
-    const errors: { username?: string; password?: string; transferAccount?: string } = {};
+    const errors: { username?: string; password?: string; parentId?: string } = {};
     
     if (!formUsername || formUsername.length < 3) {
       errors.username = "Username must be at least 3 characters";
@@ -178,8 +227,9 @@ export default function TransferAccountManagementPage() {
       errors.password = "Password must be at least 6 characters";
     }
 
-    if (!formTransferAccount) {
-      errors.transferAccount = "Transfer account is required";
+    // Only validate parent account selection for sub accounts
+    if (formType === "sub_account" && !formParentId) {
+      errors.parentId = "Parent account is required for sub accounts";
     }
     
     setFormErrors(errors);
@@ -190,16 +240,20 @@ export default function TransferAccountManagementPage() {
     if (!validateForm()) return;
     
     try {
+      // For main accounts, don't send parent_id
+      const accountData = {
+        username: formUsername,
+        password: formPassword,
+        type: formType,
+        parent_id: formType === "sub_account" ? formParentId : null
+      };
+
       const response = await fetch("/api/transfer-accounts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          account_username: formUsername,
-          password: formPassword,
-          transfer_account: formTransferAccount
-        }),
+        body: JSON.stringify(accountData),
       });
 
       if (!response.ok) {
@@ -219,9 +273,10 @@ export default function TransferAccountManagementPage() {
       toast.success("Transfer account created successfully");
       setFormUsername("");
       setFormPassword("");
-      setFormTransferAccount(""); 
+      setFormType("sub_account");
+      setFormParentId("");
       setCreateDialogOpen(false);
-      fetchAccounts();
+      fetchAllAccounts();
     } catch (error) {
       console.error("Error creating transfer account:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create transfer account");
@@ -232,17 +287,21 @@ export default function TransferAccountManagementPage() {
     if (!selectedAccount || !validateForm()) return;
   
     try {
+      // For main accounts, don't send parent_id
+      const accountData = {
+        username: formUsername,
+        password: formPassword,
+        type: formType,
+        parent_id: formType === "sub_account" ? formParentId : null
+      };
+
       // Use the dynamic route structure with the ID in the path
       const response = await fetch(`/api/transfer-accounts/${selectedAccount.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          account_username: formUsername,
-          password: formPassword,
-          transfer_account: formTransferAccount
-        }),
+        body: JSON.stringify(accountData),
       });
   
       if (!response.ok) {
@@ -261,9 +320,10 @@ export default function TransferAccountManagementPage() {
       toast.success("Transfer account updated successfully");
       setFormUsername("");
       setFormPassword("");
-      setFormTransferAccount(""); 
+      setFormType("sub_account");
+      setFormParentId("");
       setEditDialogOpen(false);
-      fetchAccounts();
+      fetchAllAccounts();
     } catch (error) {
       console.error("Error updating transfer account:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update transfer account");
@@ -294,10 +354,10 @@ export default function TransferAccountManagementPage() {
       if(response.status === 409) {  
         const data = await response.json();
         throw new Error(data.error || "Failed to delete transfer account");
-      }else {  
+      } else {  
         toast.success("Transfer account deleted successfully");
       }
-      fetchAccounts();
+      fetchAllAccounts();
     } catch (error) {
       console.error("Error deleting transfer account:", error);
       toast.error(error instanceof Error ? error.message : "Failed to delete transfer account");
@@ -315,16 +375,18 @@ export default function TransferAccountManagementPage() {
     
     setFormUsername("");
     setFormPassword("");
-    setFormTransferAccount("");
+    setFormType("sub_account");
+    setFormParentId("");
     setFormErrors({});
     setCreateDialogOpen(true);
   };
 
   const handleEdit = (account: TransferAccount) => {
     setSelectedAccount(account);
-    setFormUsername(account.account_username);
+    setFormUsername(account.username);
     setFormPassword(account.password);
-    setFormTransferAccount(account.transfer_account || "");
+    setFormType(account.type || "sub_account");
+    setFormParentId(account.parent_id || "");
     setFormErrors({});
     setEditDialogOpen(true);
   };
@@ -383,6 +445,13 @@ export default function TransferAccountManagementPage() {
     setCurrentPage(page);
   };
 
+  // Find parent account username for display
+  const getParentUsername = (parentId: string | null | undefined) => {
+    if (!parentId) return 'None';
+    const parent = parentAccounts.find(account => account.id === parentId);
+    return parent ? parent.username : 'Unknown';
+  };
+
   return (
     <div className="container mx-auto py-6">
       <Breadcrumb items={[{ label: "Transfer Account Management" }]} />
@@ -431,16 +500,7 @@ export default function TransferAccountManagementPage() {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  if (e.target.value === "") {
-                    setCurrentPage(1);
-                    fetchAccounts();
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setCurrentPage(1);
-                    fetchAccounts();
-                  }
+                  setCurrentPage(1);
                 }}
               />
             </div>
@@ -452,7 +512,10 @@ export default function TransferAccountManagementPage() {
                 <TableRow>
                   <TableHead>Username</TableHead>
                   <TableHead>Password</TableHead>
-                  <TableHead>Transfer Account</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Parent Account</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Progress</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Updated At</TableHead>
                   <TableHead>Player Count</TableHead>
@@ -462,20 +525,20 @@ export default function TransferAccountManagementPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                       Loading accounts...
                     </TableCell>
                   </TableRow>
-                ) : accounts.length === 0 ? (
+                ) : displayedAccounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                       No transfer accounts found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  accounts.map((account) => (
+                  displayedAccounts.map((account) => (
                     <TableRow key={account.id}>
-                      <TableCell className="font-medium">{account.account_username}</TableCell>
+                      <TableCell className="font-medium">{account.username}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <span className="mr-2">
@@ -494,10 +557,13 @@ export default function TransferAccountManagementPage() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{account.transfer_account || 'N/A'}</TableCell>
-                      <TableCell>{formatDate(account.created_at)}</TableCell>
-                      <TableCell>{formatDate(account.updated_at)}</TableCell>
-                      <TableCell>{account.player_count || 0}</TableCell>
+                      <TableCell>{account.type || 'sub_account'}</TableCell>
+                      <TableCell>{getParentUsername(account.parent_id)}</TableCell>
+                      <TableCell>{account.status || 'no process'}</TableCell>
+                      <TableCell>{account.progress || "N/A"}</TableCell>
+                      <TableCell>{account.created_at ? formatDate(account.created_at) : 'N/A'}</TableCell>
+                      <TableCell>{account.updated_at ? formatDate(account.updated_at) : 'N/A'}</TableCell>
+                      <TableCell>{account.player_count || "N/A"}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -546,250 +612,321 @@ export default function TransferAccountManagementPage() {
             </Table>
           </div>
 
-          {pagination && (
-            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
-              <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-                <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{" "}
-                of <span className="font-medium">{pagination.total}</span> accounts
-              </div>
-              
-              {pagination.totalPages > 1 && (
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(1)} 
-                    disabled={isLoading || !pagination.hasPreviousPage}
-                    size="sm"
-                  >
-                    First
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(currentPage - 1)} 
-                    disabled={isLoading || !pagination.hasPreviousPage}
-                    size="sm"
-                  >
-                    Previous
-                  </Button>
-                  <span className="px-2">
-                    Page {pagination.page} of {pagination.totalPages}
-                  </span>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(currentPage + 1)} 
-                    disabled={isLoading || !pagination.hasNextPage}
-                    size="sm"
-                  >
-                    Next
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(pagination.totalPages)} 
-                    disabled={isLoading || !pagination.hasNextPage}
-                    size="sm"
-                  >
-                    Last
-                  </Button>
-                </div>
-              )}
+          {/* Client-side pagination display */}
+          <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
+            <div className="text-sm text-muted-foreground">
+              Showing <span className="font-medium">{displayedAccounts.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to{" "}
+              <span className="font-medium">
+                {Math.min(currentPage * pageSize, totalItems)}
+              </span>{" "}
+              of <span className="font-medium">{totalItems}</span> accounts
             </div>
-          )}
+            
+            {totalPages > 1 && (
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => goToPage(1)} 
+                  disabled={isLoading || currentPage === 1}
+                  size="sm"
+                >
+                  First
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => goToPage(currentPage - 1)} 
+                  disabled={isLoading || currentPage === 1}
+                  size="sm"
+                >
+                  Previous
+                </Button>
+                <span className="px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button 
+                  variant="outline" 
+                  onClick={() => goToPage(currentPage + 1)} 
+                  disabled={isLoading || currentPage === totalPages}
+                  size="sm"
+                >
+                  Next
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => goToPage(totalPages)} 
+                  disabled={isLoading || currentPage === totalPages}
+                  size="sm"
+                >
+                  Last
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
-
-      {/* Create Account Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Create Transfer Account</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="account_username">Username</Label>
-              <Input 
-                id="account_username" 
-                placeholder="Enter username" 
-                value={formUsername}
-                onChange={(e) => setFormUsername(e.target.value)}
-              />
-              {formErrors.username && (
-                <p className="text-sm text-red-500">{formErrors.username}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="transfer_account">Transfer Account</Label>
-              <Input
-                id="transfer_account"
-                placeholder="Enter transfer account"
-                value={formTransferAccount}
-                onChange={(e) => setFormTransferAccount(e.target.value)}
-              />
-              {formErrors.transferAccount && (
-                <p className="text-sm text-red-500">{formErrors.transferAccount}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="flex space-x-2">
-                <Input 
-                  id="password" 
-                  type={visiblePasswords['create'] ? "text" : "password"} 
-                  placeholder="Enter password" 
-                  value={formPassword}
-                  onChange={(e) => setFormPassword(e.target.value)}
-                />
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => togglePasswordVisibility('create')}
-                >
-                  {visiblePasswords['create'] ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-              {formErrors.password && (
-                <p className="text-sm text-red-500">{formErrors.password}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={createAccount}>Create</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Account Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit Transfer Account</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="edit_account_username">Username</Label>
-              <Input 
-                id="edit_account_username" 
-                placeholder="Enter username" 
-                value={formUsername}
-                onChange={(e) => setFormUsername(e.target.value)}
-              />
-              {formErrors.username && (
-                <p className="text-sm text-red-500">{formErrors.username}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_transfer_account">Transfer Account</Label>
-              <Input
-                id="edit_transfer_account"
-                placeholder="Enter transfer account"
-                value={formTransferAccount}
-                onChange={(e) => setFormTransferAccount(e.target.value)}
-              />
-              {formErrors.transferAccount && (
-                <p className="text-sm text-red-500">{formErrors.transferAccount}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_password">Password</Label>
-              <div className="flex space-x-2">
-                <Input 
-                  id="edit_password" 
-                  type={visiblePasswords['edit'] ? "text" : "password"} 
-                  placeholder="Enter password" 
-                  value={formPassword}
-                  onChange={(e) => setFormPassword(e.target.value)}
-                />
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => togglePasswordVisibility('edit')}
-                >
-                  {visiblePasswords['edit'] ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-              {formErrors.password && (
-                <p className="text-sm text-red-500">{formErrors.password}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={updateAccount}>Update</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Permission Request Dialog */}
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} Transfer Account
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {selectedAccount && (
-              <div className="space-y-2">
-                <Label>Account</Label>
-                <p className="font-medium">{selectedAccount.account_username}</p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="request_message">Reason for Request</Label>
-              <Textarea
-                id="request_message"
-                placeholder="Explain why you need this permission..."
-                value={requestMessage}
-                onChange={(e) => setRequestMessage(e.target.value)}
-                rows={4}
-              />
-              {requestMessage.length < 10 && requestMessage.length > 0 && (
-                <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={submitPermissionRequest}
-              disabled={!requestMessage || requestMessage.length < 10}
-            >
-              Submit Request
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={deleteAccount}
-        title="Confirm Delete"
-        children={
-          <>
-            <p>Are you sure you want to delete this transfer account?</p>
-            {accountToDelete?.player_count && accountToDelete.player_count > 0 && (
-              <p className="mt-2 text-red-500">
-                Warning: This account has {accountToDelete.player_count} associated players that will be affected.
-              </p>
-            )}
-            <p className="mt-2">This action cannot be undone.</p>
-          </>
-        }
-        confirmText="Delete"
-      />
+{/* Create Account Dialog */}
+<Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+  <DialogContent className="sm:max-w-[425px]">
+    <DialogHeader>
+      <DialogTitle>Create Transfer Account</DialogTitle>
+    </DialogHeader>
+    <div className="space-y-4 py-2">
+      <div className="space-y-2">
+        <Label htmlFor="account_type">Account Type</Label>
+        <Select
+          value={formType}
+          onValueChange={(value) => {
+            setFormType(value);
+            // Reset parent ID when switching to main account
+            if (value === "main_account") {
+              setFormParentId("");
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select account type" />
+          </SelectTrigger>
+          <SelectContent>
+            {accountTypes.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="account_username">Username</Label>
+        <Input 
+          id="account_username" 
+          placeholder="Enter username" 
+          value={formUsername}
+          onChange={(e) => setFormUsername(e.target.value)}
+        />
+        {formErrors.username && (
+          <p className="text-sm text-red-500">{formErrors.username}</p>
+        )}
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <div className="flex space-x-2">
+          <Input 
+            id="password" 
+            type={visiblePasswords['create'] ? "text" : "password"} 
+            placeholder="Enter password" 
+            value={formPassword}
+            onChange={(e) => setFormPassword(e.target.value)}
+          />
+          <Button 
+            type="button"
+            variant="outline" 
+            size="icon" 
+            onClick={() => togglePasswordVisibility('create')}
+          >
+            {visiblePasswords['create'] ? <EyeOff size={16} /> : <Eye size={16} />}
+          </Button>
+        </div>
+        {formErrors.password && (
+          <p className="text-sm text-red-500">{formErrors.password}</p>
+        )}
+      </div>
+      
+      {formType === "sub_account" && (
+        <div className="space-y-2">
+          <Label htmlFor="parent_account">Parent Account</Label>
+          <Select
+            value={formParentId}
+            onValueChange={setFormParentId}
+            disabled={formType !== "sub_account"}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select parent account" />
+            </SelectTrigger>
+            <SelectContent>
+              {parentAccounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.username}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {formErrors.parentId && (
+            <p className="text-sm text-red-500">{formErrors.parentId}</p>
+          )}
+        </div>
+      )}
     </div>
-  );
-}
+    <DialogFooter>
+      <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+        Cancel
+      </Button>
+      <Button onClick={createAccount}>Create</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+{/* Edit Account Dialog */}
+<Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+  <DialogContent className="sm:max-w-[425px]">
+    <DialogHeader>
+      <DialogTitle>Edit Transfer Account</DialogTitle>
+    </DialogHeader>
+    <div className="space-y-4 py-2">
+      <div className="space-y-2">
+        <Label htmlFor="edit_account_type">Account Type</Label>
+        <Select
+          value={formType}
+          onValueChange={(value) => {
+            setFormType(value);
+            // Reset parent ID when switching to main account
+            if (value === "main_account") {
+              setFormParentId("");
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select account type" />
+          </SelectTrigger>
+          <SelectContent>
+            {accountTypes.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="edit_account_username">Username</Label>
+        <Input 
+          id="edit_account_username" 
+          placeholder="Enter username" 
+          value={formUsername}
+          onChange={(e) => setFormUsername(e.target.value)}
+        />
+        {formErrors.username && (
+          <p className="text-sm text-red-500">{formErrors.username}</p>
+        )}
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="edit_password">Password</Label>
+        <div className="flex space-x-2">
+          <Input 
+            id="edit_password" 
+            type={visiblePasswords['edit'] ? "text" : "password"} 
+            placeholder="Enter password" 
+            value={formPassword}
+            onChange={(e) => setFormPassword(e.target.value)}
+          />
+          <Button 
+            type="button"
+            variant="outline" 
+            size="icon" 
+            onClick={() => togglePasswordVisibility('edit')}
+          >
+            {visiblePasswords['edit'] ? <EyeOff size={16} /> : <Eye size={16} />}
+          </Button>
+        </div>
+        {formErrors.password && (
+          <p className="text-sm text-red-500">{formErrors.password}</p>
+        )}
+      </div>
+      
+      {formType === "sub_account" && (
+        <div className="space-y-2">
+          <Label htmlFor="edit_parent_account">Parent Account</Label>
+          <Select
+            value={formParentId}
+            onValueChange={setFormParentId}
+            disabled={formType !== "sub_account"}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select parent account" />
+            </SelectTrigger>
+            <SelectContent>
+              {parentAccounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.username}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {formErrors.parentId && (
+            <p className="text-sm text-red-500">{formErrors.parentId}</p>
+          )}
+        </div>
+      )}
+    </div>
+    <DialogFooter>
+      <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+        Cancel
+      </Button>
+      <Button onClick={updateAccount}>Update</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+{/* Delete Confirmation Dialog */}
+<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+  <DialogContent className="sm:max-w-[425px]">
+    <DialogHeader>
+      <DialogTitle>Confirm Delete</DialogTitle>
+    </DialogHeader>
+    <div className="py-4">
+      <p>Are you sure you want to delete the account <strong>{accountToDelete?.username}</strong>?</p>
+      {accountToDelete?.type === "main_account" && (
+        <p className="text-red-500 mt-2">Warning: Deleting a main account will also delete all its sub-accounts!</p>
+      )}
+    </div>
+    <DialogFooter>
+      <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+        Cancel
+      </Button>
+      <Button variant="destructive" onClick={deleteAccount}>Delete</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+{/* Permission Request Dialog */}
+<Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+  <DialogContent className="sm:max-w-[425px]">
+    <DialogHeader>
+      <DialogTitle>
+        Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} 
+        {selectedAccount ? ` "${selectedAccount.username}"` : ' New Account'}
+      </DialogTitle>
+    </DialogHeader>
+    <div className="space-y-4 py-2">
+      <div className="space-y-2">
+        <Label htmlFor="request_message">Request Message</Label>
+        <Textarea 
+          id="request_message" 
+          placeholder="Explain why you need this permission..." 
+          value={requestMessage}
+          onChange={(e) => setRequestMessage(e.target.value)}
+          rows={4}
+        />
+        {requestMessage.length < 10 && (
+          <p className="text-sm text-red-500">Message must be at least 10 characters</p>
+        )}
+      </div>
+    </div>
+    <DialogFooter>
+      <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
+        Cancel
+      </Button>
+      <Button 
+        onClick={submitPermissionRequest}
+        disabled={requestMessage.length < 10}
+      >
+        Submit Request
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+</div>
+)};
