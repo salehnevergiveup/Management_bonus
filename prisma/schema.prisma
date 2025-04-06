@@ -110,6 +110,23 @@ model agentAccount {
   process    UserProcess? @relation(fields: [process_id], references: [id], onDelete: SetNull)
 }
 
+model AccountTurnover {
+  id        String   @id @default(uuid())
+  username  String   // player username
+  game      String
+  currency  String
+  turnover  Decimal
+  createdAt DateTime @default(now())
+}
+
+model ExchangeRate {
+  id           String   @id @default(uuid())
+  fromCurrency String
+  toCurrency   String
+  rate         Decimal
+  createdAt    DateTime @default(now())
+}
+
 model Player {
   id                  String   @id @default(uuid())
   account_username    String   @unique

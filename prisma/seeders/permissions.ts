@@ -1,7 +1,7 @@
 import {prisma} from "@/lib/prisma";
 
 const actions = ["view", "create", "delete", "edit"];
-const models = ["players", "users", "profiles", "bonus", "processes", "requests", "transfer-accounts","agent-accounts", "notifications", "api-keys"];
+const models = ["players", "users", "profiles", "bonus", "processes", "requests", "transfer-accounts","agent-accounts", "notifications", "api-keys", "account-turnovers"];
 
 let permissionsList = models.flatMap((model) => 
   actions.map((action) => `${model}:${action}`)

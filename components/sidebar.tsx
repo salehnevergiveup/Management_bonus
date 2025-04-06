@@ -17,7 +17,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Gamepad2
+  Gamepad2,
+  Repeat2
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { useUser } from "@/contexts/usercontext";
@@ -51,6 +52,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
       { name: "Requests", icon: <FileText className="h-4 w-4" /> },
       {name: "Api Keys", icon: <Key className="h-4 w-4" />  },
       { name: "Processes", icon: <BarChart3 className="h-4 w-4" /> },
+      { name: "Account Turnovers", icon: <Repeat2 className="h-4 w-4" /> },
       { name: "Agent Accounts" , icon: <User className="h-4 w-4"/>}, 
       { name: "Transfer Accounts", icon: <Wallet className="h-4 w-4" /> },
       { name: "Players", icon: <Gamepad2 className="h-4 w-4" /> },
