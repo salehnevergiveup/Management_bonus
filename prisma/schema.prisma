@@ -139,6 +139,16 @@ model Player {
   @@index([transfer_account_id])
 }
 
+model Bonus {  
+  id  String @id @default(uuid())
+  name String  
+  description String 
+  function String @db.Text  
+  baseline Json
+  created_at DateTime @default(now())
+  updated_at DateTime
+}
+
 model Match {
   id                  String   @id @default(uuid())
   username            String
