@@ -32,6 +32,7 @@ export const SeedRoles = async () => {
     "transfer-accounts:delete", "transfer-accounts:edit", "transfer-accounts:create",  
     "agent-accounts:delete", "agent-accounts:edit", "agent-accounts:create",
     "players:delete", "players:edit", "players:create",
+    "bonuses:delete", "bonuses:edit", "bonuses:create", 
     "requests:edit",//meaning accept or reject
   ];
 

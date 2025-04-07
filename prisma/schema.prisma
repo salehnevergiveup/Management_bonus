@@ -146,7 +146,7 @@ model Bonus {
   function String @db.Text  
   baseline Json
   created_at DateTime @default(now())
-  updated_at DateTime
+  updated_at DateTime?
 }
 
 model Match {
