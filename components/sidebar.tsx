@@ -56,7 +56,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
       { name: "Agent Accounts" , icon: <User className="h-4 w-4"/>}, 
       { name: "Transfer Accounts", icon: <Wallet className="h-4 w-4" /> },
       { name: "Players", icon: <Gamepad2 className="h-4 w-4" /> },
-      { name: "Bonus", icon: <CircleDollarSign className="h-4 w-4" /> },
+      { name: "Bonuses", icon: <CircleDollarSign className="h-4 w-4" /> },
       { name: "Matches", icon: <Target className="h-4 w-4" /> },
     ]
 
