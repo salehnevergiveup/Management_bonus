@@ -13,7 +13,8 @@ const TruncateSeeder =  async() => {
       prisma.aPIKeyPermission.deleteMany(),  
       prisma.aPIKey.deleteMany(),  
       prisma.userInvitation.deleteMany(),  
-      prisma.user.deleteMany()  
+      prisma.user.deleteMany(),  
+      prisma.bonus.deleteMany()
     ])
 }
 

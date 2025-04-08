@@ -47,9 +47,8 @@ export async function GET(request: Request) {
   }
 }
 
-export async function Post(request: Request) {
+export async function POST(request: Request) {
   const auth = await SessionValidation();
-
   if (!auth) {
     return NextResponse.json(
       {},
@@ -74,7 +73,7 @@ export async function Post(request: Request) {
 
     const { function: bonusFunction, description, name, baseline } = body;
 
-    if (!bonusFunction || !description || !name || !baseline) {
+    if (!bonusFunction || !description || !name ) {
       return NextResponse.json(
         {
           success: false,
@@ -103,6 +102,7 @@ export async function Post(request: Request) {
       { status: 201 }
     );
   } catch (error) {
+    console.log(error);
     return NextResponse.json(
       {
         success: false,

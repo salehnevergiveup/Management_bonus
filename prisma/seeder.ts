@@ -10,6 +10,7 @@ import SeedRequests from "./seeders/request";
 import { AutomationApiKey } from "./seeders/api_key";
 import SeedAgentAccounts from "./seeders/agent_accounts";
 import TruncateSeeder from "./seeders/truncate";
+import SeedBonuses from "./seeders/bonuses";
 
 
 const main = async () => {
@@ -29,6 +30,7 @@ const main = async () => {
         await SeedPlayers(); 
         await SeedMatches(); 
         await SeedRequests(); 
+        await SeedBonuses();
 
     console.log("✅ All seeders executed successfully.");
   } catch (error) {

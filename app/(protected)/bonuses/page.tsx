@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ConfirmationDialog } from '@/components/dialog';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import CodeEditor from '@/components/ui/code-editor';
 import { Bonus } from '@/types/bonus.type';
 
 export default function BonusManagementPage() {
@@ -45,6 +46,22 @@ export default function BonusManagementPage() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
+
+  const formatCodeForDisplay = (code: any) => {
+    if (typeof code === 'string') {
+      try {
+        // First try parsing as JSON in case it's a stringified value
+        return JSON.parse(`"${code}"`);
+      } catch (e) {
+        // If that fails, try a simple replacement of escaped newlines
+        return code.replace(/\\n/g, '\n')
+                  .replace(/\\t/g, '\t')
+                  .replace(/\\"/g, '"')
+                  .replace(/\\\\/g, '\\');
+      }
+    }
+    return typeof code === 'object' ? JSON.stringify(code, null, 2) : String(code);
+  };
   
   const totalPages = Math.max(1, Math.ceil(filteredBonuses.length / pageSize));
 
@@ -70,6 +87,7 @@ export default function BonusManagementPage() {
       toast.error('Failed to fetch bonuses');
     }
   };
+
 
   useEffect(() => {
     if (!isLoading && auth) {
@@ -227,8 +245,8 @@ export default function BonusManagementPage() {
                   paginatedBonuses.map((bonus) => (
                     <TableRow key={bonus.id}>
                       <TableCell className="font-medium">{bonus.name}</TableCell>
-                      <TableCell>{formatDate(bonus.created_at)}</TableCell>
-                      <TableCell>{formatDate(bonus.updated_at)}</TableCell>
+                      <TableCell>{bonus.created_at? formatDate(bonus.created_at): "N/A"}</TableCell>
+                      <TableCell>{bonus.updated_at? formatDate(bonus.updated_at): "N/A"}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -323,88 +341,97 @@ export default function BonusManagementPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Details Dialog */}
-      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedBonus?.name} Details
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <div className="flex border-b mb-4">
-              <button
-                className={`px-4 py-2 font-medium ${activeTab === 'function' ? 'border-b-2 border-primary' : ''}`}
-                onClick={() => setActiveTab('function')}
-              >
-                Function
-              </button>
-              <button
-                className={`px-4 py-2 font-medium ${activeTab === 'baseline' ? 'border-b-2 border-primary' : ''}`}
-                onClick={() => setActiveTab('baseline')}
-              >
-                Baseline
-              </button>
-              <button
-                className={`px-4 py-2 font-medium ${activeTab === 'description' ? 'border-b-2 border-primary' : ''}`}
-                onClick={() => setActiveTab('description')}
-              >
-                Description
-              </button>
-            </div>
-            
-            {activeTab === 'function' && selectedBonus && (
-              <div className="relative">
-                <button 
-                  className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20"
-                  onClick={() => copyToClipboard(selectedBonus.function)}
-                >
-                  <Copy size={16} />
-                </button>
-                <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
-                  {formatJsonDisplay(selectedBonus.function)}
-                </pre>
-              </div>
-            )}
-            
-            {activeTab === 'baseline' && selectedBonus && (
-              <div className="relative">
-                <button 
-                  className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20"
-                  onClick={() => copyToClipboard(typeof selectedBonus.baseline === 'string' 
-                    ? selectedBonus.baseline 
-                    : JSON.stringify(selectedBonus.baseline, null, 2))}
-                >
-                  <Copy size={16} />
-                </button>
-                <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
-                  {formatJsonDisplay(selectedBonus.baseline)}
-                </pre>
-              </div>
-            )}
-            
-            {activeTab === 'description' && selectedBonus && (
-              <div className="relative">
-                <button 
-                  className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20"
-                  onClick={() => copyToClipboard(selectedBonus.description)}
-                >
-                  <Copy size={16} />
-                </button>
-                <div className="bg-muted p-4 rounded-md whitespace-pre-wrap">
-                  {selectedBonus.description}
-                </div>
-              </div>
-            )}
+    {/* Details Dialog */}
+    <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {selectedBonus?.name} Details
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="py-4">
+          <div className="flex border-b mb-4">
+            <button
+              className={`px-4 py-2 font-medium ${activeTab === 'function' ? 'border-b-2 border-primary' : ''}`}
+              onClick={() => setActiveTab('function')}
+            >
+              Function
+            </button>
+            <button
+              className={`px-4 py-2 font-medium ${activeTab === 'baseline' ? 'border-b-2 border-primary' : ''}`}
+              onClick={() => setActiveTab('baseline')}
+            >
+              Baseline
+            </button>
+            <button
+              className={`px-4 py-2 font-medium ${activeTab === 'description' ? 'border-b-2 border-primary' : ''}`}
+              onClick={() => setActiveTab('description')}
+            >
+              Description
+            </button>
           </div>
           
-          <DialogFooter>
-            <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {activeTab === 'function' && selectedBonus && (
+            <div className="relative">
+              <button 
+                className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20 z-10"
+                onClick={() => copyToClipboard(selectedBonus.function)}
+              >
+                <Copy size={16} />
+              </button>
+              <CodeEditor
+                value={formatCodeForDisplay(selectedBonus.function)}
+                onChange={() => {}} // No-op since it's read-only
+                language="javascript"
+                height="400px"
+                readOnly={true}
+              />
+            </div>
+          )}
+          
+          {activeTab === 'baseline' && selectedBonus && (
+            <div className="relative">
+              <button 
+                className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20 z-10"
+                onClick={() => copyToClipboard(typeof selectedBonus.baseline === 'string' 
+                  ? formatCodeForDisplay(selectedBonus.baseline)
+                  : JSON.stringify(selectedBonus.baseline, null, 2))}
+              >
+                <Copy size={16} />
+              </button>
+              <CodeEditor
+                value={typeof selectedBonus.baseline === 'string' 
+                  ? formatCodeForDisplay(selectedBonus.baseline) 
+                  : JSON.stringify(selectedBonus.baseline, null, 2)}
+                onChange={() => {}} // No-op since it's read-only
+                language="json"
+                height="400px"
+                readOnly={true}
+              />
+            </div>
+          )}
+          
+          {activeTab === 'description' && selectedBonus && (
+            <div className="relative">
+              <button 
+                className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20"
+                onClick={() => copyToClipboard(selectedBonus.description)}
+              >
+                <Copy size={16} />
+              </button>
+              <div className="bg-muted p-4 rounded-md whitespace-pre-wrap">
+                {selectedBonus.description}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <DialogFooter>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog

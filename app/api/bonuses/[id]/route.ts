@@ -122,4 +122,52 @@ export async function PUT(
       );
     }
   }
-  
+
+  export async function GET(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> } 
+  ) {
+    const auth = await SessionValidation();
+    
+    if (!auth) {
+      return NextResponse.json(
+        {},
+        { status: 401 }
+      );
+    }
+    
+    const { id } = await params;
+    
+    try {
+      const bonus = await prisma.bonus.findUnique({
+        where: { id }
+      });
+      
+      if (!bonus) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Bonus not found."
+          },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json(
+        {
+          success: true,
+          bonus: bonus
+        },
+        { status: 200 }
+      );
+    } catch (error) {
+      console.error("Error fetching bonus:", error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to fetch bonus data."
+        },
+        { status: 500 }
+      );
+    }
+  }
