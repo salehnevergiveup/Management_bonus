@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Edit, Trash, MoreHorizontal, Plus, Search, DollarSign, RefreshCw } from "lucide-react";
+import { Edit, Trash, MoreHorizontal, Plus, Search, DollarSign, RefreshCw, Info } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,7 +34,7 @@ interface ExchangeRate {
   createdAt: string;
 }
 
-interface Bounce {
+interface Bonus {
   id: string;
   name: string;
   description: string;
@@ -44,7 +44,7 @@ export default function AccountTurnoverPage() {
   const { auth, isLoading } = useUser();
   const [accountTurnovers, setAccountTurnovers] = useState<AccountTurnover[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
-  const [bounces, setBounces] = useState<Bounce[]>([]);
+  const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,7 +54,9 @@ export default function AccountTurnoverPage() {
   const [selectedTurnover, setSelectedTurnover] = useState<AccountTurnover | null>(null);
   const [exchangeRatesDialogOpen, setExchangeRatesDialogOpen] = useState(false);
   const [createMatchDialogOpen, setCreateMatchDialogOpen] = useState(false);
-  const [selectedBounce, setSelectedBounce] = useState("");
+  const [selectedBonus, setSelectedBonus] = useState("");
+  const [bonusDetailsDialogOpen, setBonusDetailsDialogOpen] = useState(false);
+  const [selectedBonusDetails, setSelectedBonusDetails] = useState<Bonus | null>(null);
   const router = useRouter();
 
   // Form state for edit
@@ -109,26 +111,26 @@ export default function AccountTurnoverPage() {
     }
   };
 
-  const fetchBounces = async () => {
+  const fetchBonuses = async () => {
     try {
-      const response = await fetch(`/api/bounce`);
+      const response = await fetch(`/api/bonuses?all=true`);
 
-    //   if (!response.ok) {
-    //     throw new Error("Failed to fetch bounces");
-    //   }
+      if (!response.ok) {
+        throw new Error("Failed to fetch bonuses");
+      }
 
       const data = await response.json();
-      setBounces(data?.data);
+      setBonuses(data?.data || []);
     } catch (error) {
-      console.error("Error fetching bounces:", error);
-      toast.error("Failed to fetch bounces");
+      console.error("Error fetching bonuses:", error);
+      toast.error("Failed to fetch bonuses");
     }
   };
 
   useEffect(() => {
     if (!isLoading && auth) {
       fetchAccountTurnovers();
-      fetchBounces();
+      fetchBonuses();
     }
   }, [isLoading, auth, router]);
 
@@ -215,8 +217,8 @@ export default function AccountTurnoverPage() {
   };
 
   const createMatch = async () => {
-    if (!selectedBounce) {
-      toast.error("Please select a bounce method");
+    if (!selectedBonus) {
+      toast.error("Please select a bonus method");
       return;
     }
 
@@ -227,7 +229,7 @@ export default function AccountTurnoverPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          bounceId: selectedBounce
+          bonusId: selectedBonus
         }),
       });
 
@@ -237,7 +239,7 @@ export default function AccountTurnoverPage() {
       }
 
       toast.success("Match created successfully");
-      setSelectedBounce("");
+      setSelectedBonus("");
       setCreateMatchDialogOpen(false);
     } catch (error) {
       console.error("Error creating match:", error);
@@ -250,8 +252,13 @@ export default function AccountTurnoverPage() {
   };
 
   const handleCreateMatch = () => {
-    setSelectedBounce("");
+    setSelectedBonus("");
     setCreateMatchDialogOpen(true);
+  };
+
+  const handleViewBonusDetails = (bonus: Bonus) => {
+    setSelectedBonusDetails(bonus);
+    setBonusDetailsDialogOpen(true);
   };
 
   const handleEdit = (turnover: AccountTurnover) => {
@@ -275,6 +282,12 @@ export default function AccountTurnoverPage() {
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
+  };
+
+  // Truncate text with ellipsis for display in table
+  const truncateText = (text: string, maxLength: number = 50) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
   };
 
   // Calculate pagination display values
@@ -507,37 +520,111 @@ export default function AccountTurnoverPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Match Dialog */}
+            {/* Create Match Dialog */}
       <Dialog open={createMatchDialogOpen} onOpenChange={setCreateMatchDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Create Match</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="bounce">Select Bounce Method</Label>
+              <Label htmlFor="bonus">Select Bonus Method</Label>
               <Select 
-                value={selectedBounce} 
-                onValueChange={setSelectedBounce}
+                value={selectedBonus} 
+                onValueChange={setSelectedBonus}
               >
-                <SelectTrigger id="bounce">
-                  <SelectValue placeholder="Select a bounce method" />
+                <SelectTrigger id="bonus">
+                  <SelectValue placeholder="Select a bonus method" />
                 </SelectTrigger>
                 <SelectContent>
-                  {bounces.map((bounce) => (
-                    <SelectItem key={bounce.id} value={bounce.id}>
-                      {bounce.name} - {bounce.description}
+                  {bonuses.map((bonus) => (
+                    <SelectItem key={bonus.id} value={bonus.id}>
+                      {bonus.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* List of all available bonuses */}
+            <div className="space-y-2 mt-4">
+              <Label>Available Bonus Methods</Label>
+              <ScrollArea className="h-[250px]">
+                <div className="rounded-md border w-full">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow>
+                        <TableHead className="w-2/5">Name</TableHead>
+                        <TableHead className="hidden sm:table-cell">Description</TableHead>
+                        <TableHead className="w-20 text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bonuses.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="h-24 text-center">
+                            No bonus methods found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        bonuses.map((bonus) => (
+                          <TableRow key={bonus.id} className={selectedBonus === bonus.id ? "bg-muted/50" : ""}>
+                            <TableCell className="font-medium">
+                              <div className="truncate max-w-[120px] sm:max-w-full">
+                                {bonus.name}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {truncateText(bonus.description, 40)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 px-2"
+                                onClick={() => handleViewBonusDetails(bonus)}
+                              >
+                                Details
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </ScrollArea>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-4 sm:mt-6">
             <Button type="button" variant="outline" onClick={() => setCreateMatchDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={createMatch}>Confirm</Button>
+            <Button onClick={createMatch} disabled={!selectedBonus}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bonus Details Dialog */}
+      <Dialog open={bonusDetailsDialogOpen} onOpenChange={setBonusDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] overflow-hidden p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl break-words">{selectedBonusDetails?.name || 'Bonus Details'}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4 mt-4">
+            <div className="py-2 space-y-2">
+              <div className="text-sm whitespace-pre-wrap p-4 border rounded-md bg-muted/30">
+                {selectedBonusDetails?.description || 'No description available.'}
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="mt-4 pt-2 border-t">
+            <Button 
+              onClick={() => setBonusDetailsDialogOpen(false)} 
+              className="w-full sm:w-auto"
+            >
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
