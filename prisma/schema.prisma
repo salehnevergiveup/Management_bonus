@@ -147,14 +147,16 @@ model Bonus {
   baseline    Json?            
   created_at  DateTime @default(now())
   updated_at  DateTime? 
-}
 
+  matches     Match[]  
+}
 
 model Match {
   id                  String   @id @default(uuid())
   username            String
   transfer_account_id String?
   process_id          String
+  bonus_id            String    
   status              String   @default("pending") // "pending", "failed", "success"
   amount              Float
   currency            String // "USD" or "MYR"
@@ -163,8 +165,9 @@ model Match {
 
   transfer_account TransferAccount? @relation(fields: [transfer_account_id], references: [id], onDelete: SetNull)
   process          UserProcess      @relation(fields: [process_id], references: [id], onDelete: Cascade)
-
+  bonus       Bonus?  @relation(fields: [bonus_id], references: [id])
   @@index([process_id])
+  @@index([bonus_id])
 }
 
 model APIKey {

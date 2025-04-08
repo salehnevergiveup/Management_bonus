@@ -28,7 +28,7 @@ const main = async () => {
         await SeedAgentAccounts(); 
         await SeedTransferAccounts();
         await SeedPlayers(); 
-        await SeedMatches(); 
+        // await SeedMatches(); 
         await SeedRequests(); 
         await SeedBonuses();
 
