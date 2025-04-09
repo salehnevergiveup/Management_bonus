@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Search, RotateCcw, PlayCircle, Square, RefreshCw } from "lucide-react";
+import { Search, RotateCcw, PlayCircle, Square, RefreshCw, CheckSquare, Filter } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/badge";
-import { AppColor,Roles, ProcessStatus } from "@/constants/enums";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AppColor, Roles, ProcessStatus } from "@/constants/enums";
 import { hasPermission, createRequest, fetchRequests } from "@/lib/requstHandling";
-import {RequestData} from "@/types/request-data.type" 
+import { RequestData } from "@/types/request-data.type";
 
 import {
   Tooltip,
@@ -28,10 +29,14 @@ import {
 } from "@/components/ui/tooltip";
 import toast from "react-hot-toast";
 
-
-interface Player {
+interface TransferAccount {
   id: string;
-  account_username: string;
+  name: string;
+}
+
+interface Bonus {
+  id: string;
+  name: string;
 }
 
 interface Process {
@@ -42,18 +47,18 @@ interface Process {
 interface Match {
   id: string;
   username: string;
-  player_id: string | null;
+  transfer_account_id: string | null;
   process_id: string;
-  status: string; // success or fail
+  bonus_id: string;
+  status: string; // pending, failed, success
   amount: number;
   currency: string;
   created_at: string;
-  updated_at: string;
-  player: Player | null;
+  updated_at: string | null;
+  transfer_account: TransferAccount | null;
   process: Process;
+  bonus: Bonus | null;
 }
-
-
 
 export default function MatchManagementPage() {
   const { auth, isLoading } = useUser();
@@ -61,12 +66,19 @@ export default function MatchManagementPage() {
   const [filteredMatches, setFilteredMatches] = useState<Match[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [bonusFilter, setBonusFilter] = useState("all");
+  const [availableBonuses, setAvailableBonuses] = useState<Bonus[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [activeTab, setActiveTab] = useState("all");
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<null | { match: Match; action: string }>(null);
   const router = useRouter();
+  
+  // Selected matches
+  const [selectedMatches, setSelectedMatches] = useState<string[]>([]);
+  const [selectAllChecked, setSelectAllChecked] = useState(false);
+  const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
 
   // Permission related states
   const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
@@ -89,9 +101,18 @@ export default function MatchManagementPage() {
       if (!response.ok) {
         throw new Error("Failed to fetch matches");
       }
-
       const data = await response.json();
+      console.log(data.data);
       setMatches(data.data);
+      
+      // Extract unique bonuses from matches
+      const bonuses = new Map<string, Bonus>();
+      data.data.forEach((match: Match) => {
+        if (match.bonus && match.bonus.id && !bonuses.has(match.bonus.id)) {
+          bonuses.set(match.bonus.id, match.bonus);
+        }
+      });
+      setAvailableBonuses(Array.from(bonuses.values()));
     } catch (error) {
       console.error("Error fetching matches:", error);
       toast.error("Failed to fetch matches");
@@ -156,7 +177,13 @@ export default function MatchManagementPage() {
     }
   }, [completePermission]);
 
-  // Filter matches based on search term, status, and tab
+  // Reset selections when tab changes
+  useEffect(() => {
+    setSelectedMatches([]);
+    setSelectAllChecked(false);
+  }, [activeTab, bonusFilter]);
+
+  // Filter matches based on search term, status, bonus and tab
   useEffect(() => {
     let result = [...matches];
 
@@ -166,7 +193,8 @@ export default function MatchManagementPage() {
       result = result.filter(match => 
         match.username.toLowerCase().includes(term) || 
         match.id.toLowerCase().includes(term) ||
-        match.player?.account_username?.toLowerCase().includes(term) ||
+        match.transfer_account?.name?.toLowerCase().includes(term) ||
+        match.bonus?.name?.toLowerCase().includes(term) ||
         match.currency.toLowerCase().includes(term)
       );
     }
@@ -176,19 +204,24 @@ export default function MatchManagementPage() {
       result = result.filter(match => match.status === statusFilter);
     }
 
-    // Filter by tab
+    // Filter by bonus
+    if (bonusFilter !== "all") {
+      result = result.filter(match => match.bonus_id === bonusFilter);
+    }
+
+    // Filter by tab - using transfer_account_id instead of player_id
     if (activeTab === "matched") {
-      result = result.filter(match => match.player_id !== null);
+      result = result.filter(match => match.transfer_account_id !== null);
     } else if (activeTab === "unmatched") {
-      result = result.filter(match => match.player_id === null);
+      result = result.filter(match => match.transfer_account_id === null);
     }
     // "all" tab doesn't need filtering as it shows everything
 
     setFilteredMatches(result);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [matches, searchTerm, statusFilter, activeTab]);
+  }, [matches, searchTerm, statusFilter, bonusFilter, activeTab]);
 
-  // Paginate the matches - we'll apply pagination to the number of matches
+  // Paginate the matches
   const paginatedMatches = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return filteredMatches.slice(startIndex, startIndex + pageSize);
@@ -219,7 +252,8 @@ export default function MatchManagementPage() {
   const hasNextPage = currentPage < totalPages;
   const hasPreviousPage = currentPage > 1;
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleString();
   };
 
@@ -236,8 +270,6 @@ export default function MatchManagementPage() {
         return AppColor.INFO;
       case ProcessStatus.COMPLETED:
         return AppColor.SUCCESS;
-      case ProcessStatus.SEM_COMPLETED:
-        return AppColor.WARNING;
       case ProcessStatus.FAILED:
         return AppColor.ERROR;
       case ProcessStatus.PENDING:
@@ -252,6 +284,7 @@ export default function MatchManagementPage() {
       case "success":
         return AppColor.SUCCESS;
       case "fail":
+      case "failed":
         return AppColor.ERROR;
       case "pending":
         return AppColor.WARNING;
@@ -260,9 +293,22 @@ export default function MatchManagementPage() {
     }
   };
 
+  const canShowProcessAction = (processStatus: string, action: string) => {
+    switch (processStatus) {
+      case ProcessStatus.PENDING:
+        return (action === 'resume' || action === 'rematch' || action === 'terminate');
+      case ProcessStatus.COMPLETED:
+        return (action === 'rematch' || action === 'terminate');
+      case ProcessStatus.PROCESSING:
+        return false; // No actions while processing
+      default:
+        return false;
+    }
+  };
+  
   const handleProcessAction = (process: { id: string, status: string }, action: string) => {
-    // Check if user has permission for restricted actions (restart, terminate)
-    const needsPermission = (action === 'restart' || action === 'terminate') && 
+    // Check if user has permission for restricted actions (terminate)
+    const needsPermission = (action === 'terminate') && 
                             auth?.role !== Roles.Admin;
     
     if (needsPermission && !hasPermission(permissionsMap, process.id, action)) {
@@ -271,6 +317,16 @@ export default function MatchManagementPage() {
       setRequestProcessId(process.id);
       setRequestMessage("");
       setRequestDialogOpen(true);
+      return;
+    }
+
+    // If resume action with selected matches
+    if (action === 'resume') {
+      if (selectedMatches.length > 0) {
+        setResumeDialogOpen(true);
+      } else {
+        toast.error("Please select at least one match to resume");
+      }
       return;
     }
 
@@ -285,6 +341,27 @@ export default function MatchManagementPage() {
   const handleSingleMatchAction = (match: Match, action: string) => {
     setSelectedAction({ match, action });
     setConfirmDialogOpen(true);
+  };
+
+  // Handle checkbox selection
+  const toggleMatchSelection = (matchId: string) => {
+    setSelectedMatches(prevSelected => {
+      if (prevSelected.includes(matchId)) {
+        return prevSelected.filter(id => id !== matchId);
+      } else {
+        return [...prevSelected, matchId];
+      }
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAllChecked) {
+      setSelectedMatches([]);
+    } else {
+      const processMatches = paginatedMatches.map(match => match.id);
+      setSelectedMatches(processMatches);
+    }
+    setSelectAllChecked(!selectAllChecked);
   };
 
   // Submit permission request
@@ -312,19 +389,6 @@ export default function MatchManagementPage() {
     }
   };
 
-  const canShowProcessAction = (processStatus: string, action: string) => {
-    switch (processStatus) {
-      case ProcessStatus.PENDING:
-        return (action === 'resume' || action === 'rematch' || action === 'terminate');
-      case ProcessStatus.SEM_COMPLETED:
-        return (action === 'restart' || action === 'rematch' || action === 'terminate');
-      case ProcessStatus.PROCESSING:
-        return false; // No actions while processing
-      default:
-        return false;
-    }
-  };
-
   const executeAction = async () => {
     if (!selectedAction) return;
 
@@ -337,6 +401,15 @@ export default function MatchManagementPage() {
       switch (action) {
         case 'resume':
           endpoint = `/api/processes/${match.process_id}/resume`;
+          // Include selected matches if any
+          if (selectedMatches.length > 0) {
+            body = { matchIds: selectedMatches };
+            console.log("matches from the body")
+            console.log(body);  
+          } else {
+            toast.error("No matches selected for resume action");
+            return;
+          }
           break;
         case 'rematch-process':
           endpoint = `/api/matches`;
@@ -347,9 +420,6 @@ export default function MatchManagementPage() {
         case 'terminate':
           endpoint = `/api/processes/${match.process_id}/terminate`;
           method = 'DELETE';
-          break;
-        case 'restart':
-          endpoint = `/api/processes/${match.process_id}/restart`;
           break;
       }
 
@@ -366,7 +436,7 @@ export default function MatchManagementPage() {
       }
 
       // If this was a permission-based action, mark it as complete
-      const needsPermission = (action === 'restart' || action === 'terminate');
+      const needsPermission = (action === 'terminate');
       if (needsPermission && auth?.role !== Roles.Admin) {
         setCompletePermission({
           modelId: match.process_id,
@@ -376,11 +446,14 @@ export default function MatchManagementPage() {
 
       toast.success(`Successfully performed ${action.replace('-', ' ')} action`);
       fetchMatches(); // Refresh the data
+      setSelectedMatches([]); // Clear selections
+      setSelectAllChecked(false);
     } catch (error) {
       console.error(`Error during ${action}:`, error);
       toast.error(`Failed to perform ${action.replace('-', ' ')} action`);
     } finally {
       setConfirmDialogOpen(false);
+      setResumeDialogOpen(false);
       setSelectedAction(null);
     }
   };
@@ -407,10 +480,28 @@ export default function MatchManagementPage() {
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="success">Success</SelectItem>
-                <SelectItem value="fail">Failed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select
+              value={bonusFilter}
+              onValueChange={setBonusFilter}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by bonus" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Bonuses</SelectItem>
+                {availableBonuses.map(bonus => (
+                  <SelectItem key={bonus.id} value={bonus.id}>
+                    {bonus.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             <Select
               value={pageSize.toString()}
               onValueChange={(val) => {
@@ -443,13 +534,31 @@ export default function MatchManagementPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedMatches.length} match{selectedMatches.length !== 1 ? 'es' : ''} selected
+              </span>
+              {selectedMatches.length > 0 && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedMatches([]);
+                    setSelectAllChecked(false);
+                  }}
+                >
+                  Clear selection
+                </Button>
+              )}
+            </div>
           </div>
 
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
-              <TabsTrigger value="all">All Users</TabsTrigger>
-              <TabsTrigger value="matched">Matched Users</TabsTrigger>
-              <TabsTrigger value="unmatched">Unmatched Users</TabsTrigger>
+              <TabsTrigger value="all">All Players</TabsTrigger>
+              <TabsTrigger value="matched">Matched Players</TabsTrigger>
+              <TabsTrigger value="unmatched">Unmatched Players</TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="mt-0">
@@ -532,7 +641,7 @@ export default function MatchManagementPage() {
             <p>Are you sure you want to {selectedAction?.action?.replace('-', ' ')} this {selectedAction?.action?.includes('process') ? 'process' : 'match'}?</p>
             {selectedAction?.action === 'terminate' && (
               <p className="mt-2 text-red-500">
-                Warning: This will terminate the entire process.
+                Warning: This will terminate the entire process. All turnover data will be deleted and matches will be moved to the historical section.
               </p>
             )}
           </>
@@ -541,6 +650,63 @@ export default function MatchManagementPage() {
           ? selectedAction.action.split('-')[0].charAt(0).toUpperCase() + selectedAction.action.split('-')[0].slice(1) 
           : 'Confirm'}
       />
+
+      {/* Resume Dialog with Selected Matches */}
+      <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Resume Process with Selected Matches</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Username</TableHead>
+                  <TableHead>Bonus</TableHead>
+                  <TableHead>Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedMatches.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      No matches selected
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  matches
+                    .filter(match => selectedMatches.includes(match.id))
+                    .map(match => (
+                      <TableRow key={match.id}>
+                        <TableCell>{match.username}</TableCell>
+                        <TableCell>{match.bonus?.name || "N/A"}</TableCell>
+                        <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </div>Can
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setResumeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                // Get a reference process match for the action
+                const firstSelectedMatch = matches.find(match => selectedMatches.includes(match.id));
+                if (firstSelectedMatch) {
+                  setSelectedAction({ match: firstSelectedMatch, action: 'resume' });
+                  executeAction();
+                }
+              }}
+              disabled={selectedMatches.length === 0}
+            >
+              Resume with Selected Matches
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Permission Request Dialog */}
       <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
@@ -618,37 +784,19 @@ export default function MatchManagementPage() {
                                 size="sm" 
                                 variant="outline" 
                                 onClick={() => handleProcessAction(process, 'resume')}
+                                disabled={selectedMatches.length === 0}
                               >
                                 <PlayCircle className="h-4 w-4 mr-1" />
                                 Resume
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Complete the pending process</p>
+                              <p>Complete the pending process with selected matches</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
                         
-                        {/* Restart button - only for SEM_COMPLETED */}
-                        {canShowProcessAction(process.status, 'restart') && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleProcessAction(process, 'restart')}
-                              >
-                                <RotateCcw className="h-4 w-4 mr-1" />
-                                Restart
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Rerun the process for failed matches</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        
-                        {/* Rematch button - for both PENDING and SEM_COMPLETED */}
+                        {/* Rematch button - for PENDING, SEM_COMPLETED, COMPLETED */}
                         {canShowProcessAction(process.status, 'rematch') && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -662,18 +810,18 @@ export default function MatchManagementPage() {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Update the matched users for this process</p>
+                              <p>Update the matched players for this process</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
                         
-                        {/* Terminate button - for both PENDING and SEM_COMPLETED */}
                         {canShowProcessAction(process.status, 'terminate') && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button 
                                 size="sm" 
-                                variant="outline" 
+                                variant="outline"
+                                className="text-red-500 hover:text-red-700" 
                                 onClick={() => handleProcessAction(process, 'terminate')}
                               >
                                 <Square className="h-4 w-4 mr-1" />
@@ -695,7 +843,18 @@ export default function MatchManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {process.status !== ProcessStatus.PROCESSING && (
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          checked={selectAllChecked}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Username</TableHead>
+                    <TableHead>Bonus</TableHead>
+                    <TableHead>Transfer Account</TableHead>
                     <TableHead>Match Status</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
@@ -707,18 +866,36 @@ export default function MatchManagementPage() {
                 <TableBody>
                   {process.matches.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={process.status !== ProcessStatus.PROCESSING ? 10 : 9} className="h-24 text-center">
                         No matches found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    process.matches.map((match: any) => (
+                    process.matches.map((match: Match) => (
                       <TableRow key={match.id}>
+                        {process.status !== ProcessStatus.PROCESSING && (
+                          <TableCell className="w-[50px]">
+                            <Checkbox
+                              checked={selectedMatches.includes(match.id)}
+                              onCheckedChange={() => toggleMatchSelection(match.id)}
+                              aria-label={`Select match ${match.id}`}
+                              disabled={match.transfer_account_id === null}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="font-medium">{match.username}</TableCell>
+                        <TableCell>{match.bonus?.name || "N/A"}</TableCell>
+                        <TableCell>
+                          {match.transfer_account_id ? (
+                            <span className="font-medium">{match.transfer_account?.name || "Transfer Account"}</span>
+                          ) : (
+                            <span className="text-gray-400">Not assigned</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge
-                            color={match.player_id ? AppColor.SUCCESS : AppColor.WARNING}
-                            text={match.player_id ? "Matched" : "Unmatched"}
+                            color={match.transfer_account_id ? AppColor.SUCCESS : AppColor.WARNING}
+                            text={match.transfer_account_id ? "Matched" : "Unmatched"}
                           />
                         </TableCell>
                         <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
@@ -730,9 +907,10 @@ export default function MatchManagementPage() {
                         </TableCell>
                         <TableCell>{formatDate(match.created_at)}</TableCell>
                         <TableCell>{formatDate(match.updated_at)}</TableCell>
-                        {match.player_id === null && process.status !== ProcessStatus.PROCESSING && (
+                        {process.status !== ProcessStatus.PROCESSING && (
                         <TableCell className="text-right">
-                            <TooltipProvider>
+                          <TooltipProvider>
+                            {match.transfer_account_id === null && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button 
@@ -744,10 +922,11 @@ export default function MatchManagementPage() {
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Rematch this individual user</p>
+                                  <p>Rematch this individual player</p>
                                 </TooltipContent>
                               </Tooltip>
-                            </TooltipProvider>
+                            )}
+                          </TooltipProvider>
                         </TableCell>
                         )}
                       </TableRow>

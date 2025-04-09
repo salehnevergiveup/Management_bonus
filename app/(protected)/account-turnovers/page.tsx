@@ -221,24 +221,39 @@ export default function AccountTurnoverPage() {
       toast.error("Please select a bonus method");
       return;
     }
-
+  
     try {
+      // Using the hardcoded process ID as requested
+      const processId = "e44b8777-5e84-4536-bcdd-1d8fdf2d4407";
+  
       const response = await fetch("/api/matches", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          bonusId: selectedBonus
+          bonus_id: selectedBonus,
+          process_id: processId
         }),
       });
-
+  
+      // Parse the response data
+      const data = await response.json();
+  
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create match");
+        throw new Error(data.error || "Failed to create match");
       }
-
-      toast.success("Match created successfully");
+  
+      // Check if we have any warning or specific message from the backend
+      if (data.warning) {
+        toast.error(data.warning);
+        setSelectedBonus("");
+        setCreateMatchDialogOpen(false);
+        return;
+      }
+  
+      // Only show success if we didn't get any warning messages
+      toast.success(data.message || "Match created successfully");
       setSelectedBonus("");
       setCreateMatchDialogOpen(false);
     } catch (error) {

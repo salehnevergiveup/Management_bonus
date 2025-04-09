@@ -4,8 +4,10 @@ import { SessionValidation } from '@lib/sessionvalidation';
 import { Pagination } from "@/lib/pagination";
 import {GetResponse} from "@/types/get-response.type" 
 import ProcessCommand from "@lib/processCommand";
-import { MatchStatus, ProcessStatus, Roles  } from '@constants/enums';
+import {ProcessStatus, Roles  } from '@constants/enums';
 import {prisma} from "@/lib/prisma";
+import { error } from 'console';
+import { Bonus } from '@/types/bonus.type';
 
 export async function GET(request: Request) {
   const auth = await SessionValidation();
@@ -21,13 +23,14 @@ export async function GET(request: Request) {
     where: {
       process: {
         status: {
-          in: [ProcessStatus.SEM_COMPLETED, ProcessStatus.PENDING]
+          in: [ProcessStatus.PENDING]
         }
       }
     },
     include: {
       process: true,
-      player: true
+      transfer_account: true,  
+      bonus: true
     }
   };
   
@@ -60,29 +63,110 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {  
   try {  
-    const auth  = await SessionValidation();
+    console.log("here1");
+    const auth = await SessionValidation();
 
-    if(!auth) {  
-      return  NextResponse.json(
+    if (!auth) {  
+      return NextResponse.json(
         {message: "Unauthenticated request"},  
-        {status:401}
-      )
+        {status: 401}
+      );
     }
+    console.log("here2");
+    const body = await request.json(); 
+
+    if (!body) {  
+      return NextResponse.json(
+        {error: "Nothing found in the request body"},  
+        {status: 400}
+      );
+    } 
+    console.log("here3");
+    if (!body.bonus_id || !body.process_id) {  
+      return NextResponse.json(
+        {error: "Unable to find the bonus_id or process_id"},
+        {status: 400}
+      );
+    }
+    const bonusId = body.bonus_id; 
+    const processId = body.process_id;  
+    console.log("here4");
     
-    //async process 
-    ProcessCommand["rematch"](auth.id)
-    .catch(err=>  console.error(`Background rematch process error for match`, err));  
-
+    const matchesWithBonusId = await prisma.match.count({where: {bonus_id: bonusId}});  
+    console.log("here5");
+    if (matchesWithBonusId > 0) {  
+      return NextResponse.json(
+        {error: "Incoming players have been filtered with this bonus already"},
+        {status: 400} 
+      );
+    }
+    console.log("here6");
+    
+    const bonusDB = await prisma.bonus.findUnique({where: {id: bonusId}}); 
+    const process = await prisma.userProcess.findUnique({
+      where: {
+        id: processId, 
+        status: ProcessStatus.PENDING
+      }
+    });
+    console.log("here7");
+    
+    if (!bonusDB) {  
+      return NextResponse.json(
+        {error: "Unable to find the bonus record"},  
+        {status: 404}
+      );
+    }
+    console.log("here8");
+    
+    if (!process) {  
+      return NextResponse.json(
+        {error: "Unable to find the process record or process is not in PENDING status"},  
+        {status: 404}
+      );
+    }
+    console.log("here9");
+    
+    const bonus: Bonus = {
+      ...bonusDB!,                
+      created_at: bonusDB!.created_at.toISOString(),    
+      updated_at: bonusDB!.updated_at?.toISOString()
+    };
+    
+    console.log("testing");
+    
+    // Call the background process but don't await its completion
+    // This is the async part that will continue after response is sent
+    createMatchesData(auth.id, bonus, process.id);
+    
+    console.log("here10");
     return NextResponse.json(
-      {message: "rematch Process started"},  
-      {status: 202}
-    )
+      {
+        success: true, 
+        message: "Started processing the match data. This may take some time to complete."
+      },
+      {status: 202} 
+    );
 
-  }catch(error) {  
-  console.error("Error initiating rematch process:", error);
-  return NextResponse.json(
-    { message: "Server error initiating the rematch process" },
-    { status: 500 }
-  );
+  } catch (error) {  
+    console.error("Error initiating match process:", error);
+    return NextResponse.json(
+      { error: "Server error initiating the match process" },
+      { status: 500 }
+    );
   }
 }
+
+async function createMatchesData(authId: string, bonus: Bonus, processId: string){  
+  console.log("start background task "); 
+
+  const bonusResult  =  await ProcessCommand["filter"](authId, bonus);  
+
+  if(!bonusResult) return;  
+  if(!bonus.id) return; 
+
+  await ProcessCommand["match"](authId, bonusResult,bonus.id, processId);  
+
+  console.log("background task finished");
+}
+
