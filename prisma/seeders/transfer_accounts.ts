@@ -11,6 +11,7 @@ export const SeedTransferAccounts = async () => {
         data: {
           username: 'salehtesting123',
           password: 'abc123',
+          pin_code: '000000',
           type: TransferAccountTypes.MAIN_ACCOUNT,
           status:  TransferAccountStatus.NO_PROCESS
         }
@@ -20,22 +21,20 @@ export const SeedTransferAccounts = async () => {
     const subAccounts  = [  
       {
         username: "salehtransfer01",
-        password:  "abc123"
-
       },   
       {
         username: "salehtransfer02",
-        password:  "abc123"
       },   
       {
         username: "salehtransfer03",
-        password:  "abc123"
       },   
     ];  
 
     for(const subAccount of subAccounts)  {  
 
-          const data  =  {         
+          const data  =  { 
+            password:  "abc123", 
+            pin_code: '000000',        
             type:  TransferAccountTypes.SUB_ACCOUNT,  
             status:  TransferAccountStatus.NO_PROCESS,  
             parent_id: mainAccount.id,

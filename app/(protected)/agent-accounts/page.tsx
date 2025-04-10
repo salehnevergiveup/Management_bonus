@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Edit, Trash, MoreHorizontal, Plus, Search } from "lucide-react";
+import { Eye, EyeOff, Edit, Trash, MoreHorizontal, Plus, Search } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,14 +38,12 @@ export default function AgentAccountManagementPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<AgentAccount | null>(null);
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
   // Form state for create/edit
   const [formUsername, setFormUsername] = useState("");
   const [formPassword, setFormPassword] = useState("");
-  const [formStatus, setFormStatus] = useState("");
-  const [formProgress, setFormProgress] = useState("");
-  const [formProcessId, setFormProcessId] = useState("");
   const [formErrors, setFormErrors] = useState<{ username?: string; password?: string }>({});
 
   // Filter and paginate accounts on the client side
@@ -156,24 +154,9 @@ export default function AgentAccountManagementPage() {
 
     try {
       const updateData: Record<string, any> = {
-        username: formUsername
+        username: formUsername,
+        password: formPassword
       };
-
-      if (formPassword) {
-        updateData.password = formPassword;
-      }
-
-      if (formStatus) {
-        updateData.status = formStatus;
-      }
-
-      if (formProgress) {
-        updateData.progress = formProgress;
-      }
-
-      if (formProcessId) {
-        updateData.process_id = formProcessId;
-      }
 
       const response = await fetch(`/api/agent-accounts/${selectedAccount.id}`, {
         method: "PUT",
@@ -193,9 +176,6 @@ export default function AgentAccountManagementPage() {
       
       setFormUsername("");
       setFormPassword("");
-      setFormStatus("");
-      setFormProgress("");
-      setFormProcessId("");
       setEditDialogOpen(false);
       fetchAgentAccounts();
     } catch (error) {
@@ -231,9 +211,6 @@ export default function AgentAccountManagementPage() {
   const handleCreate = () => {
     setFormUsername("");
     setFormPassword("");
-    setFormStatus("");
-    setFormProgress("");
-    setFormProcessId("");
     setFormErrors({});
     setCreateDialogOpen(true);
   };
@@ -241,10 +218,7 @@ export default function AgentAccountManagementPage() {
   const handleEdit = (account: AgentAccount) => {
     setSelectedAccount(account);
     setFormUsername(account.username);
-    setFormPassword("");
-    setFormStatus(account.status || "");
-    setFormProgress(account.progress || "");
-    setFormProcessId(account.process_id || "");
+    setFormPassword(account.password);
     setFormErrors({});
     setEditDialogOpen(true);
   };
@@ -252,6 +226,13 @@ export default function AgentAccountManagementPage() {
   const handleDelete = (account: AgentAccount) => {
     setAccountToDelete(account);
     setDeleteDialogOpen(true);
+  };
+
+  const togglePasswordVisibility = (accountId: string) => {
+    setVisiblePasswords(prev => ({
+      ...prev,
+      [accountId]: !prev[accountId]
+    }));
   };
 
   const formatDate = (dateString: string) => {
@@ -321,6 +302,7 @@ export default function AgentAccountManagementPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Username</TableHead>
+                  <TableHead>Password</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Progress</TableHead>
                   <TableHead>Process ID</TableHead>
@@ -332,13 +314,13 @@ export default function AgentAccountManagementPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                       Loading agent accounts...
                     </TableCell>
                   </TableRow>
                 ) : paginatedAccounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                       No agent accounts found
                     </TableCell>
                   </TableRow>
@@ -346,6 +328,24 @@ export default function AgentAccountManagementPage() {
                   paginatedAccounts.map((account) => (
                     <TableRow key={account.id}>
                       <TableCell className="font-medium">{account.username}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <span className="mr-2">
+                            {visiblePasswords[account.id] ? account.password : '••••••••'}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => togglePasswordVisibility(account.id)}
+                          >
+                            {visiblePasswords[account.id] ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell>{account.status || 'N/A'}</TableCell>
                       <TableCell>{account.progress || 'N/A'}</TableCell>
                       <TableCell>{account.process_id || 'N/A'}</TableCell>
@@ -455,13 +455,23 @@ export default function AgentAccountManagementPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password"
-                type="password" 
-                placeholder="Enter password" 
-                value={formPassword}
-                onChange={(e) => setFormPassword(e.target.value)}
-              />
+              <div className="flex space-x-2">
+                <Input 
+                  id="password"
+                  type={visiblePasswords['create'] ? "text" : "password"} 
+                  placeholder="Enter password" 
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                />
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => togglePasswordVisibility('create')}
+                >
+                  {visiblePasswords['create'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
               {formErrors.password && (
                 <p className="text-sm text-red-500">{formErrors.password}</p>
               )}
@@ -496,44 +506,27 @@ export default function AgentAccountManagementPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_password">Password (leave blank to keep unchanged)</Label>
-              <Input 
-                id="edit_password"
-                type="password" 
-                placeholder="Enter new password" 
-                value={formPassword}
-                onChange={(e) => setFormPassword(e.target.value)}
-              />
+              <Label htmlFor="edit_password">Password</Label>
+              <div className="flex space-x-2">
+                <Input 
+                  id="edit_password"
+                  type={visiblePasswords['edit'] ? "text" : "password"}
+                  placeholder="Enter password" 
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                />
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => togglePasswordVisibility('edit')}
+                >
+                  {visiblePasswords['edit'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
               {formErrors.password && (
                 <p className="text-sm text-red-500">{formErrors.password}</p>
               )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_status">Status</Label>
-              <Input 
-                id="edit_status" 
-                placeholder="Enter status" 
-                value={formStatus}
-                onChange={(e) => setFormStatus(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_progress">Progress</Label>
-              <Input 
-                id="edit_progress" 
-                placeholder="Enter progress" 
-                value={formProgress}
-                onChange={(e) => setFormProgress(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_process_id">Process ID</Label>
-              <Input 
-                id="edit_process_id" 
-                placeholder="Enter process ID" 
-                value={formProcessId}
-                onChange={(e) => setFormProcessId(e.target.value)}
-              />
             </div>
           </div>
           <DialogFooter>

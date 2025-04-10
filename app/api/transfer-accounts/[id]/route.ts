@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   const auth = await SessionValidation();
   
@@ -14,7 +14,7 @@ export async function PUT(
   
   try {
     const body = await request.json();
-    const { id } = await params;
+    const { id } = params;
     
     if (!id) {
       return NextResponse.json(
@@ -24,7 +24,8 @@ export async function PUT(
     }
     
     const existingAccount = await prisma.transferAccount.findUnique({
-      where: { id }
+      where: { id },
+      include: { sub_accounts: true } // Include sub_accounts to check for children
     });
     
     if (!existingAccount) {
@@ -34,7 +35,6 @@ export async function PUT(
       );
     }
     
-    // Check for duplicate username
     if (body.username && body.username !== existingAccount.username) {
       const duplicateUsername = await prisma.transferAccount.findFirst({
         where: {
@@ -51,7 +51,23 @@ export async function PUT(
       }
     }
     
-    // If parent_id is provided and changing, verify it exists
+    // Prevent updating type or parent_id if the account has children
+    if (existingAccount.sub_accounts.length > 0) {
+      if (body.type && body.type !== existingAccount.type) {
+        return NextResponse.json(
+          { error: "Cannot change account type when account has sub-accounts" },
+          { status: 400 }
+        );
+      }
+      
+      if (body.parent_id && body.parent_id !== existingAccount.parent_id) {
+        return NextResponse.json(
+          { error: "Cannot change parent account when account has sub-accounts" },
+          { status: 400 }
+        );
+      }
+    }
+    
     if (body.parent_id && body.parent_id !== existingAccount.parent_id) {
       const parentAccount = await prisma.transferAccount.findUnique({
         where: { id: body.parent_id }
@@ -64,7 +80,6 @@ export async function PUT(
         );
       }
       
-      // Prevent circular reference
       if (body.parent_id === id) {
         return NextResponse.json(
           { error: "Account cannot be its own parent" },
@@ -73,17 +88,19 @@ export async function PUT(
       }
     }
     
+    const updateData: any = {};
+    
+    if (body.username !== undefined) updateData.username = body.username;
+    if (body.password !== undefined) updateData.password = body.password;
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.progress !== undefined) updateData.progress = body.progress;
+    if (body.pin_code !== undefined) updateData.pin_code = body.pin_code;
+    if (body.type !== undefined) updateData.type = body.type;
+    if (body.parent_id !== undefined) updateData.parent_id = body.parent_id;
+    
     const updatedAccount = await prisma.transferAccount.update({
       where: { id },
-      data: {
-        username: body.username,
-        password: body.password,
-        status: body.status,
-        progress: body.progress,
-        type: body.type,
-        process_id: body.process_id,
-        parent_id: body.parent_id
-      }
+      data: updateData
     });
     
     return NextResponse.json({
@@ -95,14 +112,14 @@ export async function PUT(
   } catch (error) {
     console.error("Error updating transfer account:", error);
     return NextResponse.json(
-      { error: "Failed to update transfer account" },
+      { error: "Failed to update transfer account", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
 }
 
 export async function DELETE(
-  request: Request, 
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await SessionValidation();
@@ -132,7 +149,6 @@ export async function DELETE(
       );
     }
     
-    // Check if account has associated players
     const playerCount = await prisma.player.count({
       where: { transfer_account_id: id }
     });
@@ -147,7 +163,6 @@ export async function DELETE(
       );
     }
     
-    // Check if account has associated matches
     const matchCount = await prisma.match.count({
       where: { transfer_account_id: id }
     });
@@ -162,7 +177,6 @@ export async function DELETE(
       );
     }
     
-    // Check if account has sub-accounts
     const subAccountCount = await prisma.transferAccount.count({
       where: { parent_id: id }
     });

@@ -25,6 +25,7 @@ interface TransferAccount {
   id: string;
   username: string;
   password: string;
+  pin_code: string;
   status: string;
   progress: number | null;
   type: string;
@@ -48,6 +49,7 @@ export default function TransferAccountManagementPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<TransferAccount | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [visiblePinCodes, setVisiblePinCodes] = useState<Record<string, boolean>>({});
   const [parentAccounts, setParentAccounts] = useState<TransferAccount[]>([]);
   const router = useRouter();
 
@@ -65,9 +67,10 @@ export default function TransferAccountManagementPage() {
   // Form state for create/edit
   const [formUsername, setFormUsername] = useState("");
   const [formPassword, setFormPassword] = useState("");
+  const [formPinCode, setFormPinCode] = useState("");
   const [formType, setFormType] = useState("sub_account");
   const [formParentId, setFormParentId] = useState("");
-  const [formErrors, setFormErrors] = useState<{ username?: string; password?: string, parentId?: string }>({});
+  const [formErrors, setFormErrors] = useState<{ username?: string; password?: string; pinCode?: string; parentId?: string }>({});
 
   // Account types
   const accountTypes = [
@@ -217,7 +220,7 @@ export default function TransferAccountManagementPage() {
   }, [completePermission]);
 
   const validateForm = () => {
-    const errors: { username?: string; password?: string; parentId?: string } = {};
+    const errors: { username?: string; password?: string; pinCode?: string; parentId?: string } = {};
     
     if (!formUsername || formUsername.length < 3) {
       errors.username = "Username must be at least 3 characters";
@@ -226,7 +229,11 @@ export default function TransferAccountManagementPage() {
     if (!formPassword || formPassword.length < 6) {
       errors.password = "Password must be at least 6 characters";
     }
-
+    
+    if (!formPinCode || !/^\d{6}$/.test(formPinCode)) {
+      errors.pinCode = "PIN code must be exactly 6 digits (0-9)";
+    }
+  
     // Only validate parent account selection for sub accounts
     if (formType === "sub_account" && !formParentId) {
       errors.parentId = "Parent account is required for sub accounts";
@@ -244,6 +251,7 @@ export default function TransferAccountManagementPage() {
       const accountData = {
         username: formUsername,
         password: formPassword,
+        pin_code: formPinCode,
         type: formType,
         parent_id: formType === "sub_account" ? formParentId : null
       };
@@ -273,6 +281,7 @@ export default function TransferAccountManagementPage() {
       toast.success("Transfer account created successfully");
       setFormUsername("");
       setFormPassword("");
+      setFormPinCode("");
       setFormType("sub_account");
       setFormParentId("");
       setCreateDialogOpen(false);
@@ -291,6 +300,7 @@ export default function TransferAccountManagementPage() {
       const accountData = {
         username: formUsername,
         password: formPassword,
+        pin_code: formPinCode,
         type: formType,
         parent_id: formType === "sub_account" ? formParentId : null
       };
@@ -320,6 +330,7 @@ export default function TransferAccountManagementPage() {
       toast.success("Transfer account updated successfully");
       setFormUsername("");
       setFormPassword("");
+      setFormPinCode("");
       setFormType("sub_account");
       setFormParentId("");
       setEditDialogOpen(false);
@@ -375,6 +386,7 @@ export default function TransferAccountManagementPage() {
     
     setFormUsername("");
     setFormPassword("");
+    setFormPinCode("");
     setFormType("sub_account");
     setFormParentId("");
     setFormErrors({});
@@ -385,6 +397,7 @@ export default function TransferAccountManagementPage() {
     setSelectedAccount(account);
     setFormUsername(account.username);
     setFormPassword(account.password);
+    setFormPinCode(account.pin_code || "");
     setFormType(account.type || "sub_account");
     setFormParentId(account.parent_id || "");
     setFormErrors({});
@@ -432,6 +445,13 @@ export default function TransferAccountManagementPage() {
 
   const togglePasswordVisibility = (accountId: string) => {
     setVisiblePasswords(prev => ({
+      ...prev,
+      [accountId]: !prev[accountId]
+    }));
+  };
+  
+  const togglePinCodeVisibility = (accountId: string) => {
+    setVisiblePinCodes(prev => ({
       ...prev,
       [accountId]: !prev[accountId]
     }));
@@ -506,12 +526,13 @@ export default function TransferAccountManagementPage() {
             </div>
           </div>
 
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Username</TableHead>
                   <TableHead>Password</TableHead>
+                  <TableHead>PIN Code</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Parent Account</TableHead>
                   <TableHead>Status</TableHead>
@@ -525,13 +546,13 @@ export default function TransferAccountManagementPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                       Loading accounts...
                     </TableCell>
                   </TableRow>
                 ) : displayedAccounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
+                    <TableCell colSpan={11} className="h-24 text-center">
                       No transfer accounts found
                     </TableCell>
                   </TableRow>
@@ -550,6 +571,24 @@ export default function TransferAccountManagementPage() {
                             onClick={() => togglePasswordVisibility(account.id)}
                           >
                             {visiblePasswords[account.id] ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <span className="mr-2">
+                            {visiblePinCodes[account.id] ? account.pin_code : '••••'}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => togglePinCodeVisibility(account.id)}
+                          >
+                            {visiblePinCodes[account.id] ? (
                               <EyeOff className="h-4 w-4" />
                             ) : (
                               <Eye className="h-4 w-4" />
@@ -664,269 +703,331 @@ export default function TransferAccountManagementPage() {
           </div>
         </CardContent>
       </Card>
-{/* Create Account Dialog */}
-<Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-  <DialogContent className="sm:max-w-[425px]">
-    <DialogHeader>
-      <DialogTitle>Create Transfer Account</DialogTitle>
-    </DialogHeader>
-    <div className="space-y-4 py-2">
-      <div className="space-y-2">
-        <Label htmlFor="account_type">Account Type</Label>
-        <Select
-          value={formType}
-          onValueChange={(value) => {
-            setFormType(value);
-            // Reset parent ID when switching to main account
-            if (value === "main_account") {
-              setFormParentId("");
-            }
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select account type" />
-          </SelectTrigger>
-          <SelectContent>
-            {accountTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="account_username">Username</Label>
-        <Input 
-          id="account_username" 
-          placeholder="Enter username" 
-          value={formUsername}
-          onChange={(e) => setFormUsername(e.target.value)}
-        />
-        {formErrors.username && (
-          <p className="text-sm text-red-500">{formErrors.username}</p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <div className="flex space-x-2">
-          <Input 
-            id="password" 
-            type={visiblePasswords['create'] ? "text" : "password"} 
-            placeholder="Enter password" 
-            value={formPassword}
-            onChange={(e) => setFormPassword(e.target.value)}
-          />
-          <Button 
-            type="button"
-            variant="outline" 
-            size="icon" 
-            onClick={() => togglePasswordVisibility('create')}
-          >
-            {visiblePasswords['create'] ? <EyeOff size={16} /> : <Eye size={16} />}
-          </Button>
-        </div>
-        {formErrors.password && (
-          <p className="text-sm text-red-500">{formErrors.password}</p>
-        )}
-      </div>
-      
-      {formType === "sub_account" && (
-        <div className="space-y-2">
-          <Label htmlFor="parent_account">Parent Account</Label>
-          <Select
-            value={formParentId}
-            onValueChange={setFormParentId}
-            disabled={formType !== "sub_account"}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select parent account" />
-            </SelectTrigger>
-            <SelectContent>
-              {parentAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.username}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {formErrors.parentId && (
-            <p className="text-sm text-red-500">{formErrors.parentId}</p>
+      {/* Create Account Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Transfer Account</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="account_type">Account Type</Label>
+              <Select
+                value={formType}
+                onValueChange={(value) => {
+                  setFormType(value);
+                  // Reset parent ID when switching to main account
+                  if (value === "main_account") {
+                    setFormParentId("");
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="account_username">Username</Label>
+              <Input 
+                id="account_username" 
+                placeholder="Enter username" 
+                value={formUsername}
+                onChange={(e) => setFormUsername(e.target.value)}
+              />
+              {formErrors.username && (
+                <p className="text-sm text-red-500">{formErrors.username}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="flex space-x-2">
+                <Input 
+                  id="password" 
+                  type={visiblePasswords['create'] ? "text" : "password"} 
+                  placeholder="Enter password" 
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                />
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => togglePasswordVisibility('create')}
+                >
+                  {visiblePasswords['create'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
+              {formErrors.password && (
+                <p className="text-sm text-red-500">{formErrors.password}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="pin_code">PIN Code</Label>
+              <div className="flex space-x-2">
+              <Input 
+                id="pin_code" 
+                type={visiblePinCodes['create'] ? "text" : "password"} 
+                placeholder="Enter 6-digit PIN code" 
+                value={formPinCode}
+                onChange={(e) => {
+                  // Only allow digits and limit to 6 characters
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setFormPinCode(value);
+                }}
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => togglePinCodeVisibility('create')}
+                >
+                  {visiblePinCodes['create'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
+              {formErrors.pinCode && (
+                <p className="text-sm text-red-500">{formErrors.pinCode}</p>
+              )}
+            </div>
+            
+            {formType === "sub_account" && (
+              <div className="space-y-2">
+              <Label htmlFor="parent_account">Parent Account</Label>
+              <Select
+                value={formParentId}
+                onValueChange={setFormParentId}
+                disabled={formType !== "sub_account"}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select parent account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {parentAccounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formErrors.parentId && (
+                <p className="text-sm text-red-500">{formErrors.parentId}</p>
+              )}
+            </div>
           )}
         </div>
-      )}
-    </div>
-    <DialogFooter>
-      <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-        Cancel
-      </Button>
-      <Button onClick={createAccount}>Create</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
-{/* Edit Account Dialog */}
-<Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-  <DialogContent className="sm:max-w-[425px]">
-    <DialogHeader>
-      <DialogTitle>Edit Transfer Account</DialogTitle>
-    </DialogHeader>
-    <div className="space-y-4 py-2">
-      <div className="space-y-2">
-        <Label htmlFor="edit_account_type">Account Type</Label>
-        <Select
-          value={formType}
-          onValueChange={(value) => {
-            setFormType(value);
-            // Reset parent ID when switching to main account
-            if (value === "main_account") {
-              setFormParentId("");
-            }
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select account type" />
-          </SelectTrigger>
-          <SelectContent>
-            {accountTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="edit_account_username">Username</Label>
-        <Input 
-          id="edit_account_username" 
-          placeholder="Enter username" 
-          value={formUsername}
-          onChange={(e) => setFormUsername(e.target.value)}
-        />
-        {formErrors.username && (
-          <p className="text-sm text-red-500">{formErrors.username}</p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="edit_password">Password</Label>
-        <div className="flex space-x-2">
-          <Input 
-            id="edit_password" 
-            type={visiblePasswords['edit'] ? "text" : "password"} 
-            placeholder="Enter password" 
-            value={formPassword}
-            onChange={(e) => setFormPassword(e.target.value)}
-          />
-          <Button 
-            type="button"
-            variant="outline" 
-            size="icon" 
-            onClick={() => togglePasswordVisibility('edit')}
-          >
-            {visiblePasswords['edit'] ? <EyeOff size={16} /> : <Eye size={16} />}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+            Cancel
           </Button>
-        </div>
-        {formErrors.password && (
-          <p className="text-sm text-red-500">{formErrors.password}</p>
-        )}
-      </div>
-      
-      {formType === "sub_account" && (
-        <div className="space-y-2">
-          <Label htmlFor="edit_parent_account">Parent Account</Label>
-          <Select
-            value={formParentId}
-            onValueChange={setFormParentId}
-            disabled={formType !== "sub_account"}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select parent account" />
-            </SelectTrigger>
-            <SelectContent>
-              {parentAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.username}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {formErrors.parentId && (
-            <p className="text-sm text-red-500">{formErrors.parentId}</p>
+          <Button onClick={createAccount}>Create</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Edit Account Dialog */}
+    <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Edit Transfer Account</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="edit_account_type">Account Type</Label>
+            <Select
+              value={formType}
+              onValueChange={(value) => {
+                setFormType(value);
+                // Reset parent ID when switching to main account
+                if (value === "main_account") {
+                  setFormParentId("");
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select account type" />
+              </SelectTrigger>
+              <SelectContent>
+                {accountTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="edit_account_username">Username</Label>
+            <Input 
+              id="edit_account_username" 
+              placeholder="Enter username" 
+              value={formUsername}
+              onChange={(e) => setFormUsername(e.target.value)}
+            />
+            {formErrors.username && (
+              <p className="text-sm text-red-500">{formErrors.username}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="edit_password">Password</Label>
+            <div className="flex space-x-2">
+              <Input 
+                id="edit_password" 
+                type={visiblePasswords['edit'] ? "text" : "password"} 
+                placeholder="Enter password" 
+                value={formPassword}
+                onChange={(e) => setFormPassword(e.target.value)}
+              />
+              <Button 
+                type="button"
+                variant="outline" 
+                size="icon" 
+                onClick={() => togglePasswordVisibility('edit')}
+              >
+                {visiblePasswords['edit'] ? <EyeOff size={16} /> : <Eye size={16} />}
+              </Button>
+            </div>
+            {formErrors.password && (
+              <p className="text-sm text-red-500">{formErrors.password}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="edit_pin_code">PIN Code</Label>
+            <div className="flex space-x-2">
+            <Input 
+                id="edit_pin_code" 
+                type={visiblePinCodes['edit'] ? "text" : "password"} 
+                placeholder="Enter 6-digit PIN code" 
+                value={formPinCode}
+                onChange={(e) => {
+                  // Only allow digits and limit to 6 characters
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setFormPinCode(value);
+                }}
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+              <Button 
+                type="button"
+                variant="outline" 
+                size="icon" 
+                onClick={() => togglePinCodeVisibility('edit')}
+              >
+                {visiblePinCodes['edit'] ? <EyeOff size={16} /> : <Eye size={16} />}
+              </Button>
+            </div>
+            {formErrors.pinCode && (
+              <p className="text-sm text-red-500">{formErrors.pinCode}</p>
+            )}
+          </div>
+          
+          {formType === "sub_account" && (
+            <div className="space-y-2">
+              <Label htmlFor="edit_parent_account">Parent Account</Label>
+              <Select
+                value={formParentId}
+                onValueChange={setFormParentId}
+                disabled={formType !== "sub_account"}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select parent account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {parentAccounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formErrors.parentId && (
+                <p className="text-sm text-red-500">{formErrors.parentId}</p>
+              )}
+            </div>
           )}
         </div>
-      )}
-    </div>
-    <DialogFooter>
-      <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-        Cancel
-      </Button>
-      <Button onClick={updateAccount}>Update</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={updateAccount}>Update</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-{/* Delete Confirmation Dialog */}
-<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-  <DialogContent className="sm:max-w-[425px]">
-    <DialogHeader>
-      <DialogTitle>Confirm Delete</DialogTitle>
-    </DialogHeader>
-    <div className="py-4">
-      <p>Are you sure you want to delete the account <strong>{accountToDelete?.username}</strong>?</p>
-      {accountToDelete?.type === "main_account" && (
-        <p className="text-red-500 mt-2">Warning: Deleting a main account will also delete all its sub-accounts!</p>
-      )}
-    </div>
-    <DialogFooter>
-      <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-        Cancel
-      </Button>
-      <Button variant="destructive" onClick={deleteAccount}>Delete</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+    {/* Delete Confirmation Dialog */}
+    <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Confirm Delete</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p>Are you sure you want to delete the account <strong>{accountToDelete?.username}</strong>?</p>
+          {accountToDelete?.type === "main_account" && (
+            <p className="text-red-500 mt-2">Warning: Deleting a main account will also delete all its sub-accounts!</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={deleteAccount}>Delete</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-{/* Permission Request Dialog */}
-<Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-  <DialogContent className="sm:max-w-[425px]">
-    <DialogHeader>
-      <DialogTitle>
-        Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} 
-        {selectedAccount ? ` "${selectedAccount.username}"` : ' New Account'}
-      </DialogTitle>
-    </DialogHeader>
-    <div className="space-y-4 py-2">
-      <div className="space-y-2">
-        <Label htmlFor="request_message">Request Message</Label>
-        <Textarea 
-          id="request_message" 
-          placeholder="Explain why you need this permission..." 
-          value={requestMessage}
-          onChange={(e) => setRequestMessage(e.target.value)}
-          rows={4}
-        />
-        {requestMessage.length < 10 && (
-          <p className="text-sm text-red-500">Message must be at least 10 characters</p>
-        )}
-      </div>
-    </div>
-    <DialogFooter>
-      <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
-        Cancel
-      </Button>
-      <Button 
-        onClick={submitPermissionRequest}
-        disabled={requestMessage.length < 10}
-      >
-        Submit Request
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-</div>
-)};
+    {/* Permission Request Dialog */}
+    <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>
+            Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} 
+            {selectedAccount ? ` "${selectedAccount.username}"` : ' New Account'}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="request_message">Request Message</Label>
+            <Textarea 
+              id="request_message" 
+              placeholder="Explain why you need this permission..." 
+              value={requestMessage}
+              onChange={(e) => setRequestMessage(e.target.value)}
+              rows={4}
+            />
+            {requestMessage.length < 10 && (
+              <p className="text-sm text-red-500">Message must be at least 10 characters</p>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={submitPermissionRequest}
+            disabled={requestMessage.length < 10}
+          >
+            Submit Request
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>
+);
+}

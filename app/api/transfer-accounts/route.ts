@@ -3,6 +3,7 @@ import { SessionValidation } from '@lib/sessionvalidation';
 import { Pagination } from "@/lib/pagination";
 import { GetResponse } from "@/types/get-response.type";
 import { prisma } from "@/lib/prisma";
+import {TransferAccountStatus, TransferAccountTypes} from '@constants/enums';
 
 export async function GET(request: Request) {
   const auth = await SessionValidation();
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    if (!body.username || !body.password) {
+    if (!body.username || !body.password || !body.pin_code) {
       return NextResponse.json(
         { error: "Account username and password are required" }, 
         { status: 400 }
@@ -96,9 +97,10 @@ export async function POST(request: Request) {
       data: {
         username: body.username,
         password: body.password,
-        status: body.status || "no process",
+        status: body.status || TransferAccountStatus.NO_PROCESS,
         progress: body.progress,
-        type: body.type || "sub_account",
+        pin_code: body.pin_code,
+        type: body.type || TransferAccountTypes.SUB_ACCOUNT,
         parent_id: body.parent_id,
         process_id: body.process_id
       }

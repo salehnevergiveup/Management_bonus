@@ -84,6 +84,7 @@ model TransferAccount {
   status           String           @default("no process")
   progress         Int?
   password         String
+  pin_code         String
   type             String           @default("sub_account")
   process_id       String?
   parent_id        String?         // ID of the parent account
