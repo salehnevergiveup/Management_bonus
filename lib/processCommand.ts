@@ -1,7 +1,8 @@
-import { MatchStatus, ProcessStatus,NotificationType,Roles} from "@constants/enums";  
+import { MatchStatus, ProcessStatus,NotificationType,Roles, TransferAccountTypes} from "@constants/enums";  
 import { eventEmitter } from "@/lib/eventemitter";
 import { prisma } from '@/lib/prisma';
-import {Bonus, TurnoverData, ExchangeRates, BonusResult} from '@/types/bonus.type'
+import {Bonus, TurnoverData, ExchangeRates, BonusResult} from '@/types/bonus.type' 
+import {TransferAccount, Account, ResumeResult, Match, Transfer,Wallet } from '@/types/resume-data.type' 
 import {functionGenerator} from "@/lib/convertStringToFunction"
 
 const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null>  => {
@@ -152,58 +153,322 @@ const rematch = async (authId: string) => {
     }
 };
 
-
-
-// // Command to resume paused process
-// const resume = async (authId: string, processId: string) => {  
-//     try {
-//         const databaseData = await prisma.transferAccount.findMany({
-//             where: {
-//                 players: {
-//                     some: {
-//                         matches: { 
-//                             some: {}
-//                         }
-//                     }
-//                 }
-//             },  
-//             include: {  
-//                 players: {  
-//                     include: {  
-//                         matches: { 
-//                             where: {
-//                                 status: MatchStatus.PENDING,
-//                                 process_id: processId
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         });
+  // The resume function with proper TypeScript typing and enhanced debugging
+const resume = async (authId: string, processId: string, matchesList: any[]): Promise<ResumeResult | null> => {
+    try {
+      
+      // Get unique transfer account IDs
+      const uniqueTransferAccountIds = [
+        ...new Set(matchesList.map((match) => match.transfer_account_id))
+      ].filter(Boolean) as string[];
+      
+      console.log("Unique transfer account IDs:", uniqueTransferAccountIds);
+      console.log("Transfer account IDs in matches:", uniqueTransferAccountIds.join(", "));
+      
+      // Fetch ALL transfer accounts (not just the ones in the matches)
+      const transferAccounts = await prisma.transferAccount.findMany({
+        include: {
+          parent: true
+        }
+      }) as TransferAccount[];
+      
+      console.log("Total transfer accounts fetched:", transferAccounts.length);
+      
+      // Create a map for quick lookup
+      const accountMap = new Map<string, TransferAccount>();
+      transferAccounts.forEach(account => {
+        accountMap.set(account.id, account);
+      });
+      
+      // Let's specifically log the accounts matching the ones in the image
+      console.log("Looking for specific accounts:");
+      ["salehtransfer01", "salehtransfer02", "salehtransfer03"].forEach(username => {
+        const matchingAccount = transferAccounts.find(acc => acc.username === username);
+        if (matchingAccount) {
+          console.log(`Found ${username} with ID ${matchingAccount.id}, type: ${matchingAccount.type}, parent_id: ${matchingAccount.parent_id || 'None'}`);
+        } else {
+          console.log(`${username} NOT FOUND in database`);
+        }
+      });
+      
+      // Separate main and sub accounts
+      const mainAccounts = transferAccounts.filter(account => account.type === "main_account");
+      const subAccounts = transferAccounts.filter(account => 
+        account.type === "sub_account" && uniqueTransferAccountIds.includes(account.id)
+      );
+      
+      console.log("Main accounts count:", mainAccounts.length);
+      console.log("Sub accounts in matches:", subAccounts.length);
+      console.log("Sub account IDs:", subAccounts.map(a => a.id).join(", "));
+      
+      // Group matches by transfer account ID
+      const matchesByAccount: Record<string, Match[]> = {};
+      matchesList.forEach(match => {
+        if (!match.transfer_account_id) return;
         
-//         const data = databaseData.map((dt) => ({  
-//             transfer_account: dt?.transfer_account,  
-//             account_username: dt?.account_username, 
-//             password: dt?.password,  
-//             users: dt.players.flatMap((player) => player.matches)
-//         }));  
-
-//         await notifyAll(
-//             authId, 
-//             "Data sent to the automater and process started",
-//             NotificationType.INFO
-//         );
-//         return data;  
-//     } catch (error) {
-//         console.error("Error in resume process:", error);
-//         await notifyAll(
-//             authId, 
-//             `Error resuming process: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-//             NotificationType.ERROR
-//         );
-//         return [];
-//     }
-// };
+        if (!matchesByAccount[match.transfer_account_id]) {
+          matchesByAccount[match.transfer_account_id] = [];
+        }
+        matchesByAccount[match.transfer_account_id].push(match as Match);
+      });
+      
+      // Debug: Check which accounts have matches and how many
+      console.log("Accounts with matches:");
+      Object.keys(matchesByAccount).forEach(accountId => {
+        const accountObj = accountMap.get(accountId);
+        console.log(`Account ${accountObj ? accountObj.username : 'UNKNOWN'} (ID: ${accountId}) has ${matchesByAccount[accountId].length} matches`);
+      });
+      
+      // This recursive function will find the main account parent
+      const findMainAccountParent = (accountId: string, visitedIds = new Set<string>()): TransferAccount | null => {
+        if (visitedIds.has(accountId)) {
+          console.log(`Circular reference detected for account ${accountId}!`);
+          return null; // Avoid circular references
+        }
+        
+        const accountObj = accountMap.get(accountId);
+        if (!accountObj) return null;
+        
+        visitedIds.add(accountId);
+        
+        if (accountObj.type === "main_account") {
+          return accountObj;
+        }
+        
+        if (!accountObj.parent_id) return null;
+        
+        return findMainAccountParent(accountObj.parent_id, visitedIds);
+      };
+      
+      // Identify parent accounts for each sub account
+      const subAccountParents = new Map<string, TransferAccount>();
+      for (const subAccount of subAccounts) {
+        console.log(`Finding main parent for sub-account: ${subAccount.username} (ID: ${subAccount.id})`);
+        
+        // Find the parent chain up to a main account using recursive function
+        const mainParent = findMainAccountParent(subAccount.id);
+        
+        if (mainParent) {
+          console.log(`  Found main parent: ${mainParent.username} (ID: ${mainParent.id})`);
+          subAccountParents.set(subAccount.id, mainParent);
+        } else {
+          console.log(`  No main parent found for ${subAccount.username}`);
+        }
+      }
+      
+      console.log("Sub accounts with identified parents:", subAccountParents.size);
+      console.log("Sub account parent relationships:");
+      subAccounts.forEach(subAccount => {
+        const parent = subAccountParents.get(subAccount.id);
+        console.log(`  ${subAccount.username} -> Parent: ${parent ? parent.username : 'NONE'}`);
+      });
+      
+      // Build the main accounts result structure
+      const mainAccountsResult: Account[] = mainAccounts
+        .map(mainAccount => {
+          // Find all sub-accounts that have this main account as parent
+          const childSubAccounts = subAccounts.filter(subAccount => {
+            const parent = subAccountParents.get(subAccount.id);
+            return parent && parent.id === mainAccount.id;
+          });
+          
+          console.log(`Main account ${mainAccount.username} has ${childSubAccounts.length} child sub-accounts`);
+          
+          if (childSubAccounts.length === 0) {
+            console.log(`  Skipping main account ${mainAccount.username} - no child sub-accounts`);
+            return null;
+          }
+          
+          // Group transfers by currency
+          const walletsByCurrency: Record<string, Transfer[]> = {};
+          
+          // For each sub account, identify transfers from the main account
+          childSubAccounts.forEach(subAccount => {
+            const subAccountMatches = matchesByAccount[subAccount.id] || [];
+            
+            console.log(`  Sub-account ${subAccount.username} has ${subAccountMatches.length} matches`);
+            
+            subAccountMatches.forEach(match => {
+              const currency = match.currency;
+              
+              if (!walletsByCurrency[currency]) {
+                walletsByCurrency[currency] = [];
+              }
+              
+              // Check if we already have a transfer to this sub-account for this currency
+              const existingTransfer = walletsByCurrency[currency].find(
+                t => t.account === subAccount.username
+              );
+              
+              if (existingTransfer) {
+                // Sum up amounts for the same account
+                console.log(`    Adding ${match.amount} ${currency} to existing transfer for ${subAccount.username}`);
+                existingTransfer.amount += match.amount;
+              } else {
+                // Add new transfer
+                console.log(`    Creating new transfer of ${match.amount} ${currency} to ${subAccount.username}`);
+                walletsByCurrency[currency].push({
+                  account: subAccount.username,
+                  amount: match.amount
+                });
+              }
+            });
+          });
+          
+          // Convert wallets object to array format
+          const wallets: Wallet[] = Object.keys(walletsByCurrency).map(currency => ({
+            currency,
+            transfers: walletsByCurrency[currency]
+          }));
+          
+          if (wallets.length === 0) {
+            console.log(`  Skipping main account ${mainAccount.username} - no wallets`);
+            return null;
+          }
+          
+          console.log(`Main account ${mainAccount.username} wallets:`, JSON.stringify(wallets, null, 2));
+  
+          return {
+            username: mainAccount.username,
+            password: mainAccount.password,
+            pin_code: mainAccount.pin_code,
+            wallets
+          };
+        })
+        .filter((account): account is Account => account !== null); // Type guard to filter out null values
+      
+      // Build the sub accounts result structure
+      const subAccountsResult: Account[] = subAccounts
+        .map(subAccount => {
+          const subAccountMatches = matchesByAccount[subAccount.id] || [];
+          
+          console.log(`Processing sub-account ${subAccount.username} with ${subAccountMatches.length} matches`);
+          
+          if (subAccountMatches.length === 0) {
+            console.log(`  Skipping sub-account ${subAccount.username} - no matches`);
+            return null;
+          }
+          
+          // Group transfers by currency and username
+          const walletsByCurrency: Record<string, Transfer[]> = {};
+          
+          subAccountMatches.forEach(match => {
+            const currency = match.currency;
+            
+            if (!walletsByCurrency[currency]) {
+              walletsByCurrency[currency] = [];
+            }
+            
+            // Check if we already have a transfer to this player for this currency
+            const existingTransfer = walletsByCurrency[currency].find(
+              t => t.account === match.username
+            );
+            
+            if (existingTransfer) {
+              // Sum up amounts for the same player
+              console.log(`  Adding ${match.amount} ${currency} to existing transfer for ${match.username}`);
+              existingTransfer.amount += match.amount;
+            } else {
+              // Add new transfer
+              console.log(`  Creating new transfer of ${match.amount} ${currency} to ${match.username}`);
+              walletsByCurrency[currency].push({
+                account: match.username,
+                amount: match.amount
+              });
+            }
+          });
+          
+          // Convert wallets object to array format
+          const wallets: Wallet[] = Object.keys(walletsByCurrency).map(currency => ({
+            currency,
+            transfers: walletsByCurrency[currency]
+          }));
+          
+          if (wallets.length === 0) {
+            console.log(`  Skipping sub-account ${subAccount.username} - no wallets`);
+            return null;
+          }
+          
+          console.log(`Sub-account ${subAccount.username} wallets:`, JSON.stringify(wallets, null, 2));
+          
+          return {
+            username: subAccount.username,
+            password: subAccount.password,
+            pin_code: subAccount.pin_code,
+            wallets
+          };
+        })
+        .filter((account): account is Account => account !== null); // Type guard to filter out null values
+      
+      // Verify accounts in result
+      console.log(`FINAL RESULTS - Main accounts: ${mainAccountsResult.length}, Sub accounts: ${subAccountsResult.length}`);
+      console.log("Main account usernames:", mainAccountsResult.map(acc => acc.username).join(", "));
+      console.log("Sub account usernames:", subAccountsResult.map(acc => acc.username).join(", "));
+      
+      // Check for missing accounts
+      if (subAccountsResult.length !== Object.keys(matchesByAccount).length) {
+        console.log("WARNING: Number of sub-accounts in result doesn't match the number of accounts with matches!");
+        
+        // Find which accounts are missing
+        const accountsWithMatches = new Set(Object.keys(matchesByAccount));
+        const accountsInResult = new Set(subAccountsResult.map(acc => {
+          const matchingAccount = subAccounts.find(sa => sa.username === acc.username);
+          return matchingAccount ? matchingAccount.id : null;
+        }).filter(Boolean));
+        
+        console.log("Accounts with matches but missing from result:");
+        for (const accountId of accountsWithMatches) {
+          if (!accountsInResult.has(accountId)) {
+            const matchingAccount = accountMap.get(accountId);
+            console.log(`  - ${matchingAccount ? matchingAccount.username : 'UNKNOWN'} (ID: ${accountId})`);
+            console.log(`    Matches: ${matchesByAccount[accountId].length}`);
+            
+            // Debug why this account was skipped
+            console.log("    Debugging why this account was skipped:");
+            
+            // Check if it was found in subAccounts
+            const inSubAccounts = subAccounts.some(a => a.id === accountId);
+            console.log(`    In subAccounts list: ${inSubAccounts}`);
+            
+            // Check if it has a parent (which might affect main account grouping)
+            const accountObj = accountMap.get(accountId);
+            if (accountObj) {
+              console.log(`    Has parent_id: ${accountObj.parent_id ? 'Yes' : 'No'}`);
+              
+              // Check if it has matches
+              const hasMatches = matchesByAccount[accountId] && matchesByAccount[accountId].length > 0;
+              console.log(`    Has matches: ${hasMatches ? 'Yes' : 'No'}`);
+              
+              if (hasMatches) {
+                // Check if wallets were created correctly
+                const matches = matchesByAccount[accountId];
+                const currencies = [...new Set(matches.map(m => m.currency))];
+                console.log(`    Currencies in matches: ${currencies.join(', ')}`);
+              }
+            }
+          }
+        }
+      }
+      
+      // Construct final result
+      const result: ResumeResult = {
+        process_id: processId,
+        main_accounts: mainAccountsResult,
+        sub_accounts: subAccountsResult
+      };
+      
+      return result;
+      
+    } catch (error) {
+      console.error("Error in resume process:", error);
+      await notifyAll(
+        authId,
+        `Error resuming process: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        NotificationType.ERROR
+      );
+      return null;
+    }
+  };
 
 // // Command to clear matches after process terminate 
 // const terminate = async (authId: string, processId: string) => {  
@@ -487,9 +752,10 @@ export const ProcessCommand = {
     "match": (authId: string, collectedUsers: BonusResult[],bonusId:string, process_id: string) => match(authId, collectedUsers,bonusId, process_id),
     "rematch player": (authId: string, matchId: string) => rematchSinglePlayer(authId, matchId),  
     "rematch": (authId: string) => rematch(authId),  
-//     "resume": (authId: string, processId: string) => resume(authId, processId),  
+    "resume": (authId: string, processId: string, matches: any[]) => resume(authId, processId, matches),  
 //     "terminate": (authId: string, processId: string) => terminate(authId, processId),  
 //     "update":  (authId: string, processId: string, updateList: UpdateList[]) => update(authId, processId, updateList), 
+    "notify all":  (authId: string, message: string, type: string) => notifyAll(authId, message, type)
 };
 
 export default ProcessCommand;

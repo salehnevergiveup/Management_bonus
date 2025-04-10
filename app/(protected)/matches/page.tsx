@@ -31,7 +31,7 @@ import toast from "react-hot-toast";
 
 interface TransferAccount {
   id: string;
-  name: string;
+  username: string;
 }
 
 interface Bonus {
@@ -193,7 +193,7 @@ export default function MatchManagementPage() {
       result = result.filter(match => 
         match.username.toLowerCase().includes(term) || 
         match.id.toLowerCase().includes(term) ||
-        match.transfer_account?.name?.toLowerCase().includes(term) ||
+        match.transfer_account?.username?.toLowerCase().includes(term) ||
         match.bonus?.name?.toLowerCase().includes(term) ||
         match.currency.toLowerCase().includes(term)
       );
@@ -420,7 +420,7 @@ export default function MatchManagementPage() {
           endpoint = `/api/processes/${match.process_id}/resume`;
           if (selectedMatches.length > 0) {
             // Get full match data for selected matches
-            const selectedMatchData = matches
+            const selectedMatchData: any[] = matches
               .filter(m => selectedMatches.includes(m.id) && m.transfer_account_id !== null)
               .map(m => ({
                 id: m.id,
@@ -435,7 +435,6 @@ export default function MatchManagementPage() {
               toast.error("No valid matches selected for resume action");
               return;
             }
-            
             body = { matches: selectedMatchData };
             method = 'POST';
           } else {
@@ -943,7 +942,7 @@ export default function MatchManagementPage() {
                         <TableCell>{match.bonus?.name || "N/A"}</TableCell>
                         <TableCell>
                           {match.transfer_account_id ? (
-                            <span className="font-medium">{match.transfer_account?.name || "Transfer Account"}</span>
+                            <span className="font-medium">{match.transfer_account?.username || "Transfer Account"}</span>
                           ) : (
                             <span className="text-gray-400">Not assigned</span>
                           )}

@@ -9,9 +9,8 @@ export const SeedPlayers = async () =>  {
     const transferAccounts = await prisma.transferAccount.findMany(
      { 
         where: {
-              type: {
-                not: TransferAccountTypes.MAIN_ACCOUNT
-              }
+              type: TransferAccountTypes.SUB_ACCOUNT
+            
         } 
     } 
     );
