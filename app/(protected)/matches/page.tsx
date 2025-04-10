@@ -319,7 +319,7 @@ export default function MatchManagementPage() {
       setRequestDialogOpen(true);
       return;
     }
-
+  
     // If resume action with selected matches
     if (action === 'resume') {
       if (selectedMatches.length > 0) {
@@ -329,15 +329,32 @@ export default function MatchManagementPage() {
       }
       return;
     }
-
-    // Use the first match of the process as a reference
-    const matchForProcess = matches.find(m => m.process_id === process.id);
-    if (matchForProcess) {
-      setSelectedAction({ match: matchForProcess, action });
-      setConfirmDialogOpen(true);
+    
+    // If rematch process action
+    if (action === 'rematch-process') {
+      // Get all unmatched players for this process
+      const unmatchedMatches = matches.filter(m => 
+        m.process_id === process.id && m.transfer_account_id === null
+      );
+      
+      if (unmatchedMatches.length === 0) {
+        toast.error("No unmatched players found for this process");
+        return;
+      }
+      
+      // Use the first match of the process as a reference
+      const matchForProcess = matches.find(m => m.process_id === process.id);
+      if (matchForProcess) {
+        setSelectedAction({ 
+          match: matchForProcess, 
+          action: 'rematch-process' 
+        });
+        setConfirmDialogOpen(true);
+      }
+      return;
     }
-  };
-
+  }
+  
   const handleSingleMatchAction = (match: Match, action: string) => {
     setSelectedAction({ match, action });
     setConfirmDialogOpen(true);
@@ -359,7 +376,7 @@ export default function MatchManagementPage() {
       setSelectedMatches([]);
     } else {
       const processMatches = paginatedMatches.map(match => match.id);
-      setSelectedMatches(processMatches);
+      setSelectedMatches(processMatches)
     }
     setSelectAllChecked(!selectAllChecked);
   };
@@ -391,38 +408,63 @@ export default function MatchManagementPage() {
 
   const executeAction = async () => {
     if (!selectedAction) return;
-
+  
     const { match, action } = selectedAction;
     try {
       let endpoint = '';
-      let method = 'POST';
+      let method = '';
       let body = {};
-
+  
       switch (action) {
         case 'resume':
           endpoint = `/api/processes/${match.process_id}/resume`;
-          // Include selected matches if any
           if (selectedMatches.length > 0) {
-            body = { matchIds: selectedMatches };
-            console.log("matches from the body")
-            console.log(body);  
+            // Get full match data for selected matches
+            const selectedMatchData = matches
+              .filter(m => selectedMatches.includes(m.id) && m.transfer_account_id !== null)
+              .map(m => ({
+                id: m.id,
+                transfer_account_id: m.transfer_account_id,
+                transfer_account: m.transfer_account,
+                amount: m.amount,
+                currency: m.currency,
+                bonus_id: m.bonus_id
+              }));
+              
+            if (selectedMatchData.length === 0) {
+              toast.error("No valid matches selected for resume action");
+              return;
+            }
+            
+            body = { matches: selectedMatchData };
+            method = 'POST';
           } else {
             toast.error("No matches selected for resume action");
             return;
           }
           break;
+          
         case 'rematch-process':
-          endpoint = `/api/matches`;
+          endpoint = `/api/matches/rematch`;
+          method = 'PUT';
           break;
+          
         case 'rematch-single':
-          endpoint = `/api/matches/${match.id}`;
+          endpoint = `/api/matches/rematch/${match.id}`;
+          method = 'PUT';
           break;
+          
         case 'terminate':
           endpoint = `/api/processes/${match.process_id}/terminate`;
           method = 'DELETE';
           break;
       }
-
+      
+      if (!endpoint || !method) {
+        console.error("Invalid action configuration:", { action, endpoint, method });
+        return;
+      }
+      
       const response = await fetch(endpoint, {
         method,
         headers: {
@@ -430,11 +472,11 @@ export default function MatchManagementPage() {
         },
         body: JSON.stringify(body),
       });
-
+  
       if (!response.ok) {
         throw new Error(`Failed to ${action} match`);
       }
-
+  
       // If this was a permission-based action, mark it as complete
       const needsPermission = (action === 'terminate');
       if (needsPermission && auth?.role !== Roles.Admin) {
@@ -443,7 +485,7 @@ export default function MatchManagementPage() {
           action: action.split('-')[0] // Extract base action name
         });
       }
-
+  
       toast.success(`Successfully performed ${action.replace('-', ' ')} action`);
       fetchMatches(); // Refresh the data
       setSelectedMatches([]); // Clear selections
@@ -638,7 +680,19 @@ export default function MatchManagementPage() {
         title={`Confirm ${selectedAction?.action?.replace('-', ' ') || ''}`}
         children={
           <>
-            <p>Are you sure you want to {selectedAction?.action?.replace('-', ' ')} this {selectedAction?.action?.includes('process') ? 'process' : 'match'}?</p>
+            {selectedAction?.action === 'rematch-process' ? (
+              <div className="space-y-3">
+                <p>All unmatched users will be matched again. Do you want to continue?</p>
+                <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    This will attempt to find transfer accounts for all currently unmatched players in this process.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p>Are you sure you want to {selectedAction?.action?.replace('-', ' ')} this {selectedAction?.action?.includes('process') ? 'process' : 'match'}?</p>
+            )}
+            
             {selectedAction?.action === 'terminate' && (
               <p className="mt-2 text-red-500">
                 Warning: This will terminate the entire process. All turnover data will be deleted and matches will be moved to the historical section.
@@ -748,6 +802,8 @@ export default function MatchManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      
     </div>
   );
 

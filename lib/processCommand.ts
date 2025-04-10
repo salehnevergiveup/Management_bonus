@@ -71,85 +71,88 @@ const match = async (authId: string, collectedUsers: BonusResult[],bonusId: stri
     }
 }; 
 
-// // Command to rematch all the users 
-// const rematch = async (authId: string) => {  
-//     try {
-//         const matches = await prisma.match.findMany({ where: { player: null } });  
-//         const players = await prisma.player.findMany();  
-        
-//         let successCount = 0;
-//         let failCount = 0;
-        
-//         for (const match of matches) {
-//             const player = players.find((player) => player.account_username === match.username);  
-
-//             if (player) {  
-//                 try {
-//                     await prisma.match.update({
-//                         where: { id: match.id },  
-//                         data: { player_id: player.id }  
-//                     });
-//                     successCount++;
-//                 } catch (updateError) {
-//                     failCount++;
-//                     console.error(`Failed to update match ${match.id}:`, updateError);
-//                 }
-//             } else {
-//                 failCount++;
-//             }
-//         }
-        
-//         await notifyAll(
-//             authId, 
-//             `Rematching process completed. Updated: ${successCount}, Failed: ${failCount}`, 
-//             NotificationType.INFO
-//         );
-//         return { successCount, failCount };
-//     } catch (error) {
-//         console.error("Error in rematch process:", error);
-//         await notifyAll(authId, `Error in rematching process: ${error instanceof Error ? error.message : 'Unknown error'}`, NotificationType.ERROR);
-//         return { successCount: 0, failCount: 0, error };
-//     }
-// };
-
 // // Command to match single user
-// const rematchSingleUser = async (matchId: string, authId: string) => { 
-//     try {
-//         const match = await prisma.match.findUnique({ where: { id: matchId } });  
+const rematchSinglePlayer = async (authId: string, matchId: string) => { 
+    try {
+        const match = await prisma.match.findUnique({ where: { id: matchId } });  
 
-//         if (!match || !match.username) {  
-//             await notifyAll(authId, `Match not found or has no username`, NotificationType.ERROR);
-//             return false;
-//         }
+        if (!match || !match.username) {  
+            await notifyAll(authId, `Match not found or has no username`, NotificationType.ERROR);
+            return false;
+        }
 
-//         const player = await prisma.player.findFirst({ where: { account_username: match.username } });
+        const player = await prisma.player.findFirst({ where: { account_username: match.username } });
 
-//         if (!player) {
-//             await notifyAll(authId, `Player not found for username: ${match.username}`, NotificationType.ERROR);
-//             return false;
-//         }
+        if (!player) {
+            await notifyAll(authId, `Player not found for username: ${match.username}`, NotificationType.ERROR);
+            return false;
+        }
 
-//         const updatedMatch = await prisma.match.update({
-//             where: { id: matchId },  
-//             data: { player_id: player.id }  
-//         });
+        const updatedMatch = await prisma.match.update({
+            where: { id: matchId },  
+            data: { transfer_account_id: player.transfer_account_id }  
+        });
         
-//         await notifyAll(
-//             authId, 
-//             `Rematching ${match.username} completed successfully`, 
-//             NotificationType.SUCCESS
-//         );
-//         return true;
-//     } catch (error) {
-//         console.error(`Error in rematchSingleUser for match ${matchId}:`, error);
-//         await notifyAll(
-//             authId, 
-//             `Error rematching ${matchId}: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-//             NotificationType.ERROR
-//         );
-//         return false;
-//     }
-// };
+        await notifyAll(
+            authId, 
+            `Rematching ${match.username} completed successfully`, 
+            NotificationType.SUCCESS
+        );
+        return true;
+    } catch (error) {
+        console.error(`Error in rematchSinglePlayer for match ${matchId}:`, error);
+        await notifyAll(
+            authId, 
+            `Error rematching ${matchId}: ${error instanceof Error ? error.message : 'Unknown error'}`, 
+            NotificationType.ERROR
+        );
+        return false;
+    }
+};
+
+// // Command to rematch all the users 
+const rematch = async (authId: string) => {  
+    try {
+        const matches = await prisma.match.findMany({ where: { transfer_account: null } });  
+        const players = await prisma.player.findMany();  
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const match of matches) {
+
+            const player = players.find((player) => player.account_username === match.username);  
+            console.log(match.username); 
+            if (player) {  
+                try {
+                    await prisma.match.update({
+                        where: { id: match.id },  
+                        data: { transfer_account_id: player.transfer_account_id}  
+                    });
+                    successCount++;
+                } catch (updateError) {
+                    failCount++;
+                    console.error(`Failed to update match ${match.id}:`, updateError);
+                }
+            } else {
+                failCount++;
+            }
+        }
+        
+        await notifyAll(
+            authId, 
+            `Rematching process completed. Updated: ${successCount}, Failed: ${failCount}`, 
+            NotificationType.INFO
+        );
+        return { successCount, failCount };
+    } catch (error) {
+        console.error("Error in rematch process:", error);
+        await notifyAll(authId, `Error in rematching process: ${error instanceof Error ? error.message : 'Unknown error'}`, NotificationType.ERROR);
+        return { successCount: 0, failCount: 0, error };
+    }
+};
+
+
 
 // // Command to resume paused process
 // const resume = async (authId: string, processId: string) => {  
@@ -480,10 +483,10 @@ export const getExchangeRates = async (): Promise<ExchangeRates> => {
 
 
 export const ProcessCommand = {  
-       "filter": (authId: string, bonus: Bonus) =>  filter(authId, bonus),
-       "match": (authId: string, collectedUsers: BonusResult[],bonusId:string, process_id: string) => match(authId, collectedUsers,bonusId, process_id),
-//     "rematch": (authId: string) => rematch(authId),  
-//     "rematch user": (matchId: string, authId: string) => rematchSingleUser(matchId, authId),  
+    "filter": (authId: string, bonus: Bonus) =>  filter(authId, bonus),
+    "match": (authId: string, collectedUsers: BonusResult[],bonusId:string, process_id: string) => match(authId, collectedUsers,bonusId, process_id),
+    "rematch player": (authId: string, matchId: string) => rematchSinglePlayer(authId, matchId),  
+    "rematch": (authId: string) => rematch(authId),  
 //     "resume": (authId: string, processId: string) => resume(authId, processId),  
 //     "terminate": (authId: string, processId: string) => terminate(authId, processId),  
 //     "update":  (authId: string, processId: string, updateList: UpdateList[]) => update(authId, processId, updateList), 
