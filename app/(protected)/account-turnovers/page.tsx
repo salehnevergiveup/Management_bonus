@@ -23,6 +23,7 @@ interface AccountTurnover {
   game: string;
   currency: string;
   turnover: string;
+  process_id: string; 
   createdAt: string;
 }
 
@@ -97,14 +98,19 @@ export default function AccountTurnoverPage() {
     }
     try {
       const response = await fetch(`/api/account-turnovers`);
-
+  
       if (!response.ok) {
         throw new Error("Failed to fetch account turnovers");
       }
-
+  
       const data = await response.json();
       setAccountTurnovers(data.data.accountTurnovers);
       setExchangeRates(data.data.exchangeRates);
+      
+      // Log process IDs for debugging
+      if (data.data.accountTurnovers && data.data.accountTurnovers.length > 0) {
+        console.log("Process IDs:", data.data.accountTurnovers.map((t: any) => t.process_id));
+      }
     } catch (error) {
       console.error("Error fetching account turnovers:", error);
       toast.error("Failed to fetch account turnovers");
@@ -216,51 +222,59 @@ export default function AccountTurnoverPage() {
     }
   };
 
-  const createMatch = async () => {
-    if (!selectedBonus) {
-      toast.error("Please select a bonus method");
-      return;
+const createMatch = async () => {
+
+  if (!selectedBonus) {
+    toast.error("Please select a bonus method");
+    return;
+  }
+
+  try {
+    let processId = null;
+    
+    if (accountTurnovers && accountTurnovers.length > 0) {
+      const turnoverWithProcessId = accountTurnovers.find(t => t.process_id);
+      if (turnoverWithProcessId) {
+        processId = turnoverWithProcessId.process_id;
+      }
     }
-  
-    try {
-      // Using the hardcoded process ID as requested
-      const processId = "848bf761-187a-4a37-bdd3-6d0b18d4979e";
-  
-      const response = await fetch("/api/matches", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          bonus_id: selectedBonus,
-          process_id: processId
-        }),
-      });
-  
-      // Parse the response data
-      const data = await response.json();
-  
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create match");
-      }
-  
-      // Check if we have any warning or specific message from the backend
-      if (data.warning) {
-        toast.error(data.warning);
-        setSelectedBonus("");
-        setCreateMatchDialogOpen(false);
-        return;
-      }
-  
-      // Only show success if we didn't get any warning messages
-      toast.success(data.message || "Match created successfully");
+    
+    if (!processId) {
+      throw new Error("process Id not found")
+    }
+
+    const response = await fetch("/api/matches", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        bonus_id: selectedBonus,
+        process_id: processId
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to create match");
+    }
+
+    if (data.warning) {
+      toast.error(data.warning);
       setSelectedBonus("");
       setCreateMatchDialogOpen(false);
-    } catch (error) {
-      console.error("Error creating match:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create match");
+      return;
     }
-  };
+
+    toast.success(data.message || "Match created successfully");
+    setSelectedBonus("");
+    setCreateMatchDialogOpen(false);
+  } catch (error) {
+    console.error("Error creating match:", error);
+    toast.error(error instanceof Error ? error.message : "Failed to create match");
+  }
+};
 
   const handleViewExchangeRates = () => {
     setExchangeRatesDialogOpen(true);

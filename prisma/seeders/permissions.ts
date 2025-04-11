@@ -9,6 +9,7 @@ let permissionsList = models.flatMap((model) =>
 
 permissionsList = permissionsList.concat([
   "matches:view", 
+  "transfer-history:view", 
   "process:resume",  
   "matches:match",  
   "automation", 

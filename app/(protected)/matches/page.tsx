@@ -307,16 +307,28 @@ export default function MatchManagementPage() {
   };
   
   const handleProcessAction = (process: { id: string, status: string }, action: string) => {
-    // Check if user has permission for restricted actions (terminate)
+    // Check if user has permission for restricted actions (terminate) If user not admin
     const needsPermission = (action === 'terminate') && 
                             auth?.role !== Roles.Admin;
-    
+
+                            
     if (needsPermission && !hasPermission(permissionsMap, process.id, action)) {
       // Open request permission dialog
+      console.log("admin");
       setRequestAction(action);
       setRequestProcessId(process.id);
       setRequestMessage("");
       setRequestDialogOpen(true);
+      return;
+    }else if (action === 'terminate') {
+      const matchForProcess = matches.find(m => m.process_id === process.id);
+      if (matchForProcess) {
+        setSelectedAction({ 
+          match: matchForProcess, 
+          action: 'terminate' 
+        });
+        setConfirmDialogOpen(true);
+      }
       return;
     }
   
@@ -688,14 +700,25 @@ export default function MatchManagementPage() {
                   </p>
                 </div>
               </div>
+            ) : selectedAction?.action === 'terminate' ? (
+              <div className="space-y-3">
+                <p>Are you sure you want to terminate this process?</p>
+                
+                <div className="bg-red-50 p-4 rounded border border-red-300 space-y-2">
+                  <p className="text-sm font-semibold text-red-700">
+                    Warning: This action cannot be undone!
+                  </p>
+                  <ul className="text-sm text-red-700 list-disc pl-5 space-y-1">
+                    <li>All matches in this process will be permanently erased</li>
+                    <li>All turnovers will be permanently erased</li>
+                    <li>Match data will be converted to historical records</li>
+                    <li>You will <span className="font-bold underline">not</span> be able to recover these matches after termination</li>
+                    <li>Transfer accounts used in this process will be reset</li>
+                  </ul>
+                </div>
+              </div>
             ) : (
               <p>Are you sure you want to {selectedAction?.action?.replace('-', ' ')} this {selectedAction?.action?.includes('process') ? 'process' : 'match'}?</p>
-            )}
-            
-            {selectedAction?.action === 'terminate' && (
-              <p className="mt-2 text-red-500">
-                Warning: This will terminate the entire process. All turnover data will be deleted and matches will be moved to the historical section.
-              </p>
             )}
           </>
         }

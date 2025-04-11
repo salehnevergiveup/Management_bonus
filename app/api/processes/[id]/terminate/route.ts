@@ -1,72 +1,70 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import {ProcessCommand} from  "@/lib/processCommand"
 import { SessionValidation } from "@lib/sessionvalidation";
-import {GenerateToken,Signature } from "@lib/apikeysHandling"
 import { prisma } from '@/lib/prisma';
+import { ProcessStatus } from '@constants/enums';
 
 
 export async function DELETE(request: Request, {params}: { params: Promise<{ id: string }> }) {
-  try {
-    const auth = await SessionValidation();
-    
-    if (!auth) {
+  try { 
+   const auth =  await SessionValidation();
+
+   if(!auth) {  
       return NextResponse.json(
-        { error: "Unauthorized request" },
-        { status: 401 }
-      );
-    }
-    
-    const authId = auth.id;
-    const {id: processId} = await params;
-    
-    const { token, timeStamp } = await GenerateToken(authId, processId);
-    
-    const signaturePayload = {
-      processId,
-      authId,
-      action: "terminate"
-    };
-    
-    const signature = Signature(signaturePayload, token, timeStamp);
-    
-    try {
-      const externalResponse = await fetch(`${process.env.EXTERNAL_APP_ENDPOINT}/processes/${processId}` || '', {
-        method: "DELETE",
-        headers:  {  
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.API_KEY || '',
-          'X-Token': token,
-          'X-Timestamp': timeStamp,
-          'X-Signature': signature
-      },  
-      });
-      
-      if (!externalResponse.ok) {
-        console.warn(`External terminate request returned status ${externalResponse.status}`);
-      }
-    } catch (fetchError) {
-      console.error("Error sending external terminate request:", fetchError);
-    }
-    
-    ProcessCommand["terminate"](authId, processId)
-      .catch(error => {
-        console.error(`Error in background terminate process for ${processId}:`, error);
-      });
-    
-    return NextResponse.json({
-      success: true,
-      message: "Process termination initiated",
-      processId
-    }, { status: 202 });
-    
-  } catch (error) {
-    console.error("Error initiating terminate process:", error);
+      {},  
+      {status: 401}
+     )
+   }
+
+   const {id} = await params; 
+   
+   if(!id) {  
     return NextResponse.json(
-      { 
-        error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error"
-      },
-      { status: 500 }
-    );
+      {
+        error: "Unable to find the process"
+      }, 
+      {status: 404}
+    )
+   }
+
+   const process = await prisma.userProcess.findFirst({
+    where: {
+      id,
+      status: {
+        notIn: [ProcessStatus.COMPLETED, ProcessStatus.FAILED]
+      }
+    }
+  });
+
+  if(!process) {  
+    return NextResponse.json(
+      {
+        error: "Unable to find the process"
+      }, 
+      {status: 404}
+    )
   }
+  
+  //Fire & Forget
+  terminateProcess(auth.id,  id); 
+
+  return NextResponse.json(
+    {
+      Success: true,
+      message: "start to terminate the process"
+    }, 
+    {status: 202}
+  )
+  
+  }catch(error) { 
+    console.log(error); 
+    return NextResponse.json(
+      {error: "unable to stop the process"},  
+      {status: 500}
+    )
+  }
+}
+
+async function terminateProcess(authId: string,  processId: string){  
+   await ProcessCommand["terminate"](authId, processId);  
 }

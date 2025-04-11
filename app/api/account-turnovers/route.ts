@@ -3,7 +3,7 @@ import { SessionValidation } from '@lib/sessionvalidation';
 import { Pagination } from "@/lib/pagination";
 import { GetResponse } from "@/types/get-response.type";
 import { prisma } from "@/lib/prisma";
-import { AgentAccountStatus } from '@constants/enums';
+import { AgentAccountStatus, ProcessStatus } from '@constants/enums';
 
 // Types for the received data structure
 interface TurnoverItem {
@@ -85,6 +85,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log("📥 Incoming payload:", JSON.stringify(body, null, 2));
     
+    // Extract the process_id from the incoming data
+    const process_id = body.process_id;
+    
+    if (!process_id) {
+      console.error("❌ No process_id found in request");
+      return NextResponse.json(
+        { error: "Missing process_id in request" },
+        { status: 400 }
+      );
+    }
+    
+    // Remove process_id from body to avoid processing it as an agent account
+    delete body.process_id;
+    
     // Get the first agent account key to process the exchange rates once
     const firstAgentAccountKey = Object.keys(body)[0];
     const firstAgentAccountData: AgentAccountData = body[firstAgentAccountKey];
@@ -129,15 +143,16 @@ export async function POST(request: Request) {
               // Remove commas from turnover value and convert to float
               const turnoverValue = parseFloat(turnoverItem.turnover.replace(/,/g, ''));
               
-              // Create account turnover record
-              console.log(`📊 Turnover | Username: ${username}, Game: ${turnoverItem.game}, Turnover: ${turnoverValue}, Currency: ${turnoverItem.currency}`);
+              // Create account turnover record with process_id
+              console.log(`📊 Turnover | Username: ${username}, Game: ${turnoverItem.game}, Turnover: ${turnoverValue}, Currency: ${turnoverItem.currency}, Process ID: ${process_id}`);
               accountTurnoverPromises.push(
                 prisma.accountTurnover.create({
                   data: {
                     username,
                     game: turnoverItem.game,
                     currency: turnoverItem.currency,
-                    turnover: turnoverValue
+                    turnover: turnoverValue,
+                    process_id: process_id // Add the process_id to each turnover record
                   }
                 })
               );
@@ -201,6 +216,13 @@ export async function POST(request: Request) {
           ...exchangeRatePromises,
           ...accountTurnoverPromises
         ]);
+        
+        // Update the process status to PENDING after data is successfully saved
+        console.log(`🔄 Updating process status to PENDING for process_id: ${process_id}`);
+        await prisma.userProcess.update({
+          where: { id: process_id },
+          data: { status: ProcessStatus.PENDING } // Assuming "pending" is the correct enum value for ProcessStatus.PENDING
+        });
         
         console.log('✅ Background processing completed successfully');
       } catch(bgErr) {

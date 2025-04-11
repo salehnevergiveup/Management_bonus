@@ -328,7 +328,7 @@ export default function ProcessManagementPage() {
       }
 
       const result = await response.json();
-      toast.success("Process started successfully");
+      toast.success(result.message);
       setStartProcessDialogOpen(false);
       fetchProcesses(); // Refresh the list
     } catch (error) {

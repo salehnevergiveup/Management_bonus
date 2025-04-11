@@ -1,4 +1,4 @@
-import { MatchStatus, ProcessStatus,NotificationType,Roles, TransferAccountTypes} from "@constants/enums";  
+import { MatchStatus, ProcessStatus,NotificationType,Roles, TransferAccountTypes, TransferAccountStatus} from "@constants/enums";  
 import { eventEmitter } from "@/lib/eventemitter";
 import { prisma } from '@/lib/prisma';
 import {Bonus, TurnoverData, ExchangeRates, BonusResult} from '@/types/bonus.type' 
@@ -470,150 +470,76 @@ const resume = async (authId: string, processId: string, matchesList: any[]): Pr
     }
   };
 
-// // Command to clear matches after process terminate 
-// const terminate = async (authId: string, processId: string) => {  
-//     try {
-//         const deleteResult = await prisma.match.deleteMany({ 
-//             where: { process_id: processId }
-//         });
+const terminate = async (authId: string, processId: string) => {
+    try {
+      return await prisma.$transaction(async (tx) => {
 
-//         await prisma.userProcess.update({
-//             where: { id: processId },
-//             data: { status: ProcessStatus.FAILED }
-//           });
+        const process = await tx.userProcess.findUnique({
+          where: { id: processId },
+          select: { from_date: true, to_date: true }
+        });
+        
+        await tx.transferAccount.updateMany({
+          where: {
+            process_id: processId,
+            status: TransferAccountStatus.UNDER_PROCESS
+          },
+          data: {
+            status: TransferAccountStatus.NO_PROCESS,
+            process_id: null,
+            progress: null
+          }
+        });
+  
+        const matches = await tx.match.findMany({
+          where: { process_id: processId },
+          select: {
+            username: true,
+            bonus_id: true,
+            amount: true,
+            currency: true,
+            status: true,
+            transfer_account_id: true
+          }
+        });
+        
+        if (matches.length > 0) {
+          await tx.transferHistory.createMany({
+            data: matches.map(match => ({
+              username: match.username,
+              process_id: processId,
+              status: match.status === MatchStatus.PENDING ? MatchStatus.FAILED : match.status,
+              amount: match.amount,
+              currency: match.currency,
+              transfer_account_id: match.transfer_account_id,
+              bonus_id: match.bonus_id,
+              date_from: process?.from_date || new Date(),
+              date_to: process?.to_date || new Date()
+            }))
+          });
+        }
+        
+        await tx.match.deleteMany({
+          where: { process_id: processId }
+        });
 
-//         await notifyAll(
-//             authId, 
-//             `Process shutdown complete. Deleted ${deleteResult.count} match records.`, 
-//             NotificationType.INFO
-//         );
-//         return deleteResult.count;
-//     } catch (error) {
-//         console.error("Error in shutdown process:", error);
-//         await notifyAll(
-//             authId, 
-//             `Error shutting down process: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-//             NotificationType.ERROR
-//         );
-//         return 0;
-//     }
-// };
-
-// interface UpdateList {  
-//     user_name: string,
-//     status: string  
-// }
-
-// // Command to update the matches and process status once the process finished 
-// const update = async(authId: string, processId: string, updateList: UpdateList[]) => {
-//     try {
-//         const updateMap = new Map<string, string>();
-//         updateList.forEach((ele) => {
-//             updateMap.set(ele.user_name, ele.status);
-//         });
+        await tx.accountTurnover.deleteMany(); 
         
-//         const usernames = Array.from(updateMap.keys());
-//         const batchSize = 100;
-//         const batches = Math.ceil(usernames.length / batchSize);
+        await tx.userProcess.update({
+          where: { id: processId },
+          data: { status: ProcessStatus.COMPLETED }
+        });
         
-
-        
-//         for(let i = 0; i < batches; i++) {  
-//             const batchStart = i * batchSize;  
-//             let batchUsernames = usernames.slice(batchStart, batchStart + batchSize);
-            
-//             try {
-//                 await prisma.$transaction(async(tx) => {
-//                     const matches = await tx.match.findMany({
-//                         where: {
-//                             username: { in: batchUsernames },
-//                             process_id: processId 
-//                         },
-//                         include: {
-//                             player: true
-//                         }
-//                     });
-                    
-//                     for(const match of matches) {
-//                         const updateStatus = updateMap.get(match.username);
-                        
-//                         if(!updateStatus) {
-//                             continue;
-//                         }
-                        
-//                         await tx.match.update({
-//                             where: { id: match.id },
-//                             data: { status: updateStatus }
-//                         });
-                        
-//                         if(updateStatus === MatchStatus.SUCCESS && match.player_id) {
-//                             await tx.player.update({  // FIXED: Added await
-//                                 where: { id: match.player_id },
-//                                 data: { updated_at: new Date() }
-//                             });
-//                         }
-//                     }
-//                 });
-//             } catch(batchError) {
-//                 // Log batch error but continue processing other batches
-//                 console.error(`Error processing batch ${i+1}/${batches}:`, batchError);
-                
-//                 await notifyAll(
-//                     authId, 
-//                     `Error in batch ${i+1}: ${batchError instanceof Error ? batchError.message : 'Unknown error'}`, 
-//                     NotificationType.WARNING
-//                 );
-//             }
-//         }
-        
-//         const values = Array.from(updateMap.values());
-//         const hasSuccess = values.includes(MatchStatus.SUCCESS);
-//         const hasFailed = values.includes(MatchStatus.FAILED);
-        
-//         let processStatus;
-//         if (hasSuccess) {
-//             processStatus = hasFailed ? ProcessStatus.SEM_COMPLETED : ProcessStatus.COMPLETED;
-//         } else {
-//             processStatus = ProcessStatus.FAILED;
-//         }
-        
-//         const updatedProcess = await prisma.userProcess.update({
-//             where: { id: processId },
-//             data: { status: processStatus }
-//         });
-        
-//         if(updatedProcess && updatedProcess.status === ProcessStatus.COMPLETED) {
-//             await terminate(authId, processId);
-//         }
-        
-//         await notifyAll(
-//             authId, 
-//             `The process has been completed with status of ${updatedProcess.status}`, 
-//             hasSuccess ? NotificationType.SUCCESS : NotificationType.ERROR
-//         );
-        
-//     } catch(error) {
-
-//         console.error("Critical error in update process:", error);
-        
-//         try {
-//             await prisma.userProcess.update({
-//                 where: { id: processId },
-//                 data: { status: ProcessStatus.FAILED }
-//             });
-//         } catch (statusUpdateError) {
-//             console.error("Failed to update process status:", statusUpdateError);
-//         }
-        
-//         await notifyAll(
-//             authId, 
-//             `Critical error in update process: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-//             NotificationType.ERROR
-//         );
-        
-//     }
-// };
-
+        notifyAll(authId, "Process terminated successfully", NotificationType.SUCCESS )
+        return { success: true, message: "Process terminated successfully" };
+      });
+      
+    } catch (error) {
+      console.error("Error terminating process:", error);
+      notifyAll(authId, "Error terminating process", NotificationType.ERROR )
+      throw new Error(`Failed to terminate process`);
+    }
+  };
 
 // // Helper functions to trigger the notifications event
 const notifyAll = async (authId: string, message: string, type: string) => {  
@@ -753,8 +679,7 @@ export const ProcessCommand = {
     "rematch player": (authId: string, matchId: string) => rematchSinglePlayer(authId, matchId),  
     "rematch": (authId: string) => rematch(authId),  
     "resume": (authId: string, processId: string, matches: any[]) => resume(authId, processId, matches),  
-//     "terminate": (authId: string, processId: string) => terminate(authId, processId),  
-//     "update":  (authId: string, processId: string, updateList: UpdateList[]) => update(authId, processId, updateList), 
+    "terminate": (authId: string, processId: string) => terminate(authId, processId),  
     "notify all":  (authId: string, message: string, type: string) => notifyAll(authId, message, type)
 };
 

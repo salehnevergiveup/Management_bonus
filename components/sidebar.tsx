@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Gamepad2,
-  Repeat2
+  Repeat2, 
+  FileClock
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { useUser } from "@/contexts/usercontext";
@@ -58,6 +59,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
       { name: "Players", icon: <Gamepad2 className="h-4 w-4" /> },
       { name: "Bonuses", icon: <CircleDollarSign className="h-4 w-4" /> },
       { name: "Matches", icon: <Target className="h-4 w-4" /> },
+      { name: "Transfer History", icon: <FileClock className="h-4 w-4" /> },
     ]
 
     return sections
