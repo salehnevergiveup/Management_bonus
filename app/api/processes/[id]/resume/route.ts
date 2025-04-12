@@ -1,7 +1,7 @@
 import {ProcessCommand} from  "@/lib/processCommand"
 import { SessionValidation } from "@lib/sessionvalidation";
 import { NextResponse } from "next/server";
-import {GenerateToken,Signature } from "@lib/apikeysHandling"
+import {preparePythonBackendHeaders } from "@lib/apikeysHandling"
 import { NotificationType, ProcessStatus } from "@constants/enums";
 import { prisma } from '@/lib/prisma';
 
@@ -41,7 +41,7 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
         )
     }
     
-    sendDataToResume(auth.id, processId, body.matches);  
+    sendDataToResume(auth.id,auth.role, processId, body.matches);  
 
     //make sure to immediately to update the process status 
     await prisma.userProcess.update({ 
@@ -71,32 +71,24 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
 
 }
 
-async function sendDataToResume(authId: string, processId: string,  matches: any[]) {  
-  //async function for the notification
+async function sendDataToResume(authId: string,authRole: string, processId: string,  matches: any[]) {  
+    //async function for the notification
     const notificationFunction =  ProcessCommand["notify all"];  
     try {  
+
         const data =  await ProcessCommand["resume"](authId, processId, matches);  
 
         console.log("output data: ",  data);  
 
-        const signaturePayload= {  
+        const headers = await preparePythonBackendHeaders(
+            authId, 
             processId,  
-            authId
-        }
-        
-        const  {token,timeStamp} = await GenerateToken(authId,  processId);  
-
-        const signature =  Signature(signaturePayload, token, timeStamp);  
+            authRole
+        );
             
-        const externalResponse = await fetch('add the endpoint of the other app ', {  
+        const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}/resume-process`, {  
             method: "POST", 
-            headers:  {  
-                'Content-Type': 'application/json',
-                'X-API-Key': process.env.API_KEY || '',
-                'X-Token': token,
-                'X-Timestamp': timeStamp,
-                'X-Signature': signature
-            },  
+            headers: headers, 
             body: JSON.stringify(data) 
         })
 
