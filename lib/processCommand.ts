@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import {Bonus, TurnoverData, ExchangeRates, BonusResult} from '@/types/bonus.type' 
 import {TransferAccount, Account, ResumeResult, Match, Transfer,Wallet } from '@/types/resume-data.type' 
 import {functionGenerator} from "@/lib/convertStringToFunction"
+import {ProcessPayload, isProcessPayload} from  "@/types/update-process.type"
+
 
 const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null>  => {
    try{  
@@ -541,6 +543,72 @@ const terminate = async (authId: string, processId: string) => {
     }
   };
 
+
+  async function update(updateProcessMatches: ProcessPayload): Promise<void> {
+    try {
+      const processId = updateProcessMatches.process_id;
+      
+      const accountUsernames = Object.keys(updateProcessMatches).filter(
+        key => key !== 'process_id'
+      );
+      
+      await prisma.$transaction(async (tx) => {
+
+        for (const username of accountUsernames) {
+          const accountData = updateProcessMatches[username];
+          
+          await tx.transferAccount.update({
+            where: { username },
+            data: {
+              status: TransferAccountStatus.NO_PROCESS,
+              progress: accountData.progress,
+              updated_at: new Date()
+            }
+          });
+          
+          const matchKeys = Object.keys(accountData.transfer_report);
+          
+          for (const matchKey of matchKeys) {
+            const transferData = accountData.transfer_report[matchKey];
+            const [playerUsername, currency] = matchKey.split('-');
+            
+            // Note filter based on the amount and the game as well 
+            const matches = await tx.match.findMany({
+              where: {
+                username: playerUsername,
+                currency: currency,
+                process_id: processId,
+                transfer_account: {
+                  username: username
+                }
+              }
+            });
+            
+            if (matches.length > 0) {
+              const matchUpdatePromises = matches.map(match => {
+                const status =  accountData.transfer_report[match.username+"-"+match.currency].status; 
+               return tx.match.update({
+                  where: { id: match.id },
+                  data: {
+                    status,
+                    updated_at: new Date()
+                  }
+                })
+              }
+              );
+              await Promise.all(matchUpdatePromises);
+            }
+          }
+        }
+      });
+      
+      console.log(`Successfully updated accounts and matches for process ${processId}`);
+    } catch (error) {
+      console.error(`Error updating process ${updateProcessMatches.process_id}:`, error);
+      throw error; 
+    }
+  }
+
 // // Helper functions to trigger the notifications event
 const notifyAll = async (authId: string, message: string, type: string) => {  
     try {
@@ -680,6 +748,7 @@ export const ProcessCommand = {
     "rematch": (authId: string) => rematch(authId),  
     "resume": (authId: string, processId: string, matches: any[]) => resume(authId, processId, matches),  
     "terminate": (authId: string, processId: string) => terminate(authId, processId),  
+    "update": (updateProcessPayload: ProcessPayload) => update(updateProcessPayload), 
     "notify all":  (authId: string, message: string, type: string) => notifyAll(authId, message, type)
 };
 

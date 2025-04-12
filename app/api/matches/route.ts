@@ -6,8 +6,8 @@ import {GetResponse} from "@/types/get-response.type"
 import ProcessCommand from "@lib/processCommand";
 import {ProcessStatus, Roles  } from '@constants/enums';
 import {prisma} from "@/lib/prisma";
-import { error } from 'console';
 import { Bonus } from '@/types/bonus.type';
+import {ProcessPayload, isProcessPayload} from  "@/types/update-process.type"
 
 export async function GET(request: Request) {
   const auth = await SessionValidation();
@@ -61,6 +61,7 @@ export async function GET(request: Request) {
   {status: 200});
 }
 
+// this is to create the turnover data the request made from the selenium 
 export async function POST(request: Request) {  
   try {  
     console.log("here1");
@@ -170,3 +171,59 @@ async function createMatchesData(authId: string, bonus: Bonus, processId: string
   console.log("background task finished");
 }
 
+//this is to update the matches and the transfer accounts back from the selenium 
+export async function PUT(request: Request) {  
+  try {  
+    // const auth =  await SessionValidation()
+    // if(!auth) { 
+    //  return NextResponse.json(
+    //    {}, 
+    //    {status: 401}
+    //  )
+    // }
+
+    const body =  await request.json();  
+
+    if(!body) {  
+      return NextResponse.json(
+        {
+          error:"Invalid data passed"
+        }, 
+        {status:  400}
+      )
+    }
+    
+    if(!isProcessPayload(body)) {  
+      return NextResponse.json(
+        {error: "Invalid data"},  
+        {status:  400}
+      )
+    }
+
+    const updateProcessPayload: ProcessPayload =  body;  
+    
+    updateProcessMatches(updateProcessPayload);  
+   
+    return  NextResponse.json(
+      {
+        message: "Started to update process and the matches"
+      },  
+      {
+        status: 202
+      }
+    )
+  } catch (error) {  
+    console.error("Error initiating match process:", error);
+    return NextResponse.json(
+      { error: "Server error initiating the match process" },
+      { status: 500 }
+    );
+  }
+}
+
+
+async function updateProcessMatches(ProcessPayload: ProcessPayload) {  
+  console.log("update process Started"); 
+   await ProcessCommand["update"](ProcessPayload)
+  console.log("update process Finished"); 
+}

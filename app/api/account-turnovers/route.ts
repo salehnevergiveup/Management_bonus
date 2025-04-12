@@ -35,15 +35,14 @@ interface AgentAccountData {
 }
 
 export async function GET(request: Request) {
-  // const auth = await SessionValidation();
-  // if(!auth) {
-  //     return NextResponse.json(
-  //         { error: "Unauthorized" },
-  //         {status: 401}
-  //     )
-  // }
-
   try {
+    const auth = await SessionValidation();
+    if(!auth) {
+        return NextResponse.json(
+            { error: "Unauthorized" },
+            {status: 401}
+        )
+    }
     // Get account turnovers with pagination
     const countAccountTurnovers = await prisma.accountTurnover.count();
     
