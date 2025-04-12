@@ -1,10 +1,10 @@
-import { MatchStatus, ProcessStatus,NotificationType,Roles, TransferAccountTypes, TransferAccountStatus} from "@constants/enums";  
+import { MatchStatus, ProcessStatus,NotificationType,Roles, TransferAccountStatus} from "@constants/enums";  
 import { eventEmitter } from "@/lib/eventemitter";
 import { prisma } from '@/lib/prisma';
 import {Bonus, TurnoverData, ExchangeRates, BonusResult} from '@/types/bonus.type' 
 import {TransferAccount, Account, ResumeResult, Match, Transfer,Wallet } from '@/types/resume-data.type' 
 import {functionGenerator} from "@/lib/convertStringToFunction"
-import {ProcessPayload, isProcessPayload} from  "@/types/update-process.type"
+import {ProcessPayload} from  "@/types/update-process.type"
 
 
 const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null>  => {
@@ -33,128 +33,306 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
 
   };
 
-// Command to match the users 
-const match = async (authId: string, collectedUsers: BonusResult[],bonusId: string, processId: string) => {  
+  const match = async (authId: string, collectedUsers: BonusResult[], bonusId: string, processId: string) => {
     try {
-        const createList = [];
-        const players = await prisma.player.findMany();  
-
-        const playerMap = new Map(players.map(player => [player.account_username, player.transfer_account_id]));
-
-        for (const user of collectedUsers) {
-            createList.push({  
-                process_id: processId,  
-                currency: user.currency,  
-                amount: user.amount,
-                username: user.username,  
-                bonus_id:  bonusId,
-                transfer_account_id: playerMap.get(user.username) || null
-            });
+      // Fetch all relevant players in one query to avoid N+1 problems
+      const players = await prisma.player.findMany({
+        where: {
+          account_username: {
+            in: collectedUsers.map(user => user.username)
+          }
+        },
+        select: {
+          account_username: true,
+          transfer_account_id: true
         }
-
-        // Batch processing
-        const batchSize = 100;
-        const batches = Math.ceil(createList.length / batchSize);
+      });
+      
+      const playerMap = new Map(players.map(player => [player.account_username, player.transfer_account_id]));
+      
+      const createList = [];
+      const transferAccountIds = new Set<string>();
+      
+      for (const user of collectedUsers) {
+        const transferAccountId = playerMap.get(user.username) || null;
         
-        for (let i = 0; i < batches; i++) {  
-            const batchStart = i * batchSize;  
-            const collectedUsersBatch = createList.slice(batchStart, batchStart + batchSize);
-            console.log(`${i}-collected users for the batch: `, collectedUsersBatch);
-            await prisma.$transaction(async (tx) => {  
-                await tx.match.createMany({ data: collectedUsersBatch });
-            });
-        }
-
-        await notifyAll(authId, "Matching process completed", NotificationType.SUCCESS);
-        return true;
-    } catch (error) {
-        console.error("Error in match process:", error);
-        await notifyAll(authId, `Error in matching process: ${error instanceof Error ? error.message : 'Unknown error'}`, NotificationType.ERROR);
-        return false;
-    }
-}; 
-
-// // Command to match single user
-const rematchSinglePlayer = async (authId: string, matchId: string) => { 
-    try {
-        const match = await prisma.match.findUnique({ where: { id: matchId } });  
-
-        if (!match || !match.username) {  
-            await notifyAll(authId, `Match not found or has no username`, NotificationType.ERROR);
-            return false;
-        }
-
-        const player = await prisma.player.findFirst({ where: { account_username: match.username } });
-
-        if (!player) {
-            await notifyAll(authId, `Player not found for username: ${match.username}`, NotificationType.ERROR);
-            return false;
-        }
-
-        const updatedMatch = await prisma.match.update({
-            where: { id: matchId },  
-            data: { transfer_account_id: player.transfer_account_id }  
+        createList.push({
+          process_id: processId,
+          currency: user.currency,
+          amount: user.amount,
+          username: user.username,
+          bonus_id: bonusId,
+          transfer_account_id: transferAccountId,
+          status: "pending"
         });
         
-        await notifyAll(
-            authId, 
-            `Rematching ${match.username} completed successfully`, 
-            NotificationType.SUCCESS
-        );
-        return true;
-    } catch (error) {
-        console.error(`Error in rematchSinglePlayer for match ${matchId}:`, error);
-        await notifyAll(
-            authId, 
-            `Error rematching ${matchId}: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-            NotificationType.ERROR
-        );
-        return false;
-    }
-};
-
-// // Command to rematch all the users 
-const rematch = async (authId: string) => {  
-    try {
-        const matches = await prisma.match.findMany({ where: { transfer_account: null } });  
-        const players = await prisma.player.findMany();  
-        
-        let successCount = 0;
-        let failCount = 0;
-        
-        for (const match of matches) {
-
-            const player = players.find((player) => player.account_username === match.username);  
-            console.log(match.username); 
-            if (player) {  
-                try {
-                    await prisma.match.update({
-                        where: { id: match.id },  
-                        data: { transfer_account_id: player.transfer_account_id}  
-                    });
-                    successCount++;
-                } catch (updateError) {
-                    failCount++;
-                    console.error(`Failed to update match ${match.id}:`, updateError);
-                }
-            } else {
-                failCount++;
-            }
+        if (transferAccountId) {
+          transferAccountIds.add(transferAccountId);
         }
+      }
+      
+      console.log(`Processing ${createList.length} matches with ${transferAccountIds.size} unique transfer accounts`);
+      
+      // Batch processing for matches
+      const batchSize = 100;
+      const batches = Math.ceil(createList.length / batchSize);
+      
+      for (let i = 0; i < batches; i++) {
+        const batchStart = i * batchSize;
+        const collectedUsersBatch = createList.slice(batchStart, batchStart + batchSize);
+        console.log(`Batch ${i+1}/${batches}: Creating ${collectedUsersBatch.length} matches`);
         
-        await notifyAll(
-            authId, 
-            `Rematching process completed. Updated: ${successCount}, Failed: ${failCount}`, 
-            NotificationType.INFO
-        );
-        return { successCount, failCount };
+        await prisma.$transaction(async (tx) => {
+          await tx.match.createMany({ data: collectedUsersBatch });
+        });
+      }
+      
+      if (transferAccountIds.size > 0) {
+        console.log(`Updating ${transferAccountIds.size} transfer accounts with process ID: ${processId}`);
+        
+        const transferAccountIdArray = Array.from(transferAccountIds);
+        const transferAccountBatchSize = 100;
+        const transferAccountBatches = Math.ceil(transferAccountIdArray.length / transferAccountBatchSize);
+        
+        for (let i = 0; i < transferAccountBatches; i++) {
+          const batchStart = i * transferAccountBatchSize;
+          const transferAccountBatch = transferAccountIdArray.slice(batchStart, batchStart + transferAccountBatchSize);
+          
+          console.log(`Batch ${i+1}/${transferAccountBatches}: Updating ${transferAccountBatch.length} transfer accounts`);
+          
+          await prisma.$transaction(async (tx) => {
+            await tx.transferAccount.updateMany({
+              where: {
+                id: {
+                  in: transferAccountBatch
+                }
+              },
+              data: {
+                process_id: processId,
+                progress: 0,
+                status: {
+                  set: TransferAccountStatus.UNDER_PROCESS
+                }
+              }
+            });
+          });
+        }
+      }
+      
+      await notifyAll(authId, "Matching process completed", NotificationType.SUCCESS);
+      return true;
     } catch (error) {
-        console.error("Error in rematch process:", error);
-        await notifyAll(authId, `Error in rematching process: ${error instanceof Error ? error.message : 'Unknown error'}`, NotificationType.ERROR);
-        return { successCount: 0, failCount: 0, error };
+      console.error("Error in match process:", error);
+      await notifyAll(authId, `Error in matching process: ${error instanceof Error ? error.message : 'Unknown error'}`, NotificationType.ERROR);
+      return false;
     }
+  };
+
+const rematchSinglePlayer = async (authId: string, matchId: string) => {
+  try {
+    const match = await prisma.match.findUnique({ 
+      where: { id: matchId } 
+    });
+    
+    if (!match || !match.username || !match.process_id) {
+      await notifyAll(authId, `Match not found or has incomplete information`, NotificationType.ERROR);
+      return false;
+    }
+    
+    const player = await prisma.player.findFirst({ 
+      where: { account_username: match.username } 
+    });
+    
+    if (!player) {
+      await notifyAll(authId, `Player not found for username: ${match.username}`, NotificationType.ERROR);
+      return false;
+    }
+    
+    const processId = match.process_id;
+    
+    const transferAccount = await prisma.transferAccount.findUnique({
+      where: { id: player.transfer_account_id }
+    });
+    
+    if (!transferAccount) {
+      await notifyAll(authId, `Transfer account not found for player: ${match.username}`, NotificationType.ERROR);
+      return false;
+    }
+    
+    await prisma.$transaction(async (tx) => {
+      await tx.match.update({
+        where: { id: matchId },
+        data: { transfer_account_id: player.transfer_account_id }
+      });
+      
+      if (transferAccount.process_id !== processId) {
+        await tx.transferAccount.update({
+          where: { id: player.transfer_account_id },
+          data: {
+            process_id: processId,
+            status: TransferAccountStatus.UNDER_PROCESS, 
+            progress: 0
+          }
+        });
+        
+        console.log(`Connected transfer account ${player.transfer_account_id} to process ${processId}`);
+      } else {
+        console.log(`Transfer account ${player.transfer_account_id} already connected to process ${processId}`);
+      }
+    });
+    
+    await notifyAll(
+      authId, 
+      `Rematching ${match.username} completed successfully`,
+      NotificationType.SUCCESS
+    );
+    return true;
+  } catch (error) {
+    console.error(`Error in rematchSinglePlayer for match ${matchId}:`, error);
+    await notifyAll(
+      authId, 
+      `Error rematching ${matchId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      NotificationType.ERROR
+    );
+    return false;
+  }
 };
 
+const rematch = async (authId: string) => {
+  try {
+    
+    const matches = await prisma.match.findMany({ 
+      where: { transfer_account_id: null },
+      select: {
+        id: true,
+        username: true,
+        process_id: true
+      }
+    });
+    
+    if (matches.length === 0) {
+      await notifyAll(authId, "No matches found that require rematching", NotificationType.INFO);
+      return { successCount: 0, failCount: 0 };
+    }
+    
+    const players = await prisma.player.findMany({
+      where: {
+        account_username: {
+          in: matches.map(match => match.username)
+        }
+      },
+      select: {
+        account_username: true,
+        transfer_account_id: true
+      }
+    });
+    
+    const playerMap = new Map(
+      players.map(player => [player.account_username, player.transfer_account_id])
+    );
+    
+    // Track transfer accounts that need updating per process
+    const processTransferAccounts = new Map<string, Set<string>>();
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const match of matches) {
+      const transferAccountId = playerMap.get(match.username);
+      
+      if (transferAccountId) {
+        try {
+          await prisma.match.update({
+            where: { id: match.id },
+            data: { transfer_account_id: transferAccountId}
+          });
+          successCount++;
+          
+          // Track which transfer accounts need to be connected to which processes
+          if (!processTransferAccounts.has(match.process_id)) {
+            processTransferAccounts.set(match.process_id, new Set());
+          }
+          processTransferAccounts.get(match.process_id)?.add(transferAccountId);
+          
+        } catch (updateError) {
+          failCount++;
+          console.error(`Failed to update match ${match.id}:`, updateError);
+        }
+      } else {
+        failCount++;
+        console.log(`No player found for username: ${match.username}`);
+      }
+    }
+
+    let transferAccountsUpdated = 0;
+    
+    for (const [processId, transferAccountIds] of processTransferAccounts.entries()) {
+      if (transferAccountIds.size > 0) {
+        console.log(`Updating ${transferAccountIds.size} transfer accounts for process ${processId}`);
+        
+        const existingTransferAccounts = await prisma.transferAccount.findMany({
+          where: {
+            id: { in: Array.from(transferAccountIds) },
+            NOT: { process_id: processId}
+          },
+          select: { id: true }
+        });
+        
+        const accountsToUpdate = existingTransferAccounts.map(account => account.id);
+        
+        if (accountsToUpdate.length > 0) {
+          const batchSize = 100;
+          const batches = Math.ceil(accountsToUpdate.length / batchSize);
+          
+          for (let i = 0; i < batches; i++) {
+            const batchStart = i * batchSize;
+            const accountBatch = accountsToUpdate.slice(batchStart, batchStart + batchSize);
+            
+            await prisma.$transaction(async (tx) => {
+              await tx.transferAccount.updateMany({
+                where: {
+                  id: { in: accountBatch }
+                },
+                data: {
+                  process_id: processId,
+                  status: TransferAccountStatus.UNDER_PROCESS, 
+                  progress: 0
+                }
+              });
+            });
+            
+            transferAccountsUpdated += accountBatch.length;
+          }
+        }
+      }
+    }
+    
+    await notifyAll(
+      authId,
+      `Rematching process completed. Updated matches: ${successCount}, Failed: ${failCount}, Transfer accounts updated: ${transferAccountsUpdated}`,
+      NotificationType.INFO
+    );
+    
+    return { 
+      successCount, 
+      failCount,
+      transferAccountsUpdated
+    };
+  } catch (error) {
+    console.error("Error in rematch process:", error);
+    await notifyAll(
+      authId, 
+      `Error in rematching process: ${error instanceof Error ? error.message : 'Unknown error'}`, 
+      NotificationType.ERROR
+    );
+    return { 
+      successCount: 0, 
+      failCount: 0, 
+      transferAccountsUpdated: 0,
+      error 
+    };
+  }
+};
   // The resume function with proper TypeScript typing and enhanced debugging
 const resume = async (authId: string, processId: string, matchesList: any[]): Promise<ResumeResult | null> => {
     try {

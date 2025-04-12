@@ -10,14 +10,37 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, XAxis, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { Progress } from "@/components/ui/progress"
-import { User, Users, Clock, Bell, FileCheck, AlertTriangle, Layers, Fingerprint } from "lucide-react"
+import { User, Users, Clock, Bell, FileCheck, AlertTriangle, Layers, Fingerprint, ChevronDown, ChevronUp } from "lucide-react"
 import { ProcessStatus, NotificationStatus } from "@/constants/enums"
+import { Badge } from "@/components/badge" 
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import toast from 'react-hot-toast'
+
 export default function DashboardPage() {
   const { auth, isLoading } = useUser()
   const router = useRouter()
   
   const [timeRange, setTimeRange] = useState("week")
+  
+  // Updated interface to include transfer accounts and agent accounts
+  interface TransferAccountInfo {
+    id: string;
+    username: string;
+    status: string;
+    progress: number | null;
+    type: string;
+    updated_at: string | Date;
+  }
+
+  interface AgentAccountInfo {
+    id: string;
+    username: string;
+    status: string;
+    progress: number | null;
+    updated_at: string | Date;
+  }
+
   interface DashboardData {
     users: Array<{ date: string; count: number }>;
     transferAccounts: Array<{ date: string; count: number }>;
@@ -28,8 +51,10 @@ export default function DashboardPage() {
       id: string;
       user_id: string;
       status: string;
+      created_at: string | Date;
       progress: number;
-      start_time: string | Date;
+      transferAccounts: TransferAccountInfo[];
+      agent_account: AgentAccountInfo[];
     }>;
   }
 
@@ -126,6 +151,32 @@ export default function DashboardPage() {
         unread: data.notifications?.filter(n => n.status === NotificationStatus.UNREAD)?.length || 0
       }
     })
+  }
+
+  // Format the status for display
+  const formatStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  }
+
+  // Get appropriate color class based on status for the custom Badge component
+  const getStatusColorClass = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  const formatDate = (dateString: string | Date) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
   }
 
   if (isLoading) {
@@ -322,7 +373,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Active Processes */}
+        {/* UPDATED: Active Processes with Scrollable Accounts */}
         <Card>
           <CardHeader>
             <CardTitle>Active Processes</CardTitle>
@@ -331,24 +382,128 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {dashboardData.activeProcesses && dashboardData.activeProcesses.length > 0 ? (
                 dashboardData.activeProcesses.map(process => (
-                  <div key={process.id} className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium">
-                        Process ID: {process.id.substring(0, 8)}...
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {Math.round(process.progress * 100)}%
-                      </span>
-                    </div>
-                    <Progress value={process.progress * 100} className="h-2" />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Started: {new Date(process.start_time).toLocaleString()}</span>
-                      <span>Status: {process.status}</span>
-                    </div>
-                  </div>
+                  <Accordion 
+                    key={process.id} 
+                    type="single" 
+                    collapsible
+                    className="border rounded-md"
+                  >
+                    <AccordionItem value={process.id}>
+                      <AccordionTrigger className="px-4 py-2 hover:no-underline">
+                        <div className="w-full">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium text-sm">
+                              Process ID: {process.id.substring(0, 8)}...
+                            </span>
+                            <Badge 
+                              color={getStatusColorClass(process.status)}
+                              text={formatStatus(process.status)}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs text-muted-foreground">
+                              Started: {formatDate(process.created_at)}
+                            </span>
+                            <span className="text-xs font-medium">
+                              {Math.round(process.progress)}%
+                            </span>
+                          </div>
+                          <Progress value={process.progress} className="h-2" />
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pt-2 pb-4">
+                        <Tabs defaultValue="transfer">
+                          <TabsList className="mb-2">
+                            <TabsTrigger value="transfer">
+                              Transfer Accounts ({process.transferAccounts?.length || 0})
+                            </TabsTrigger>
+                            <TabsTrigger value="agent">
+                              Agent Accounts ({process.agent_account?.length || 0})
+                            </TabsTrigger>
+                          </TabsList>
+
+                          <TabsContent value="transfer" className="mt-0">
+                            <ScrollArea className="h-40 rounded-md border p-2">
+                              <div className="space-y-3">
+                                {process.transferAccounts && process.transferAccounts.length > 0 ? (
+                                  process.transferAccounts.map(account => (
+                                    <div key={account.id} className="p-2 border rounded-md">
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="font-medium text-sm">{account.username}</span>
+                                        <Badge 
+                                          color={getStatusColorClass(account.status)}
+                                          text={formatStatus(account.status)}
+                                        />
+                                      </div>
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="text-xs text-muted-foreground">
+                                          Type: {account.type}
+                                        </span>
+                                        <span className="text-xs font-medium">
+                                          {account.progress !== null ? `${account.progress}%` : 'N/A'}
+                                        </span>
+                                      </div>
+                                      {account.progress !== null && (
+                                        <Progress value={account.progress} className="h-1.5" />
+                                      )}
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        Updated: {formatDate(account.updated_at)}
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+                                    <p>No transfer accounts</p>
+                                  </div>
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </TabsContent>
+
+                          <TabsContent value="agent" className="mt-0">
+                            <ScrollArea className="h-40 rounded-md border p-2">
+                              <div className="space-y-3">
+                                {process.agent_account && process.agent_account.length > 0 ? (
+                                  process.agent_account.map(account => (
+                                    <div key={account.id} className="p-2 border rounded-md">
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="font-medium text-sm">{account.username}</span>
+                                        <Badge 
+                                          color={getStatusColorClass(account.status)}
+                                          text={formatStatus(account.status)}
+                                        />
+                                      </div>
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="text-xs text-muted-foreground">
+                                          Agent Account
+                                        </span>
+                                        <span className="text-xs font-medium">
+                                          {account.progress !== null ? `${account.progress}%` : 'N/A'}
+                                        </span>
+                                      </div>
+                                      {account.progress !== null && (
+                                        <Progress value={account.progress} className="h-1.5" />
+                                      )}
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        Updated: {formatDate(account.updated_at)}
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+                                    <p>No agent accounts</p>
+                                  </div>
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </TabsContent>
+                        </Tabs>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">

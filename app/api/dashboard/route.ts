@@ -3,7 +3,6 @@ import { SessionValidation } from '@/lib/sessionvalidation';
 import { prisma } from "@/lib/prisma";
 import { ProcessStatus, NotificationStatus } from "@/constants/enums";
 
-// Define interfaces for TypeScript
 interface DateCount {
   [key: string]: { date: string; count: number };
 }
@@ -244,7 +243,6 @@ async function getNotificationsData(startDate: Date) {
   }
 }
 
-// Get active processes (those that are in PENDING or PROCESSING status)
 async function getActiveProcesses() {
   try {
     const processes = await prisma.userProcess.findMany({
@@ -257,16 +255,62 @@ async function getActiveProcesses() {
         id: true,
         user_id: true,
         status: true,
-        progress: true,
-        start_time: true
+        created_at: true,
+        // Include related transfer accounts
+        transferAccounts: {
+          select: {
+            id: true,
+            username: true,
+            status: true,
+            progress: true,
+            type: true,
+            updated_at: true
+          }
+        },
+        // Include related agent accounts
+        agent_account: {
+          select: {
+            id: true,
+            username: true,
+            status: true,
+            progress: true,
+            updated_at: true
+          }
+        }
       },
       orderBy: {
-        start_time: 'asc'
+        created_at: 'desc'
       },
       take: 5 // Limit to 5 most recent active processes
     });
     
-    return processes;
+    // Calculate overall progress for each process based on related accounts
+    const processesWithProgress = processes.map(process => {
+      // Calculate progress based on transfer accounts
+      const transferAccountsCount = process.transferAccounts.length;
+      const transferAccountsProgress = transferAccountsCount > 0 
+        ? process.transferAccounts.reduce((sum, account) => sum + (account.progress || 0), 0) / transferAccountsCount
+        : 0;
+      
+      // Calculate progress based on agent accounts
+      const agentAccountsCount = process.agent_account.length;
+      const agentAccountsProgress = agentAccountsCount > 0
+        ? process.agent_account.reduce((sum, account) => sum + (account.progress || 0), 0) / agentAccountsCount
+        : 0;
+      
+      // Calculate overall progress (average of transfer and agent accounts)
+      const totalAccountsCount = transferAccountsCount + agentAccountsCount;
+      const overallProgress = totalAccountsCount > 0
+        ? Math.round((transferAccountsProgress * transferAccountsCount + agentAccountsProgress * agentAccountsCount) / totalAccountsCount)
+        : 0;
+      
+      return {
+        ...process,
+        progress: overallProgress
+      };
+    });
+    
+    return processesWithProgress;
   } catch (error) {
     console.error("Error fetching active processes:", error);
     return [];
