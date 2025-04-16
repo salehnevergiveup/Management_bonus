@@ -30,7 +30,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // 📥 Parse and validate request body
     const body = await request.json();
     const { transfer_account_id, transfer_status } = body || {};
 
