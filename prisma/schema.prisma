@@ -70,35 +70,53 @@ model UserProcess {
   to_date          DateTime?      // Added field for date range end
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
+
   matches          Match[]
   agent_account    agentAccount[]
   transferAccounts TransferAccount[]
+  process_TransferAccount    UserProcess_TransferAccount[]
   transferHistory     TransferHistory[]
   accountTurnover    AccountTurnover[]
   @@index([user_id])
   @@index([status])
 }
 
+model UserProcess_TransferAccount {
+  user_process_id     String
+  transfer_account_id String
+  transfer_status     String                    @default("pending")
+
+  user_process        UserProcess?              @relation(fields: [user_process_id], references: [id], onDelete: Cascade)
+  transfer_account    TransferAccount?          @relation(fields: [transfer_account_id], references: [id], onDelete: Cascade)
+
+  @@id([user_process_id, transfer_account_id])
+  @@index([transfer_status])
+}
+
+
 model TransferAccount {
-  id               String           @id @default(uuid())
-  username         String           @unique
-  status           String           @default("no process")
-  progress         Int?
-  password         String
-  pin_code         String
-  type             String           @default("sub_account")
-  process_id       String?
-  parent_id        String?         // ID of the parent account
-  created_at       DateTime         @default(now())
-  updated_at       DateTime         @updatedAt
-  
-  parent           TransferAccount? @relation("AccountHierarchy", fields: [parent_id], references: [id], onDelete: SetNull)
-  sub_accounts     TransferAccount[] @relation("AccountHierarchy")
-  
-  players          Player[]
-  process          UserProcess?     @relation(fields: [process_id], references: [id], onDelete: SetNull)
-  matches          Match[] 
+  id                  String                      @id @default(uuid())
+  username            String                      @unique
+  status              String                      @default("no process")
+  progress            Int?
+  password            String
+  pin_code            String
+  type                String                      @default("sub_account")  //delete later 
+  process_id          String?
+  parent_id           String?
+  created_at          DateTime                    @default(now())
+  updated_at          DateTime                    @updatedAt
+
+  parent              TransferAccount?            @relation("AccountHierarchy", fields: [parent_id], references: [id], onDelete: SetNull)
+  sub_accounts        TransferAccount[]           @relation("AccountHierarchy")
+
+  players             Player[]
+  matches             Match[]
   transferHistory     TransferHistory[]
+  process              UserProcess?     @relation(fields: [process_id], references: [id], onDelete: SetNull) //delete later 
+
+
+  process_TransferAccount           UserProcess_TransferAccount[]
 }
 
 model agentAccount {

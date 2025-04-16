@@ -37,6 +37,11 @@ export enum TransferAccountTypes {
     SUB_ACCOUNT =  "sub_account"
 }
 
+export enum TransferAccountTransferStatus  {  
+    SUCCESS =  "success",  
+    FAILED =  "failed"
+}
+
 export enum NotificationStatus {
     READ = "read",
     UNREAD = "unread",
