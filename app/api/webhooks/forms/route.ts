@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { eventEmitter } from "@/lib/eventemitter";
-import { FormType, EventOptionType } from "@/constants/enums";
 import { verifyApi } from "@/lib/apikeysHandling";
 
 export async function POST(request: Request) {
@@ -33,9 +32,9 @@ export async function POST(request: Request) {
       );
     }
       const body = await request.clone().json();
-      const {options, type,thread_id } = body;
+      const {options, type,thread_id,timeout, title, message } = body;
       
-      if (!userId || !options || !type) {
+      if (!userId || !type  ||!thread_id) {
         return NextResponse.json(
           { error: "Missing required fields" },
           { status: 400 }
@@ -49,21 +48,21 @@ export async function POST(request: Request) {
         );
       }
       
-      const validOptionTypes = Object.values(EventOptionType);
       const validOptions = options.filter(option => 
-        typeof option === 'string' && 
-        validOptionTypes.includes(option.toLowerCase() as EventOptionType)
+        typeof option === 'string' 
       );
       
-      console.log("this is the process ID: ",  processId);  
       const optionsString = validOptions.join(',');
       const formData = {
         options: optionsString,
         type: type,  
         thread_id: thread_id,  
-        processId: processId 
+        processId: processId, 
+        timeout: timeout, 
+        message: message, 
+        title: title 
       };
-      
+
       eventEmitter.emit(userId, 'forms', formData);
       
       return NextResponse.json({ 

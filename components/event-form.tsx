@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, type ChangeEvent, type FormEvent } from "react"
-import { FormType } from "@/constants/enums"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useState, useRef, useEffect, type ChangeEvent, type FormEvent } from "react"
+import { AppColor, FormType } from "@/constants/enums"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/badge"
 
 interface VerificationMethodPayload {
-  verificationMethod: string
+  verification_method: string
   thread_id: string
 }
 
@@ -18,6 +18,114 @@ interface EventFormProps {
   isOpen: boolean
   onClose: () => void
 }
+
+const DraggableCard = ({ children, title, badge, timer, onClose }: any) => {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const cardRef = useRef(null);
+
+  const handleMouseDown = (e: any) => {
+    if (e.target.closest('.drag-handle')) {
+      setIsDragging(true);
+      setStartPos({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
+  };
+
+  const handleMouseMove = (e: any) => {
+    if (!isDragging) return;
+    
+    setPosition({
+      x: e.clientX - startPos.x,
+      y: e.clientY - startPos.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  return (
+    <div 
+      ref={cardRef}
+      className="bg-white rounded-lg shadow-lg border border-gray-200 w-96 max-w-full"
+      style={{ 
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        cursor: isDragging ? 'grabbing' : 'default',
+        zIndex: isDragging ? 100 : 100
+      }}
+    >
+      <div 
+        className="p-4 border-b drag-handle flex justify-between items-center" 
+        onMouseDown={handleMouseDown}
+      >
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold">{title}</h2>
+        </div>
+        <div className="ml-2">{badge}</div>
+        <button
+          className="ml-2 text-white hover:text-gray-200"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+      </div>
+      {timer && (
+        <div className="px-4 py-2 border-b bg-gray-50">
+          {timer}
+        </div>
+      )}
+      <div className="p-4">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Timer component to show countdown
+const Timer = ({ seconds, onTimeout }: { seconds: number, onTimeout: () => void }) => {
+  const [timeLeft, setTimeLeft] = useState(seconds);
+  
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      onTimeout();
+      return;
+    }
+    
+    const timerId = setTimeout(() => {
+      setTimeLeft(timeLeft - 1);
+    }, 1000);
+    
+    return () => clearTimeout(timerId);
+  }, [timeLeft, onTimeout]);
+  
+  const minutes = Math.floor(timeLeft / 60);
+  const secs = timeLeft % 60;
+  
+  return (
+    <div className={`text-sm font-medium ${timeLeft < 30 ? 'text-red-500' : ''}`}>
+      Time remaining: {minutes}:{secs.toString().padStart(2, '0')}
+    </div>
+  );
+};
 
 const VerificationMethodForm = ({ data, onClose }: { data: any; onClose: () => void }) => {
   const [verificationMethod, setVerificationMethod] = useState("")
@@ -38,11 +146,11 @@ const VerificationMethodForm = ({ data, onClose }: { data: any; onClose: () => v
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const thread_id  = data.thread_id;  
-    const payload: VerificationMethodPayload = { verificationMethod, thread_id }
+    const thread_id = data.thread_id;  
+    const payload: VerificationMethodPayload = {verification_method: verificationMethod, thread_id }
 
     try {
-      const res = await fetch("/api/external/out/submit-verification-method", {
+      const res = await fetch("api/external-app/submit-verification-method", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -89,15 +197,20 @@ const VerificationMethodForm = ({ data, onClose }: { data: any; onClose: () => v
 
 const VerificationForm = ({ data, onClose }: { data: any; onClose: () => void }) => {
   const [code, setCode] = useState("")
+  console.log("Form data received:", data);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const thread_id = data.thread_id
     try {
-      const res = await fetch("/api/external/out/submit-verification", {
+      const res = await fetch("api/external-app/submit-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, thread_id }),
+        body: JSON.stringify({ 
+          code, 
+          thread_id,
+          process_id: data.processId 
+        }),
       })
       if (!res.ok) {
         throw new Error("Failed to submit verification code")
@@ -112,6 +225,19 @@ const VerificationForm = ({ data, onClose }: { data: any; onClose: () => void })
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Display title and message if available */}
+
+      {data.title && (
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">{data.title}</h3>
+        </div>
+      )}
+      {data.message && (
+        <div className="mb-4 text-sm text-gray-600">
+          {data.message}
+        </div>
+      )}
+      
       <div className="space-y-2">
         <Label htmlFor="code">Verification Code</Label>
         <Input
@@ -134,6 +260,11 @@ const VerificationForm = ({ data, onClose }: { data: any; onClose: () => void })
 }
 
 const EventForm = ({ data, isOpen, onClose }: EventFormProps) => {
+  const handleTimeout = () => {
+    console.log("Form timed out for thread:", data.thread_id);
+    onClose();
+  };
+  
   const getFormTitle = () => {
     if (data.type === FormType.verification_method) {
       return "Select Verification Method"
@@ -152,16 +283,18 @@ const EventForm = ({ data, isOpen, onClose }: EventFormProps) => {
     return <div>Invalid form type</div>
   }
 
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{getFormTitle()}</DialogTitle>
-        </DialogHeader>
-        {renderForm()}
-      </DialogContent>
-    </Dialog>
-  )
+    <DraggableCard
+      title={getFormTitle()}
+      badge={<Badge color={AppColor.SUCCESS} text={data.thread_id} />}
+      timer={data.timeout && <Timer seconds={data.timeout} onTimeout={handleTimeout} />}
+      onClose={onClose}
+    >
+      {renderForm()}
+    </DraggableCard>
+  );
 }
 
 export default EventForm

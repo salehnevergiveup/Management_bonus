@@ -120,8 +120,8 @@ export const verifyApi = async (request: Request, requiredPermission?: string) =
     keyId: keyRecord.id,
     application: keyRecord.application,
     permissions,
-    userId,
-    processId
+    userId: userId,  
+    processId: processId  
   };
 };
 
@@ -153,7 +153,7 @@ export const verifyRenew = async (request: Request, requiredPermission?: string)
     return { 
       valid: false, 
       error: "Invalid API key",
-      status: 401
+    status: 401
     };
   }
   

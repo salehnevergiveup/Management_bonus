@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
     };
     
     try {
-      const backendResponse = await fetch(`${process.env.EXTERNAL_APP_URL}/submit-verification`, {
+      const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-verification`
+      const backendResponse = await fetch(backendUrl, {
         method: 'POST',
         headers: {
           ...headers,

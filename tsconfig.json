@@ -28,7 +28,7 @@
     "**/*.ts",
     "**/*.tsx",
     "types/*",
-    ".next/types/**/*.ts", "app/api/external/out/submit-verification", "app/api/external/out/submite-credential",
+    ".next/types/**/*.ts", "app/api/external-app/out/submit-verification", "app/api/external-app/out/submite-credential",
   ],
   "exclude": ["node_modules"]
 }

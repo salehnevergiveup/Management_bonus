@@ -7,7 +7,7 @@ export enum AppColor {
 
 export enum EventOptionType {
     TFA = "tfa",
-    OTP = "otp",
+    OTP = "phone number verification",
     EMAIL = "email",
     SMS = "sms",
 }

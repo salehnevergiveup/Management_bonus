@@ -181,10 +181,20 @@ export async function POST(request: Request) {
 
 async function startProcess(auth: any, fromDate: Date, toDate: Date, accounts: any[], processId: string) { 
   try {
-    // Prepare request data with actual account credentials
+    const pad = (n: any) => (n < 10 ? '0' + n : n);
+
+    // Set fixed time explicitly for both dates
+    const formatDateTime = (date: any, endOfDay = false) => {
+      const year = date.getFullYear();
+      const month = pad(date.getMonth() + 1); // JS months are 0-based
+      const day = pad(date.getDate());
+      const time = endOfDay ? "23:59:59" : "00:00:00";
+      return `${year}-${month}-${day} ${time}`;
+    };
+    
     const requestData = {
-      from_date: fromDate.toISOString(),
-      to_date: toDate.toISOString(),
+      from_date: formatDateTime(fromDate),
+      to_date: formatDateTime(toDate, true), // end of day for the last date
       accounts: accounts.map(acc => ({
         username: acc.username,
         password: acc.password
@@ -201,7 +211,8 @@ async function startProcess(auth: any, fromDate: Date, toDate: Date, accounts: a
     console.log(`[Process ${processId}] Calling external service with prepared headers`);
     
     // making request to selenium to start the process  
-    const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}/start-process`, {
+    console.log(`${process.env.EXTERNAL_APP_URL}start-process`);
+    const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}start-process`, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestData)

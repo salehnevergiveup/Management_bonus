@@ -65,10 +65,8 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
     return sections
       .map((section) => {
          const permissionName = section.name.toLowerCase().replace(/\s+/g, "-");
-         console.log("before: "+  permissionName)
         if (auth && auth.canAccess(permissionName)) {
           const href = `/${section.name.toLowerCase().replace(/\s+/g, "-")}`
-          console.log("after: "+  permissionName)
           return (
             <SidebarMenuItem key={section.name}>
               <SidebarMenuButton asChild>

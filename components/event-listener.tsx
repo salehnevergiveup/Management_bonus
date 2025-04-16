@@ -6,8 +6,8 @@ import EventForm from '@/components/event-form';
 
 const SSEListener = () => {
   const [eventType, setEventType] = useState('connection');
-  const [data, setData] = useState(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [notificationData, setNotificationData] = useState<any>(null);
+  const [forms, setForms] = useState<any[]>([]); 
 
   useEffect(() => {
     const eventSource = new EventSource('/api/events');
@@ -21,18 +21,48 @@ const SSEListener = () => {
       setEventType('notification');
       try {
         const parsedData = JSON.parse(event.data);
-        setData(parsedData);
+        setNotificationData(parsedData);
       } catch (err) {
         console.error('Error parsing notification event data:', err);
       }
     });
 
     eventSource.addEventListener('forms', (event) => {
-      setEventType('form');
       try {
         const parsedData = JSON.parse(event.data);
-        setData(parsedData);
-        setIsFormOpen(true); 
+        
+        const formId = `form-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        
+        setForms((prevForms) => {
+          const existingOpenForms = prevForms.filter(
+            (f) => f.thread_id === parsedData.thread_id && f.isOpen
+          );
+          
+          let updatedForms = [...prevForms];
+          
+          if (existingOpenForms.length > 0) {
+            updatedForms = updatedForms.map(form => 
+              (form.thread_id === parsedData.thread_id && form.isOpen)
+                ? { ...form, isOpen: false } 
+                : form
+            );
+          }
+          
+          const newForm = {
+            ...parsedData,
+            formId,
+            isOpen: true,
+            timestamp: Date.now()
+          };
+          
+          return [...updatedForms, newForm];
+        });
+        
+        if (parsedData.timeout && typeof parsedData.timeout === 'number') {
+          setTimeout(() => {
+            closeForm(formId);
+          }, parsedData.timeout * 1000); 
+        }
       } catch (err) {
         console.error('Error parsing form event data:', err);
       }
@@ -42,7 +72,6 @@ const SSEListener = () => {
       setEventType('progress');
       try {
         const parsedData = JSON.parse(event.data);
-        setData(parsedData);
       } catch (err) {
         console.error('Error parsing progress event data:', err);
       }
@@ -57,8 +86,23 @@ const SSEListener = () => {
     };
   }, []);
 
+  const closeForm = (formId: string) => {
+    console.log("🔒 Closing form:", formId);
+    setForms((prevForms) => 
+      prevForms.map((form) => 
+        form.formId === formId 
+          ? { ...form, isOpen: false } 
+          : form
+      )
+    );
+    
+    setTimeout(() => {
+      setForms((prevForms) => prevForms.filter((form) => form.isOpen || form.formId !== formId));
+    }, 3000); // Remove 3 seconds after closing
+  };
+
   useEffect(() => {
-    if (eventType === 'progress' && data) {
+    if (eventType === 'progress' && notificationData) {
       const updateProgress = async () => {
         try {
           const res = await fetch('/progress', {
@@ -66,7 +110,7 @@ const SSEListener = () => {
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ data })
+            body: JSON.stringify({ data: notificationData })
           });
           if (!res.ok) {
             throw new Error('Failed to update progress');
@@ -79,26 +123,40 @@ const SSEListener = () => {
       };
       updateProgress();
     }
-  }, [eventType, data]);
+  }, [eventType, notificationData]);
 
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-  };
-
-  if (eventType === 'progress') {
-    return null;
-  }
+  // Initial positioning of forms in a grid pattern
+  const getGridPosition = () => ({
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)'
+  });
 
   return (
     <>
-      {eventType === 'notification' && <LiveNotification data={data} />}
-      {eventType === 'form' && data && (
-        <EventForm 
-          data={data} 
-          isOpen={isFormOpen} 
-          onClose={handleCloseForm} 
-        />
-      )}
+      {eventType === 'notification' && <LiveNotification data={notificationData} />}
+      
+      <div className="fixed inset-0 pointer-events-none">
+      {forms.map((form, index) => (
+        form?.isOpen && (
+          <div 
+            key={form?.formId}
+            className="pointer-events-auto absolute animate-fade-in"
+            style={{
+              ...getGridPosition(),
+              zIndex: 1000 - index,
+            }}
+          >
+            <EventForm
+              data={form}
+              isOpen={true}
+              onClose={() => closeForm(form?.formId)}
+            />
+          </div>
+    )
+  ))}
+</div>
+
     </>
   );
 };
