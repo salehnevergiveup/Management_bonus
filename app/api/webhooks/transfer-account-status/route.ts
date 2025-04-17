@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyApi } from "@/lib/apikeysHandling";
 
-export async function POST(request: Request) {
+export async function PUT(request: Request) {
   try {
 
     const apiKey = request.headers.get("X-API-Key");

@@ -3,11 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import LiveNotification from '@components/live-notifications';
 import EventForm from '@/components/event-form';
+import DetailsDialog from '@/components/details-dialog';
 
 const SSEListener = () => {
   const [eventType, setEventType] = useState('connection');
   const [notificationData, setNotificationData] = useState<any>(null);
   const [forms, setForms] = useState<any[]>([]); 
+  const [detailsData, setDetailsData] = useState<any>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     const eventSource = new EventSource('/api/events');
@@ -68,6 +71,18 @@ const SSEListener = () => {
       }
     });
 
+    // Add event listener for show_details
+    eventSource.addEventListener('show_details', (event) => {
+      setEventType('show_details');
+      try {
+        const parsedData = JSON.parse(event.data);
+        setDetailsData(parsedData);
+        setShowDetails(true);
+      } catch (err) {
+        console.error('Error parsing show_details event data:', err);
+      }
+    });
+   
     eventSource.addEventListener('progress', (event) => {
       setEventType('progress');
       try {
@@ -99,6 +114,15 @@ const SSEListener = () => {
     setTimeout(() => {
       setForms((prevForms) => prevForms.filter((form) => form.isOpen || form.formId !== formId));
     }, 3000); // Remove 3 seconds after closing
+  };
+
+  const closeDetailsDialog = () => {
+    setShowDetails(false);
+    
+    // Optional: Clear the data after dialog closes and a short delay
+    setTimeout(() => {
+      setDetailsData(null);
+    }, 300);
   };
 
   useEffect(() => {
@@ -136,27 +160,35 @@ const SSEListener = () => {
     <>
       {eventType === 'notification' && <LiveNotification data={notificationData} />}
       
+      {/* Show Details Dialog when appropriate */}
+      {detailsData && (
+        <DetailsDialog 
+          data={detailsData} 
+          isOpen={showDetails} 
+          onClose={closeDetailsDialog} 
+        />
+      )}
+      
       <div className="fixed inset-0 pointer-events-none">
-      {forms.map((form, index) => (
-        form?.isOpen && (
-          <div 
-            key={form?.formId}
-            className="pointer-events-auto absolute animate-fade-in"
-            style={{
-              ...getGridPosition(),
-              zIndex: 1000 - index,
-            }}
-          >
-            <EventForm
-              data={form}
-              isOpen={true}
-              onClose={() => closeForm(form?.formId)}
-            />
-          </div>
-    )
-  ))}
-</div>
-
+        {forms.map((form, index) => (
+          form?.isOpen && (
+            <div 
+              key={form?.formId}
+              className="pointer-events-auto absolute animate-fade-in"
+              style={{
+                ...getGridPosition(),
+                zIndex: 1000 - index,
+              }}
+            >
+              <EventForm
+                data={form}
+                isOpen={true}
+                onClose={() => closeForm(form?.formId)}
+              />
+            </div>
+          )
+        ))}
+      </div>
     </>
   );
 };
