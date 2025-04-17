@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import { threadId } from 'worker_threads';
 
 interface ConfirmTransferDialogProps {
   data: {
     processId: string;
     title: string;
     message: string;
+    thread_id: string;
     timeout?: number;
   };
   isOpen: boolean;
@@ -29,7 +31,9 @@ const ConfirmTransferDialog: React.FC<ConfirmTransferDialogProps> = ({ data, isO
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          confirmation: true 
+          confirmation: true,  
+          threadId: data.thread_id 
+
         })
       });
 

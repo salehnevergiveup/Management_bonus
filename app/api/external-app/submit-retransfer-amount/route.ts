@@ -16,9 +16,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { confirmation } = await request.json();
+    const { confirmation, thread_id } = await request.json();
 
-    if (confirmation == null) {
+    if (confirmation == null || !thread_id) {
       return NextResponse.json(
         { error: "Missing required field: confirmation" },
         { status: 400 }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
     
     // fire and forget 
-    retransferAmountRequest(userProcess.id, userProcess.user_id, role, confirmation);
+    retransferAmountRequest(userProcess.id, userProcess.user_id, role,thread_id,confirmation);
 
     return NextResponse.json(
       {
@@ -89,6 +89,7 @@ async function retransferAmountRequest(
   userProcess_id: string,
   user_id: string,
   role: string,
+  thread_id: string, 
   confirmation: boolean
 ) {
   try {
@@ -101,7 +102,7 @@ async function retransferAmountRequest(
         ...headers,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ confirmation })
+      body: JSON.stringify({ confirmation, thread_id })
     });
 
     if (!backendResponse.ok) {
