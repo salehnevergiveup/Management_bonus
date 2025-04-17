@@ -4,13 +4,20 @@ import React, { useState, useEffect } from 'react';
 import LiveNotification from '@components/live-notifications';
 import EventForm from '@/components/event-form';
 import DetailsDialog from '@/components/details-dialog';
+import ConfirmTransferDialog from '@/components/confirm-transfer-amount';
 
 const SSEListener = () => {
   const [eventType, setEventType] = useState('connection');
   const [notificationData, setNotificationData] = useState<any>(null);
   const [forms, setForms] = useState<any[]>([]); 
+  
+  // Details dialog state
   const [detailsData, setDetailsData] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  
+  // Confirm transfer dialog state
+  const [confirmTransferData, setConfirmTransferData] = useState<any>(null);
+  const [showConfirmTransfer, setShowConfirmTransfer] = useState(false);
 
   useEffect(() => {
     const eventSource = new EventSource('/api/events');
@@ -71,7 +78,7 @@ const SSEListener = () => {
       }
     });
 
-    // Add event listener for show_details
+    // Event listener for show_details
     eventSource.addEventListener('show_details', (event) => {
       setEventType('show_details');
       try {
@@ -80,6 +87,25 @@ const SSEListener = () => {
         setShowDetails(true);
       } catch (err) {
         console.error('Error parsing show_details event data:', err);
+      }
+    });
+    
+    // Event listener for confirm_transfer
+    eventSource.addEventListener('confirm_transfer', (event) => {
+      setEventType('confirm_transfer');
+      try {
+        const parsedData = JSON.parse(event.data);
+        setConfirmTransferData(parsedData);
+        setShowConfirmTransfer(true);
+        
+        // Set timeout to auto-close if provided
+        if (parsedData.timeout && typeof parsedData.timeout === 'number') {
+          setTimeout(() => {
+            closeConfirmTransferDialog();
+          }, parsedData.timeout * 1000);
+        }
+      } catch (err) {
+        console.error('Error parsing confirm_transfer event data:', err);
       }
     });
    
@@ -119,9 +145,18 @@ const SSEListener = () => {
   const closeDetailsDialog = () => {
     setShowDetails(false);
     
-    // Optional: Clear the data after dialog closes and a short delay
+    // Clear the data after dialog closes and a short delay
     setTimeout(() => {
       setDetailsData(null);
+    }, 300);
+  };
+  
+  const closeConfirmTransferDialog = () => {
+    setShowConfirmTransfer(false);
+    
+    // Clear the data after dialog closes and a short delay
+    setTimeout(() => {
+      setConfirmTransferData(null);
     }, 300);
   };
 
@@ -166,6 +201,15 @@ const SSEListener = () => {
           data={detailsData} 
           isOpen={showDetails} 
           onClose={closeDetailsDialog} 
+        />
+      )}
+      
+      {/* Show Confirm Transfer Dialog when appropriate */}
+      {confirmTransferData && (
+        <ConfirmTransferDialog
+          data={confirmTransferData}
+          isOpen={showConfirmTransfer}
+          onClose={closeConfirmTransferDialog}
         />
       )}
       
