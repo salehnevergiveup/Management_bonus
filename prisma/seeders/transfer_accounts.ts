@@ -13,7 +13,6 @@ export const SeedTransferAccounts = async () => {
           password: 'abc123',
           pin_code: '000000',
           type: TransferAccountTypes.MAIN_ACCOUNT,
-          status:  TransferAccountStatus.NO_PROCESS
         }
       });
     seededAccounts.push(mainAccount);  
@@ -36,9 +35,8 @@ export const SeedTransferAccounts = async () => {
             password:  "abc123", 
             pin_code: '000000',        
             type:  TransferAccountTypes.SUB_ACCOUNT,  
-            status:  TransferAccountStatus.NO_PROCESS,  
             parent_id: mainAccount.id,
-            ...subAccount,
+            ...subAccount
           }
 
           const seededAccount = await prisma.transferAccount.create( {  

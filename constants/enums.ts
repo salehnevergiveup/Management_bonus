@@ -27,19 +27,15 @@ NO_PROCESS= "no process",
 UNDER_PROCESS = "under process"
 }
 
-export enum TransferAccountStatus {  
-NO_PROCESS =  "no process",  
-UNDER_PROCESS = "under process"
-}
-
 export enum TransferAccountTypes {  
     MAIN_ACCOUNT = "main_account",  
     SUB_ACCOUNT =  "sub_account"
 }
 
-export enum TransferAccountTransferStatus  {  
+export enum TransferAccountStatus  {  
     SUCCESS =  "success",  
-    FAILED =  "failed"
+    FAILED =  "failed",  
+    PENDING = "pending"
 }
 
 export enum NotificationStatus {
@@ -58,6 +54,7 @@ export enum ProcessStatus {
     PENDING = "pending", // one the process finished the stage one and not start the stage two 
     PROCESSING = "processing", // while the process is under processing 
     COMPLETED = "completed",
+    ONBHOLD =  "on hold",
     FAILED = "failed"
 }
   

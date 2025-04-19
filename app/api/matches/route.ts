@@ -172,58 +172,58 @@ async function createMatchesData(authId: string, bonus: Bonus, processId: string
 }
 
 //this is to update the matches and the transfer accounts back from the selenium 
-export async function PUT(request: Request) {  
-  try {  
-    // const auth =  await SessionValidation()
-    // if(!auth) { 
-    //  return NextResponse.json(
-    //    {}, 
-    //    {status: 401}
-    //  )
-    // }
+// export async function PUT(request: Request) {  
+//   try {  
+//     // const auth =  await SessionValidation()
+//     // if(!auth) { 
+//     //  return NextResponse.json(
+//     //    {}, 
+//     //    {status: 401}
+//     //  )
+//     // }
 
-    const body =  await request.json();  
+//     const body =  await request.json();  
 
-    if(!body) {  
-      return NextResponse.json(
-        {
-          error:"Invalid data passed"
-        }, 
-        {status:  400}
-      )
-    }
+//     if(!body) {  
+//       return NextResponse.json(
+//         {
+//           error:"Invalid data passed"
+//         }, 
+//         {status:  400}
+//       )
+//     }
     
-    if(!isProcessPayload(body)) {  
-      return NextResponse.json(
-        {error: "Invalid data"},  
-        {status:  400}
-      )
-    }
+//     if(!isProcessPayload(body)) {  
+//       return NextResponse.json(
+//         {error: "Invalid data"},  
+//         {status:  400}
+//       )
+//     }
 
-    const updateProcessPayload: ProcessPayload =  body;  
+//     const updateProcessPayload: ProcessPayload =  body;  
     
-    updateProcessMatches(updateProcessPayload);  
+//     updateProcessMatches(updateProcessPayload);  
    
-    return  NextResponse.json(
-      {
-        message: "Started to update process and the matches"
-      },  
-      {
-        status: 202
-      }
-    )
-  } catch (error) {  
-    console.error("Error initiating match process:", error);
-    return NextResponse.json(
-      { error: "Server error initiating the match process" },
-      { status: 500 }
-    );
-  }
-}
+//     return  NextResponse.json(
+//       {
+//         message: "Started to update process and the matches"
+//       },  
+//       {
+//         status: 202
+//       }
+//     )
+//   } catch (error) {  
+//     console.error("Error initiating match process:", error);
+//     return NextResponse.json(
+//       { error: "Server error initiating the match process" },
+//       { status: 500 }
+//     );
+//   }
+// }
 
 
-async function updateProcessMatches(ProcessPayload: ProcessPayload) {  
-  console.log("update process Started"); 
-   await ProcessCommand["update"](ProcessPayload)
-  console.log("update process Finished"); 
-}
+// async function updateProcessMatches(ProcessPayload: ProcessPayload) {  
+//   console.log("update process Started"); 
+//    await ProcessCommand["update"](ProcessPayload)
+//   console.log("update process Finished"); 
+// }

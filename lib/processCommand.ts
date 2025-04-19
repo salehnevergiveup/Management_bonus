@@ -48,10 +48,12 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
         }
       });
       
+      //between the player and the transfer account 
       const playerMap = new Map(players.map(player => [player.account_username, player.transfer_account_id]));
       
       const createList = [];
-      const transferAccountIds = new Set<string>();
+      // Store transfer_account_id and currency pairs
+      const transferAccountCurrencyPairs = [];
       
       for (const user of collectedUsers) {
         const transferAccountId = playerMap.get(user.username) || null;
@@ -63,15 +65,27 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
           username: user.username,
           bonus_id: bonusId,
           transfer_account_id: transferAccountId,
-          status: "pending"
+          status: TransferAccountStatus.PENDING
         });
         
         if (transferAccountId) {
-          transferAccountIds.add(transferAccountId);
+          // Store each unique combination of transfer account and currency
+          transferAccountCurrencyPairs.push({
+            transferAccountId: transferAccountId,
+            currency: user.currency
+          });
         }
       }
       
-      console.log(`Processing ${createList.length} matches with ${transferAccountIds.size} unique transfer accounts`);
+      // Remove duplicates by creating a Map with a composite key
+      const uniquePairs = new Map();
+      for (const pair of transferAccountCurrencyPairs) {
+        const key = `${pair.transferAccountId}-${pair.currency}`;
+        uniquePairs.set(key, pair);
+      }
+      const uniquePairsArray = Array.from(uniquePairs.values());
+      
+      console.log(`Processing ${createList.length} matches with ${uniquePairsArray.length} unique transfer account-currency pairs`);
       
       // Batch processing for matches
       const batchSize = 100;
@@ -87,33 +101,33 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
         });
       }
       
-      if (transferAccountIds.size > 0) {
-        console.log(`Updating ${transferAccountIds.size} transfer accounts with process ID: ${processId}`);
+      // Create entries in the pivot table with currency
+      if (uniquePairsArray.length > 0) {
+        console.log(`Creating ${uniquePairsArray.length} pivot entries for process ID: ${processId}`);
         
-        const transferAccountIdArray = Array.from(transferAccountIds);
-        const transferAccountBatchSize = 100;
-        const transferAccountBatches = Math.ceil(transferAccountIdArray.length / transferAccountBatchSize);
+        const pivotBatchSize = 100;
+        const pivotBatches = Math.ceil(uniquePairsArray.length / pivotBatchSize);
         
-        for (let i = 0; i < transferAccountBatches; i++) {
-          const batchStart = i * transferAccountBatchSize;
-          const transferAccountBatch = transferAccountIdArray.slice(batchStart, batchStart + transferAccountBatchSize);
+        for (let i = 0; i < pivotBatches; i++) {
+          const batchStart = i * pivotBatchSize;
+          const pairsBatch = uniquePairsArray.slice(batchStart, batchStart + pivotBatchSize);
           
-          console.log(`Batch ${i+1}/${transferAccountBatches}: Updating ${transferAccountBatch.length} transfer accounts`);
+          console.log(`Batch ${i+1}/${pivotBatches}: Creating pivot entries for ${pairsBatch.length} transfer account-currency pairs`);
           
           await prisma.$transaction(async (tx) => {
-            await tx.transferAccount.updateMany({
-              where: {
-                id: {
-                  in: transferAccountBatch
-                }
-              },
-              data: {
-                process_id: processId,
-                progress: 0,
-                status: {
-                  set: TransferAccountStatus.UNDER_PROCESS
-                }
-              }
+            // Create pivot table entries with progress field and currency
+            const pivotData = pairsBatch.map(pair => ({
+              user_process_id: processId,
+              transfer_account_id: pair.transferAccountId,
+              currency: pair.currency, // Include currency in the composite key
+              transfer_status: TransferAccountStatus.PENDING,
+              progress: 0 // Set initial progress
+            }));
+            
+            // Use createMany to batch insert pivot entries
+            await tx.userProcess_TransferAccount.createMany({
+              data: pivotData,
+              skipDuplicates: true
             });
           });
         }
@@ -127,212 +141,248 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
       return false;
     }
   };
-
-const rematchSinglePlayer = async (authId: string, matchId: string) => {
-  try {
-    const match = await prisma.match.findUnique({ 
-      where: { id: matchId } 
-    });
-    
-    if (!match || !match.username || !match.process_id) {
-      await notifyAll(authId, `Match not found or has incomplete information`, NotificationType.ERROR);
-      return false;
-    }
-    
-    const player = await prisma.player.findFirst({ 
-      where: { account_username: match.username } 
-    });
-    
-    if (!player) {
-      await notifyAll(authId, `Player not found for username: ${match.username}`, NotificationType.ERROR);
-      return false;
-    }
-    
-    const processId = match.process_id;
-    
-    const transferAccount = await prisma.transferAccount.findUnique({
-      where: { id: player.transfer_account_id }
-    });
-    
-    if (!transferAccount) {
-      await notifyAll(authId, `Transfer account not found for player: ${match.username}`, NotificationType.ERROR);
-      return false;
-    }
-    
-    await prisma.$transaction(async (tx) => {
-      await tx.match.update({
-        where: { id: matchId },
-        data: { transfer_account_id: player.transfer_account_id }
+ 
+  const rematchSinglePlayer = async (authId: string, matchId: string) => {
+    try {
+      const match = await prisma.match.findUnique({
+        where: { id: matchId }
       });
       
-      if (transferAccount.process_id !== processId) {
-        await tx.transferAccount.update({
-          where: { id: player.transfer_account_id },
-          data: {
-            process_id: processId,
-            status: TransferAccountStatus.UNDER_PROCESS, 
-            progress: 0
-          }
-        });
-        
-        console.log(`Connected transfer account ${player.transfer_account_id} to process ${processId}`);
-      } else {
-        console.log(`Transfer account ${player.transfer_account_id} already connected to process ${processId}`);
+      if (!match || !match.username || !match.process_id || !match.currency) {
+        await notifyAll(authId, `Match not found or has incomplete information`, NotificationType.ERROR);
+        return false;
       }
-    });
-    
-    await notifyAll(
-      authId, 
-      `Rematching ${match.username} completed successfully`,
-      NotificationType.SUCCESS
-    );
-    return true;
-  } catch (error) {
-    console.error(`Error in rematchSinglePlayer for match ${matchId}:`, error);
-    await notifyAll(
-      authId, 
-      `Error rematching ${matchId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      NotificationType.ERROR
-    );
-    return false;
-  }
-};
-
-const rematch = async (authId: string) => {
-  try {
-    
-    const matches = await prisma.match.findMany({ 
-      where: { transfer_account_id: null },
-      select: {
-        id: true,
-        username: true,
-        process_id: true
-      }
-    });
-    
-    if (matches.length === 0) {
-      await notifyAll(authId, "No matches found that require rematching", NotificationType.INFO);
-      return { successCount: 0, failCount: 0 };
-    }
-    
-    const players = await prisma.player.findMany({
-      where: {
-        account_username: {
-          in: matches.map(match => match.username)
-        }
-      },
-      select: {
-        account_username: true,
-        transfer_account_id: true
-      }
-    });
-    
-    const playerMap = new Map(
-      players.map(player => [player.account_username, player.transfer_account_id])
-    );
-    
-    // Track transfer accounts that need updating per process
-    const processTransferAccounts = new Map<string, Set<string>>();
-    
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const match of matches) {
-      const transferAccountId = playerMap.get(match.username);
       
-      if (transferAccountId) {
-        try {
-          await prisma.match.update({
-            where: { id: match.id },
-            data: { transfer_account_id: transferAccountId}
-          });
-          successCount++;
-          
-          // Track which transfer accounts need to be connected to which processes
-          if (!processTransferAccounts.has(match.process_id)) {
-            processTransferAccounts.set(match.process_id, new Set());
-          }
-          processTransferAccounts.get(match.process_id)?.add(transferAccountId);
-          
-        } catch (updateError) {
-          failCount++;
-          console.error(`Failed to update match ${match.id}:`, updateError);
-        }
-      } else {
-        failCount++;
-        console.log(`No player found for username: ${match.username}`);
+      const player = await prisma.player.findFirst({
+        where: { account_username: match.username }
+      });
+      
+      if (!player) {
+        await notifyAll(authId, `Player not found for username: ${match.username}`, NotificationType.ERROR);
+        return false;
       }
-    }
-
-    let transferAccountsUpdated = 0;
-    
-    for (const [processId, transferAccountIds] of processTransferAccounts.entries()) {
-      if (transferAccountIds.size > 0) {
-        console.log(`Updating ${transferAccountIds.size} transfer accounts for process ${processId}`);
-        
-        const existingTransferAccounts = await prisma.transferAccount.findMany({
-          where: {
-            id: { in: Array.from(transferAccountIds) },
-            NOT: { process_id: processId}
-          },
-          select: { id: true }
+      
+      const processId = match.process_id;
+      const currency = match.currency; // Get the currency from the match
+      
+      const transferAccount = await prisma.transferAccount.findUnique({
+        where: { id: player.transfer_account_id }
+      });
+      
+      if (!transferAccount) {
+        await notifyAll(authId, `Transfer account not found for player: ${match.username}`, NotificationType.ERROR);
+        return false;
+      }
+      
+      await prisma.$transaction(async (tx) => {
+        // Update the match with the transfer account ID
+        await tx.match.update({
+          where: { id: matchId },
+          data: { transfer_account_id: player.transfer_account_id }
         });
         
-        const accountsToUpdate = existingTransferAccounts.map(account => account.id);
+        // Check if pivot relationship already exists - using the new composite key
+        const existingRelation = await tx.userProcess_TransferAccount.findUnique({
+          where: {
+            // Using the updated composite primary key structure
+            user_process_id_transfer_account_id_currency: {
+              user_process_id: processId,
+              transfer_account_id: player.transfer_account_id,
+              currency: currency
+            }
+          }
+        });
         
-        if (accountsToUpdate.length > 0) {
+        if (!existingRelation) {
+          // Create pivot relationship if it doesn't exist - including currency
+          await tx.userProcess_TransferAccount.create({
+            data: {
+              user_process_id: processId,
+              transfer_account_id: player.transfer_account_id,
+              currency: currency, // Include currency in the creation
+              transfer_status: TransferAccountStatus.PENDING,
+              progress: 0
+            }
+          });
+          
+          console.log(`Connected transfer account ${player.transfer_account_id} to process ${processId} with currency ${currency}`);
+        } else {
+          console.log(`Transfer account ${player.transfer_account_id} already connected to process ${processId} with currency ${currency}`);
+        }
+      });
+      
+      await notifyAll(
+        authId, 
+        `Rematching ${match.username} completed successfully`,
+        NotificationType.SUCCESS
+      );
+      return true;
+    } catch (error) {
+      console.error(`Error in rematchSinglePlayer for match ${matchId}:`, error);
+      await notifyAll(
+        authId, 
+        `Error rematching ${matchId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        NotificationType.ERROR
+      );
+      return false;
+    }
+  };
+
+  const rematch = async (authId: string) => {
+    try {
+      const matches = await prisma.match.findMany({ 
+        where: { transfer_account_id: null },
+        select: {
+          id: true,
+          username: true,
+          process_id: true,
+          currency: true  // Include currency in the selection
+        }
+      });
+      
+      if (matches.length === 0) {
+        await notifyAll(authId, "No matches found that require rematching", NotificationType.INFO);
+        return { successCount: 0, failCount: 0 };
+      }
+      
+      const players = await prisma.player.findMany({
+        where: {
+          account_username: {
+            in: matches.map(match => match.username)
+          }
+        },
+        select: {
+          account_username: true,
+          transfer_account_id: true
+        }
+      });
+      
+      const playerMap = new Map(
+        players.map(player => [player.account_username, player.transfer_account_id])
+      );
+      
+      // Track process-transfer account-currency relationships to create
+      // Use composite key of processId-transferAccountId-currency to ensure uniqueness
+      const processTransferAccountCurrencies = new Map<string, Set<string>>();
+      const relationshipDetails = new Map<string, {processId: string, transferAccountId: string, currency: string}>();
+      
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const match of matches) {
+        const transferAccountId = playerMap.get(match.username);
+        
+        if (transferAccountId && match.currency) {  // Ensure match has currency
+          try {
+            await prisma.match.update({
+              where: { id: match.id },
+              data: { transfer_account_id: transferAccountId }
+            });
+            successCount++;
+            
+            // Create a composite key to track unique combinations
+            const compositeKey = `${match.process_id}-${transferAccountId}-${match.currency}`;
+            processTransferAccountCurrencies.set(compositeKey, new Set());
+            
+            // Store the details for later use
+            relationshipDetails.set(compositeKey, {
+              processId: match.process_id,
+              transferAccountId: transferAccountId,
+              currency: match.currency
+            });
+            
+          } catch (updateError) {
+            failCount++;
+            console.error(`Failed to update match ${match.id}:`, updateError);
+          }
+        } else {
+          failCount++;
+          console.log(`No player found for username: ${match.username} or missing currency`);
+        }
+      }
+  
+      let transferAccountsUpdated = 0;
+      
+      // Convert the unique combinations to an array for processing
+      const uniqueRelationships = Array.from(relationshipDetails.values());
+      
+      if (uniqueRelationships.length > 0) {
+        console.log(`Creating pivot entries for ${uniqueRelationships.length} unique process-account-currency combinations`);
+        
+        // Check which combinations don't already exist
+        const existingRelationships = await Promise.all(
+          uniqueRelationships.map(async (rel) => {
+            const exists = await prisma.userProcess_TransferAccount.findUnique({
+              where: {
+                user_process_id_transfer_account_id_currency: {
+                  user_process_id: rel.processId,
+                  transfer_account_id: rel.transferAccountId,
+                  currency: rel.currency
+                }
+              }
+            });
+            return { 
+              ...rel, 
+              exists: !!exists 
+            };
+          })
+        );
+        
+        const relationshipsToCreate = existingRelationships.filter(rel => !rel.exists);
+        
+        if (relationshipsToCreate.length > 0) {
           const batchSize = 100;
-          const batches = Math.ceil(accountsToUpdate.length / batchSize);
+          const batches = Math.ceil(relationshipsToCreate.length / batchSize);
           
           for (let i = 0; i < batches; i++) {
             const batchStart = i * batchSize;
-            const accountBatch = accountsToUpdate.slice(batchStart, batchStart + batchSize);
+            const relationshipBatch = relationshipsToCreate.slice(batchStart, batchStart + batchSize);
             
             await prisma.$transaction(async (tx) => {
-              await tx.transferAccount.updateMany({
-                where: {
-                  id: { in: accountBatch }
-                },
-                data: {
-                  process_id: processId,
-                  status: TransferAccountStatus.UNDER_PROCESS, 
+              await tx.userProcess_TransferAccount.createMany({
+                data: relationshipBatch.map(rel => ({
+                  user_process_id: rel.processId,
+                  transfer_account_id: rel.transferAccountId,
+                  currency: rel.currency,  // Include currency in the creation
+                  transfer_status: TransferAccountStatus.PENDING,
                   progress: 0
-                }
+                })),
+                skipDuplicates: true
               });
             });
             
-            transferAccountsUpdated += accountBatch.length;
+            transferAccountsUpdated += relationshipBatch.length;
           }
         }
       }
+      
+      await notifyAll(
+        authId,
+        `Rematching process completed. Updated matches: ${successCount}, Failed: ${failCount}, Transfer accounts updated: ${transferAccountsUpdated}`,
+        NotificationType.INFO
+      );
+      
+      return { 
+        successCount, 
+        failCount,
+        transferAccountsUpdated
+      };
+    } catch (error) {
+      console.error("Error in rematch process:", error);
+      await notifyAll(
+        authId, 
+        `Error in rematching process: ${error instanceof Error ? error.message : 'Unknown error'}`, 
+        NotificationType.ERROR
+      );
+      return { 
+        successCount: 0, 
+        failCount: 0, 
+        transferAccountsUpdated: 0,
+        error 
+      };
     }
-    
-    await notifyAll(
-      authId,
-      `Rematching process completed. Updated matches: ${successCount}, Failed: ${failCount}, Transfer accounts updated: ${transferAccountsUpdated}`,
-      NotificationType.INFO
-    );
-    
-    return { 
-      successCount, 
-      failCount,
-      transferAccountsUpdated
-    };
-  } catch (error) {
-    console.error("Error in rematch process:", error);
-    await notifyAll(
-      authId, 
-      `Error in rematching process: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-      NotificationType.ERROR
-    );
-    return { 
-      successCount: 0, 
-      failCount: 0, 
-      transferAccountsUpdated: 0,
-      error 
-    };
-  }
-};
+  };
+
   // The resume function with proper TypeScript typing and enhanced debugging
 const resume = async (authId: string, processId: string, matchesList: any[]): Promise<ResumeResult | null> => {
     try {
@@ -650,27 +700,25 @@ const resume = async (authId: string, processId: string, matchesList: any[]): Pr
     }
   };
 
-const terminate = async (authId: string, processId: string) => {
+  const terminate = async (authId: string, processId: string) => {
     try {
       return await prisma.$transaction(async (tx) => {
-
         const process = await tx.userProcess.findUnique({
           where: { id: processId },
           select: { from_date: true, to_date: true }
         });
         
-        await tx.transferAccount.updateMany({
+        // Get all transfer accounts linked to this process through the bridge table
+        const processTransferAccounts = await tx.userProcess_TransferAccount.findMany({
           where: {
-            process_id: processId,
-            status: TransferAccountStatus.UNDER_PROCESS
+            user_process_id: processId,
           },
-          data: {
-            status: TransferAccountStatus.NO_PROCESS,
-            process_id: null,
-            progress: null
+          select: {
+            transfer_account_id: true,
+            currency: true
           }
         });
-  
+
         const matches = await tx.match.findMany({
           where: { process_id: processId },
           select: {
@@ -702,90 +750,106 @@ const terminate = async (authId: string, processId: string) => {
         await tx.match.deleteMany({
           where: { process_id: processId }
         });
-
-        await tx.accountTurnover.deleteMany(); 
+  
+        await tx.accountTurnover.deleteMany({
+          where: { process_id: processId }
+        }); 
         
-        await tx.userProcess.update({
-          where: { id: processId },
-          data: { status: ProcessStatus.COMPLETED }
+      // Delete all the connections in the database  
+      if (processTransferAccounts.length > 0) {
+        await tx.userProcess_TransferAccount.deleteMany({
+          where :{  
+            user_process_id: processId 
+          }
         });
-        
-        notifyAll(authId, "Process terminated successfully", NotificationType.SUCCESS )
+      }
+        notifyAll(authId, "Process terminated successfully", NotificationType.SUCCESS);
         return { success: true, message: "Process terminated successfully" };
       });
       
     } catch (error) {
       console.error("Error terminating process:", error);
-      notifyAll(authId, "Error terminating process", NotificationType.ERROR )
+      notifyAll(authId, "Error terminating process", NotificationType.ERROR);
       throw new Error(`Failed to terminate process`);
     }
   };
 
-
-  async function update(updateProcessMatches: ProcessPayload): Promise<void> {
-    try {
-      const processId = updateProcessMatches.process_id;
+  
+  // async function update(updateProcessMatches: ProcessPayload): Promise<void> {
+  //   try {
+  //     const processId = updateProcessMatches.process_id;
       
-      const accountUsernames = Object.keys(updateProcessMatches).filter(
-        key => key !== 'process_id'
-      );
+  //     const accountUsernames = Object.keys(updateProcessMatches).filter(
+  //       key => key !== 'process_id'
+  //     );
       
-      await prisma.$transaction(async (tx) => {
-
-        for (const username of accountUsernames) {
-          const accountData = updateProcessMatches[username];
+  //     await prisma.$transaction(async (tx) => {
+  //       for (const username of accountUsernames) {
+  //         const accountData = updateProcessMatches[username];
           
-          await tx.transferAccount.update({
-            where: { username },
-            data: {
-              status: TransferAccountStatus.NO_PROCESS,
-              progress: accountData.progress,
-              updated_at: new Date()
-            }
-          });
+  //         // Get the transfer account ID for this username
+  //         const transferAccount = await tx.transferAccount.findUnique({
+  //           where: { username },
+  //           select: { id: true }
+  //         });
           
-          const matchKeys = Object.keys(accountData.transfer_report);
+  //         if (!transferAccount) {
+  //           console.log(`Transfer account not found for username: ${username}`);
+  //           continue;
+  //         }
           
-          for (const matchKey of matchKeys) {
-            const transferData = accountData.transfer_report[matchKey];
-            const [playerUsername, currency] = matchKey.split('-');
+  //         const matchKeys = Object.keys(accountData.transfer_report);
+          
+  //         for (const matchKey of matchKeys) {
+  //           const transferData = accountData.transfer_report[matchKey];
+  //           const [playerUsername, currency] = matchKey.split('-');
             
-            // Note filter based on the amount and the game as well 
-            const matches = await tx.match.findMany({
-              where: {
-                username: playerUsername,
-                currency: currency,
-                process_id: processId,
-                transfer_account: {
-                  username: username
-                }
-              }
-            });
+  //           // Update the bridge table entry instead of the transfer account directly
+  //           await tx.userProcess_TransferAccount.updateMany({
+  //             where: {
+  //               user_process_id: processId,
+  //               transfer_account_id: transferAccount.id,
+  //               currency: currency
+  //             },
+  //             data: {
+  //               transfer_status: TransferAccountStatus.NO_PROCESS,
+  //               progress: accountData.progress,
+  //             }
+  //           });
             
-            if (matches.length > 0) {
-              const matchUpdatePromises = matches.map(match => {
-                const status =  accountData.transfer_report[match.username+"-"+match.currency].status; 
-               return tx.match.update({
-                  where: { id: match.id },
-                  data: {
-                    status,
-                    updated_at: new Date()
-                  }
-                })
-              }
-              );
-              await Promise.all(matchUpdatePromises);
-            }
-          }
-        }
-      });
+  //           // Note filter based on the amount and the game as well 
+  //           const matches = await tx.match.findMany({
+  //             where: {
+  //               username: playerUsername,
+  //               currency: currency,
+  //               process_id: processId,
+  //               transfer_account_id: transferAccount.id
+  //             }
+  //           });
+            
+  //           if (matches.length > 0) {
+  //             const matchUpdatePromises = matches.map(match => {
+  //               const status = accountData.transfer_report[match.username+"-"+match.currency].status; 
+  //               return tx.match.update({
+  //                 where: { id: match.id },
+  //                 data: {
+  //                   status,
+  //                   updated_at: new Date()
+  //                 }
+  //               });
+  //             });
+  //             await Promise.all(matchUpdatePromises);
+  //           }
+  //         }
+  //       }
+  //     });
       
-      console.log(`Successfully updated accounts and matches for process ${processId}`);
-    } catch (error) {
-      console.error(`Error updating process ${updateProcessMatches.process_id}:`, error);
-      throw error; 
-    }
-  }
+  //     console.log(`Successfully updated accounts and matches for process ${processId}`);
+  //   } catch (error) {
+  //     console.error(`Error updating process ${updateProcessMatches.process_id}:`, error);
+  //     throw error; 
+  //   }
+  // }
 
 // // Helper functions to trigger the notifications event
 const notifyAll = async (authId: string, message: string, type: string) => {  
@@ -926,7 +990,7 @@ export const ProcessCommand = {
     "rematch": (authId: string) => rematch(authId),  
     "resume": (authId: string, processId: string, matches: any[]) => resume(authId, processId, matches),  
     "terminate": (authId: string, processId: string) => terminate(authId, processId),  
-    "update": (updateProcessPayload: ProcessPayload) => update(updateProcessPayload), 
+    // "update": (updateProcessPayload: ProcessPayload) => update(updateProcessPayload), 
     "notify all":  (authId: string, message: string, type: string) => notifyAll(authId, message, type)
 };
 

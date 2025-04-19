@@ -97,12 +97,9 @@ export async function POST(request: Request) {
       data: {
         username: body.username,
         password: body.password,
-        status: body.status || TransferAccountStatus.NO_PROCESS,
-        progress: body.progress,
         pin_code: body.pin_code,
         type: body.type || TransferAccountTypes.SUB_ACCOUNT,
-        parent_id: body.parent_id,
-        process_id: body.process_id
+        parent_id: body.parent_id
       }
     });
     

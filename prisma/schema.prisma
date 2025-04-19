@@ -66,30 +66,47 @@ model UserProcess {
   user_id          String
   user             User?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   status           String         @default("pending")
-  from_date        DateTime?      // Added field for date range start
-  to_date          DateTime?      // Added field for date range end
+  from_date        DateTime?
+  to_date          DateTime?
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
 
   matches          Match[]
   agent_account    agentAccount[]
-  transferAccounts TransferAccount[]
   process_TransferAccount    UserProcess_TransferAccount[]
   transferHistory     TransferHistory[]
   accountTurnover    AccountTurnover[]
+  progressLogs      ProcessProgress[]  
   @@index([user_id])
   @@index([status])
 }
 
+model ProcessProgress {
+  id                  String                      @id @default(uuid())
+  process_id          String
+  stage               String
+  timestamp           DateTime
+  data                Json
+  thread_id           String
+  event_name          String
+  status              String
+
+  process             UserProcess                 @relation(fields: [process_id], references: [id], onDelete: Cascade)
+  @@index([process_id])
+  @@index([status])
+}
+
+
 model UserProcess_TransferAccount {
   user_process_id     String
   transfer_account_id String
+  currency            String
   transfer_status     String                    @default("pending")
-
+  progress            Int?
   user_process        UserProcess?              @relation(fields: [user_process_id], references: [id], onDelete: Cascade)
   transfer_account    TransferAccount?          @relation(fields: [transfer_account_id], references: [id], onDelete: Cascade)
 
-  @@id([user_process_id, transfer_account_id])
+  @@id([user_process_id, transfer_account_id, currency])
   @@index([transfer_status])
 }
 
@@ -97,12 +114,9 @@ model UserProcess_TransferAccount {
 model TransferAccount {
   id                  String                      @id @default(uuid())
   username            String                      @unique
-  status              String                      @default("no process")
-  progress            Int?
   password            String
   pin_code            String
   type                String                      @default("sub_account")  //delete later 
-  process_id          String?
   parent_id           String?
   created_at          DateTime                    @default(now())
   updated_at          DateTime                    @updatedAt
@@ -113,8 +127,6 @@ model TransferAccount {
   players             Player[]
   matches             Match[]
   transferHistory     TransferHistory[]
-  process              UserProcess?     @relation(fields: [process_id], references: [id], onDelete: SetNull) //delete later 
-
 
   process_TransferAccount           UserProcess_TransferAccount[]
 }
