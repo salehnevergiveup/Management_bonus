@@ -383,10 +383,8 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
     }
   };
 
-  // The resume function with proper TypeScript typing and enhanced debugging
-const resume = async (authId: string, processId: string, matchesList: any[]): Promise<ResumeResult | null> => {
+  const resume = async (authId: string, processId: string, matchesList: any[]): Promise<ResumeResult | null> => {
     try {
-      
       // Get unique transfer account IDs
       const uniqueTransferAccountIds = [
         ...new Set(matchesList.map((match) => match.transfer_account_id))
@@ -401,6 +399,27 @@ const resume = async (authId: string, processId: string, matchesList: any[]): Pr
           parent: true
         }
       }) as TransferAccount[];
+      
+      // Fetch all transfer account statuses from the bridge table for this process
+      const transferAccountStatuses = await prisma.userProcess_TransferAccount.findMany({
+        where: {
+          user_process_id: processId
+        },
+        select: {
+          transfer_account_id: true,
+          currency: true,
+          transfer_status: true
+        }
+      });
+      
+      // Create a map for quick lookup of transfer account statuses by account ID and currency
+      const statusMap = new Map<string, Map<string, string>>();
+      transferAccountStatuses.forEach(status => {
+        if (!statusMap.has(status.transfer_account_id)) {
+          statusMap.set(status.transfer_account_id, new Map<string, string>());
+        }
+        statusMap.get(status.transfer_account_id)?.set(status.currency, status.transfer_status);
+      });
       
       console.log("Total transfer accounts fetched:", transferAccounts.length);
       
@@ -518,30 +537,29 @@ const resume = async (authId: string, processId: string, matchesList: any[]): Pr
             
             console.log(`  Sub-account ${subAccount.username} has ${subAccountMatches.length} matches`);
             
-            subAccountMatches.forEach(match => {
-              const currency = match.currency;
+            // Get unique currencies for this sub account
+            const currencies = [...new Set(subAccountMatches.map(match => match.currency))];
+            
+            currencies.forEach(currency => {
+              // Calculate total amount for this currency
+              const totalAmount = subAccountMatches
+                .filter(match => match.currency === currency)
+                .reduce((sum, match) => sum + match.amount, 0);
               
               if (!walletsByCurrency[currency]) {
                 walletsByCurrency[currency] = [];
               }
               
-              // Check if we already have a transfer to this sub-account for this currency
-              const existingTransfer = walletsByCurrency[currency].find(
-                t => t.account === subAccount.username
-              );
+              // Get the transfer status from the bridge table
+              const accountStatus = statusMap.get(subAccount.id)?.get(currency) || "pending";
               
-              if (existingTransfer) {
-                // Sum up amounts for the same account
-                console.log(`    Adding ${match.amount} ${currency} to existing transfer for ${subAccount.username}`);
-                existingTransfer.amount += match.amount;
-              } else {
-                // Add new transfer
-                console.log(`    Creating new transfer of ${match.amount} ${currency} to ${subAccount.username}`);
-                walletsByCurrency[currency].push({
-                  account: subAccount.username,
-                  amount: match.amount
-                });
-              }
+              // Add new transfer with status
+              console.log(`    Creating transfer of ${totalAmount} ${currency} to ${subAccount.username} with status ${accountStatus}`);
+              walletsByCurrency[currency].push({
+                account: subAccount.username,
+                amount: totalAmount,
+                status: accountStatus
+              });
             });
           });
           
@@ -582,30 +600,37 @@ const resume = async (authId: string, processId: string, matchesList: any[]): Pr
           // Group transfers by currency and username
           const walletsByCurrency: Record<string, Transfer[]> = {};
           
-          subAccountMatches.forEach(match => {
-            const currency = match.currency;
-            
+          // Get unique currencies for this sub account
+          const currencies = [...new Set(subAccountMatches.map(match => match.currency))];
+          
+          currencies.forEach(currency => {
             if (!walletsByCurrency[currency]) {
               walletsByCurrency[currency] = [];
             }
             
-            // Check if we already have a transfer to this player for this currency
-            const existingTransfer = walletsByCurrency[currency].find(
-              t => t.account === match.username
-            );
+            // Group matches by username for this currency
+            const matchesByCurrencyAndUsername: Record<string, Match[]> = {};
             
-            if (existingTransfer) {
-              // Sum up amounts for the same player
-              console.log(`  Adding ${match.amount} ${currency} to existing transfer for ${match.username}`);
-              existingTransfer.amount += match.amount;
-            } else {
-              // Add new transfer
-              console.log(`  Creating new transfer of ${match.amount} ${currency} to ${match.username}`);
-              walletsByCurrency[currency].push({
-                account: match.username,
-                amount: match.amount
+            subAccountMatches
+              .filter(match => match.currency === currency)
+              .forEach(match => {
+                if (!matchesByCurrencyAndUsername[match.username]) {
+                  matchesByCurrencyAndUsername[match.username] = [];
+                }
+                matchesByCurrencyAndUsername[match.username].push(match);
               });
-            }
+            
+            // Create transfers for each username
+            Object.keys(matchesByCurrencyAndUsername).forEach(username => {
+              const userMatches = matchesByCurrencyAndUsername[username];
+              const totalAmount = userMatches.reduce((sum, match) => sum + match.amount, 0);
+              
+              console.log(`  Creating transfer of ${totalAmount} ${currency} to ${username}`);
+              walletsByCurrency[currency].push({
+                account: username,
+                amount: totalAmount
+              });
+            });
           });
           
           // Convert wallets object to array format
@@ -634,51 +659,6 @@ const resume = async (authId: string, processId: string, matchesList: any[]): Pr
       console.log(`FINAL RESULTS - Main accounts: ${mainAccountsResult.length}, Sub accounts: ${subAccountsResult.length}`);
       console.log("Main account usernames:", mainAccountsResult.map(acc => acc.username).join(", "));
       console.log("Sub account usernames:", subAccountsResult.map(acc => acc.username).join(", "));
-      
-      // Check for missing accounts
-      if (subAccountsResult.length !== Object.keys(matchesByAccount).length) {
-        console.log("WARNING: Number of sub-accounts in result doesn't match the number of accounts with matches!");
-        
-        // Find which accounts are missing
-        const accountsWithMatches = new Set(Object.keys(matchesByAccount));
-        const accountsInResult = new Set(subAccountsResult.map(acc => {
-          const matchingAccount = subAccounts.find(sa => sa.username === acc.username);
-          return matchingAccount ? matchingAccount.id : null;
-        }).filter(Boolean));
-        
-        console.log("Accounts with matches but missing from result:");
-        for (const accountId of accountsWithMatches) {
-          if (!accountsInResult.has(accountId)) {
-            const matchingAccount = accountMap.get(accountId);
-            console.log(`  - ${matchingAccount ? matchingAccount.username : 'UNKNOWN'} (ID: ${accountId})`);
-            console.log(`    Matches: ${matchesByAccount[accountId].length}`);
-            
-            // Debug why this account was skipped
-            console.log("    Debugging why this account was skipped:");
-            
-            // Check if it was found in subAccounts
-            const inSubAccounts = subAccounts.some(a => a.id === accountId);
-            console.log(`    In subAccounts list: ${inSubAccounts}`);
-            
-            // Check if it has a parent (which might affect main account grouping)
-            const accountObj = accountMap.get(accountId);
-            if (accountObj) {
-              console.log(`    Has parent_id: ${accountObj.parent_id ? 'Yes' : 'No'}`);
-              
-              // Check if it has matches
-              const hasMatches = matchesByAccount[accountId] && matchesByAccount[accountId].length > 0;
-              console.log(`    Has matches: ${hasMatches ? 'Yes' : 'No'}`);
-              
-              if (hasMatches) {
-                // Check if wallets were created correctly
-                const matches = matchesByAccount[accountId];
-                const currencies = [...new Set(matches.map(m => m.currency))];
-                console.log(`    Currencies in matches: ${currencies.join(', ')}`);
-              }
-            }
-          }
-        }
-      }
       
       // Construct final result
       const result: ResumeResult = {
