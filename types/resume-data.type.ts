@@ -26,7 +26,8 @@ export interface Match {
 export interface Transfer {
     account: string;
     amount: number;
-    status?: string
+    status?: string;  
+    id?: string
   }
   
 export interface Wallet {

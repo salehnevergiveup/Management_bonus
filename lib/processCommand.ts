@@ -390,17 +390,14 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
         ...new Set(matchesList.map((match) => match.transfer_account_id))
       ].filter(Boolean) as string[];
       
-      console.log("Unique transfer account IDs:", uniqueTransferAccountIds);
-      console.log("Transfer account IDs in matches:", uniqueTransferAccountIds.join(", "));
-      
-      // Fetch ALL transfer accounts (not just the ones in the matches)
+      // Fetch ALL transfer accounts 
       const transferAccounts = await prisma.transferAccount.findMany({
         include: {
           parent: true
         }
       }) as TransferAccount[];
       
-      // Fetch all transfer account statuses from the bridge table for this process
+      // Fetch all transfer account statuses from the bridge table
       const transferAccountStatuses = await prisma.userProcess_TransferAccount.findMany({
         where: {
           user_process_id: processId
@@ -412,7 +409,7 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
         }
       });
       
-      // Create a map for quick lookup of transfer account statuses by account ID and currency
+      // Create status map for quick lookup
       const statusMap = new Map<string, Map<string, string>>();
       transferAccountStatuses.forEach(status => {
         if (!statusMap.has(status.transfer_account_id)) {
@@ -421,23 +418,10 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
         statusMap.get(status.transfer_account_id)?.set(status.currency, status.transfer_status);
       });
       
-      console.log("Total transfer accounts fetched:", transferAccounts.length);
-      
-      // Create a map for quick lookup
+      // Create account map for quick lookup
       const accountMap = new Map<string, TransferAccount>();
       transferAccounts.forEach(account => {
         accountMap.set(account.id, account);
-      });
-      
-      // Let's specifically log the accounts matching the ones in the image
-      console.log("Looking for specific accounts:");
-      ["salehtransfer01", "salehtransfer02", "salehtransfer03"].forEach(username => {
-        const matchingAccount = transferAccounts.find(acc => acc.username === username);
-        if (matchingAccount) {
-          console.log(`Found ${username} with ID ${matchingAccount.id}, type: ${matchingAccount.type}, parent_id: ${matchingAccount.parent_id || 'None'}`);
-        } else {
-          console.log(`${username} NOT FOUND in database`);
-        }
       });
       
       // Separate main and sub accounts
@@ -445,10 +429,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
       const subAccounts = transferAccounts.filter(account => 
         account.type === "sub_account" && uniqueTransferAccountIds.includes(account.id)
       );
-      
-      console.log("Main accounts count:", mainAccounts.length);
-      console.log("Sub accounts in matches:", subAccounts.length);
-      console.log("Sub account IDs:", subAccounts.map(a => a.id).join(", "));
       
       // Group matches by transfer account ID
       const matchesByAccount: Record<string, Match[]> = {};
@@ -461,19 +441,9 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
         matchesByAccount[match.transfer_account_id].push(match as Match);
       });
       
-      // Debug: Check which accounts have matches and how many
-      console.log("Accounts with matches:");
-      Object.keys(matchesByAccount).forEach(accountId => {
-        const accountObj = accountMap.get(accountId);
-        console.log(`Account ${accountObj ? accountObj.username : 'UNKNOWN'} (ID: ${accountId}) has ${matchesByAccount[accountId].length} matches`);
-      });
-      
-      // This recursive function will find the main account parent
+      // Find main account parent function
       const findMainAccountParent = (accountId: string, visitedIds = new Set<string>()): TransferAccount | null => {
-        if (visitedIds.has(accountId)) {
-          console.log(`Circular reference detected for account ${accountId}!`);
-          return null; // Avoid circular references
-        }
+        if (visitedIds.has(accountId)) return null;
         
         const accountObj = accountMap.get(accountId);
         if (!accountObj) return null;
@@ -492,25 +462,12 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
       // Identify parent accounts for each sub account
       const subAccountParents = new Map<string, TransferAccount>();
       for (const subAccount of subAccounts) {
-        console.log(`Finding main parent for sub-account: ${subAccount.username} (ID: ${subAccount.id})`);
-        
-        // Find the parent chain up to a main account using recursive function
         const mainParent = findMainAccountParent(subAccount.id);
         
         if (mainParent) {
-          console.log(`  Found main parent: ${mainParent.username} (ID: ${mainParent.id})`);
           subAccountParents.set(subAccount.id, mainParent);
-        } else {
-          console.log(`  No main parent found for ${subAccount.username}`);
         }
       }
-      
-      console.log("Sub accounts with identified parents:", subAccountParents.size);
-      console.log("Sub account parent relationships:");
-      subAccounts.forEach(subAccount => {
-        const parent = subAccountParents.get(subAccount.id);
-        console.log(`  ${subAccount.username} -> Parent: ${parent ? parent.username : 'NONE'}`);
-      });
       
       // Build the main accounts result structure
       const mainAccountsResult: Account[] = mainAccounts
@@ -521,10 +478,7 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
             return parent && parent.id === mainAccount.id;
           });
           
-          console.log(`Main account ${mainAccount.username} has ${childSubAccounts.length} child sub-accounts`);
-          
           if (childSubAccounts.length === 0) {
-            console.log(`  Skipping main account ${mainAccount.username} - no child sub-accounts`);
             return null;
           }
           
@@ -534,8 +488,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
           // For each sub account, identify transfers from the main account
           childSubAccounts.forEach(subAccount => {
             const subAccountMatches = matchesByAccount[subAccount.id] || [];
-            
-            console.log(`  Sub-account ${subAccount.username} has ${subAccountMatches.length} matches`);
             
             // Get unique currencies for this sub account
             const currencies = [...new Set(subAccountMatches.map(match => match.currency))];
@@ -554,7 +506,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
               const accountStatus = statusMap.get(subAccount.id)?.get(currency) || "pending";
               
               // Add new transfer with status
-              console.log(`    Creating transfer of ${totalAmount} ${currency} to ${subAccount.username} with status ${accountStatus}`);
               walletsByCurrency[currency].push({
                 account: subAccount.username,
                 amount: totalAmount,
@@ -570,12 +521,9 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
           }));
           
           if (wallets.length === 0) {
-            console.log(`  Skipping main account ${mainAccount.username} - no wallets`);
             return null;
           }
           
-          console.log(`Main account ${mainAccount.username} wallets:`, JSON.stringify(wallets, null, 2));
-  
           return {
             username: mainAccount.username,
             password: mainAccount.password,
@@ -583,21 +531,18 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
             wallets
           };
         })
-        .filter((account): account is Account => account !== null); // Type guard to filter out null values
+        .filter((account): account is Account => account !== null);
       
       // Build the sub accounts result structure
       const subAccountsResult: Account[] = subAccounts
         .map(subAccount => {
           const subAccountMatches = matchesByAccount[subAccount.id] || [];
           
-          console.log(`Processing sub-account ${subAccount.username} with ${subAccountMatches.length} matches`);
-          
           if (subAccountMatches.length === 0) {
-            console.log(`  Skipping sub-account ${subAccount.username} - no matches`);
             return null;
           }
           
-          // Group transfers by currency and username
+          // Group transfers by currency
           const walletsByCurrency: Record<string, Transfer[]> = {};
           
           // Get unique currencies for this sub account
@@ -608,29 +553,17 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
               walletsByCurrency[currency] = [];
             }
             
-            // Group matches by username for this currency
-            const matchesByCurrencyAndUsername: Record<string, Match[]> = {};
-            
+            // CHANGED: Process each match individually instead of grouping by username
             subAccountMatches
-              .filter(match => match.currency === currency)
+              .filter(match => match.currency === currency && match.username)
               .forEach(match => {
-                if (!matchesByCurrencyAndUsername[match.username]) {
-                  matchesByCurrencyAndUsername[match.username] = [];
-                }
-                matchesByCurrencyAndUsername[match.username].push(match);
+                // Each match becomes its own transfer with its own ID
+                walletsByCurrency[currency].push({
+                  account: match.username,
+                  amount: match.amount,
+                  id: match.id 
+                });
               });
-            
-            // Create transfers for each username
-            Object.keys(matchesByCurrencyAndUsername).forEach(username => {
-              const userMatches = matchesByCurrencyAndUsername[username];
-              const totalAmount = userMatches.reduce((sum, match) => sum + match.amount, 0);
-              
-              console.log(`  Creating transfer of ${totalAmount} ${currency} to ${username}`);
-              walletsByCurrency[currency].push({
-                account: username,
-                amount: totalAmount
-              });
-            });
           });
           
           // Convert wallets object to array format
@@ -640,11 +573,8 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
           }));
           
           if (wallets.length === 0) {
-            console.log(`  Skipping sub-account ${subAccount.username} - no wallets`);
             return null;
           }
-          
-          console.log(`Sub-account ${subAccount.username} wallets:`, JSON.stringify(wallets, null, 2));
           
           return {
             username: subAccount.username,
@@ -653,12 +583,7 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
             wallets
           };
         })
-        .filter((account): account is Account => account !== null); // Type guard to filter out null values
-      
-      // Verify accounts in result
-      console.log(`FINAL RESULTS - Main accounts: ${mainAccountsResult.length}, Sub accounts: ${subAccountsResult.length}`);
-      console.log("Main account usernames:", mainAccountsResult.map(acc => acc.username).join(", "));
-      console.log("Sub account usernames:", subAccountsResult.map(acc => acc.username).join(", "));
+        .filter((account): account is Account => account !== null);
       
       // Construct final result
       const result: ResumeResult = {

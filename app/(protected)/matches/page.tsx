@@ -436,6 +436,7 @@ export default function MatchManagementPage() {
               .filter(m => selectedMatches.includes(m.id) && m.transfer_account_id !== null)
               .map(m => ({
                 id: m.id,
+                username: m.username,
                 transfer_account_id: m.transfer_account_id,
                 transfer_account: m.transfer_account,
                 amount: m.amount,

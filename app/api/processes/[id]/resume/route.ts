@@ -78,7 +78,7 @@ async function sendDataToResume(authId: string,authRole: string, processId: stri
 
         const data =  await ProcessCommand["resume"](authId, processId, matches);  
 
-        console.log("output data: ",  data);  
+        console.log("output data: ",  data , "==============================================================================================");  
 
         const headers = await preparePythonBackendHeaders(
             authId, 
