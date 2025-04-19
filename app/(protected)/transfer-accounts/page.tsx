@@ -26,8 +26,6 @@ interface TransferAccount {
   username: string;
   password: string;
   pin_code: string;
-  status: string;
-  progress: number | null;
   type: string;
   process_id: string | null;
   parent_id: string | null;
@@ -177,8 +175,7 @@ export default function TransferAccountManagementPage() {
       const searchLower = search.toLowerCase();
       filtered = accounts.filter(account => 
         account.username.toLowerCase().includes(searchLower) ||
-        account.type?.toLowerCase().includes(searchLower) ||
-        account.status?.toLowerCase().includes(searchLower)
+        account.type?.toLowerCase().includes(searchLower)
       );
     }
     
@@ -535,8 +532,6 @@ export default function TransferAccountManagementPage() {
                   <TableHead>PIN Code</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Parent Account</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Progress</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Updated At</TableHead>
                   <TableHead>Player Count</TableHead>
@@ -598,8 +593,6 @@ export default function TransferAccountManagementPage() {
                       </TableCell>
                       <TableCell>{account.type || 'sub_account'}</TableCell>
                       <TableCell>{getParentUsername(account.parent_id)}</TableCell>
-                      <TableCell>{account.status || 'no process'}</TableCell>
-                      <TableCell>{account.progress || "N/A"}</TableCell>
                       <TableCell>{account.created_at ? formatDate(account.created_at) : 'N/A'}</TableCell>
                       <TableCell>{account.updated_at ? formatDate(account.updated_at) : 'N/A'}</TableCell>
                       <TableCell>{account.player_count || "N/A"}</TableCell>
