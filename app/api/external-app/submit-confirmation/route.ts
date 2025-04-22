@@ -94,7 +94,7 @@ async function retransferAmountRequest(
 ) {
   try {
     const headers = await preparePythonBackendHeaders(user_id, userProcess_id, role);
-    const backendUrl = `${process.env.EXTERNAL_APP_URL}retransfer-amount`;
+    const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-confirmation`;
 
     const backendResponse = await fetch(backendUrl, {
       method: "POST",
@@ -102,7 +102,7 @@ async function retransferAmountRequest(
         ...headers,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ confirmation, thread_id })
+      body: JSON.stringify({"confirmation": confirmation, "thread_id": thread_id })
     });
 
     if (!backendResponse.ok) {
