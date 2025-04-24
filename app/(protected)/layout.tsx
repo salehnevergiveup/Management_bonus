@@ -1,3 +1,4 @@
+// 1. First, let's update ProtectedLayout.tsx to just include the FloatingProcessButton without passing data
 "use client";
 
 import { SidebarProvider } from "@components/ui/sidebar";
@@ -7,6 +8,7 @@ import { UserProvider } from "@/contexts/usercontext";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SSEComponent from "@components/event-listener";
+import FloatingProcessButton from "@components/floating-process-button";
 
 export default function ProtectedLayout({
   children,
@@ -32,6 +34,8 @@ export default function ProtectedLayout({
               <ToastContainer />
             </main>
           </div>
+          
+          <FloatingProcessButton/>
         </div>
       </SidebarProvider>
     </UserProvider>

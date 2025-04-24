@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       const sendEvent = (eventType: string, data: any) => {
         const eventString = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
         controller.enqueue(encoder.encode(eventString));
-        console.log("send event call back triggerd")
+        console.log("send event call back trigged")
       };
         
       sendEvent('connected', { message: 'SSE connection established' });

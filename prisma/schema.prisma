@@ -87,11 +87,12 @@ model ProcessProgress {
   process_stage String
   thread_stage  String?
   thread_id     String?
-  data          Json
+  data          Json?
   event_name    String
   status        String
-
-  process       "UserProcess" @relation(fields: [process_id], references: [id], onDelete: Cascade)
+  created_at  DateTime  @default(now())
+  
+  process       UserProcess @relation(fields: [process_id], references: [id], onDelete: Cascade)
   
   @@index([process_id])
   @@index([status])

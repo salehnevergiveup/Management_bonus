@@ -12,6 +12,13 @@ export enum EventOptionType {
     SMS = "sms",
 }
 
+export enum Events {  
+    CONFIRMATION_DIALOG =  "confirmation_dialog",
+    VERIFICATION_OPTIONS = "verification_options",
+    VERIFICATION_CODE =  "verification_code",
+    PROGRESS_TRACKER = "process tracker"
+}
+
 export enum FormType {
     verification_method = "verification_method",
     verification = "verification",
@@ -57,7 +64,13 @@ export enum ProcessStatus {
     ONBHOLD =  "on hold",
     FAILED = "failed"
 }
-  
+
+export enum  ProcessProgress {  
+    FAILED=  "failed",  
+    PROGRESS = "progress", 
+    SUCCESS = "success",
+}
+
 export enum MatchStatus {
     PENDING = "pending",
     SUCCESS = "success",

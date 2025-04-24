@@ -5,48 +5,33 @@ import { SessionValidation } from '@/lib/sessionvalidation';
 import { preparePythonBackendHeaders } from '@/lib/apikeysHandling';
 
 export async function POST(request: NextRequest) {
-  console.log("API route handler called: /api/external/submit-verification-method");
-  
   try {
-    console.log("Validating session...");
+    console.log("dfsdfsfdsdppppppppppppppppppppppppppppppppppppppppppppp")
     const auth = await SessionValidation();
     
     if (!auth) {
-      console.log("Session validation failed: Unauthorized");
       return NextResponse.json(
         { error: "Unauthorized: User must be logged in" },
         { status: 401 }
       );
     }
     
-    console.log("Session validated successfully:", auth.id);
-    
-    console.log("Parsing request body...");
-    const body = await request.json().catch(e => {
-      console.error("Failed to parse request JSON:", e);
-      return {};
-    });
-    
-    console.log("Received request body:", body);
-    const { verification_method, thread_id } = body;
-    
-    if (!verification_method) {
-      console.log("Validation error: Missing verificationMethod");
+    const { code, thread_id } = await request.json();
+
+    if (!code) {
       return NextResponse.json(
-        { error: "Missing required field: verificationMethod is required" },
+        { error: "Missing verification code" },
         { status: 400 }
       );
     }
     
-    console.log("Finding active user process...");
     let userProcess = null;
     
     if (auth.role === Roles.Admin) {
+      // For admin: find the first active process in the system
       userProcess = await prisma.userProcess.findFirst({
         where: {
-          status: {
-            in: [ProcessStatus.PROCESSING, ProcessStatus.PENDING]
-          }
+          status: ProcessStatus.PROCESSING
         },
         include: {
           user: {
@@ -60,12 +45,11 @@ export async function POST(request: NextRequest) {
         }
       });
     } else {
+      // For regular user: find their own active process
       userProcess = await prisma.userProcess.findFirst({
         where: {
           user_id: auth.id,
-          status: {
-            in: [ProcessStatus.PROCESSING, ProcessStatus.PENDING]
-          }
+          status: ProcessStatus.PROCESSING
         },
         orderBy: {
           created_at: 'desc'
@@ -74,14 +58,11 @@ export async function POST(request: NextRequest) {
     }
     
     if (!userProcess) {
-      console.log("No active process found for user:", auth.id);
       return NextResponse.json(
         { error: "No active process found" },
         { status: 404 }
       );
     }
-    
-    console.log("Found active process:", userProcess.id);
     
     let role = auth.role;
     if (auth.role !== Roles.Admin) {
@@ -95,33 +76,19 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    console.log("User role:", role);
-    console.log("This is the process id sent back:", userProcess.id);
-    
-    // Prepare headers
-    console.log("Preparing headers for Python backend...");
     const headers = await preparePythonBackendHeaders(
       userProcess.user_id,
       userProcess.id,
       role
     );
     
-    console.log("Headers prepared:", Object.keys(headers));
-
-    // Prepare request data
     const requestData = {
-      verification_method: verification_method,  
+      verification_code: code,  
       thread_id: thread_id
     };
     
-    console.log("Sending request to Python backend:", requestData);
-    
     try {
-      // Check if the URL is properly formatted
-      const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-verification-method`;
-      console.log("Backend URL:", backendUrl);
-      
-      // Send request to Python backend
+      const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-verification-code`
       const backendResponse = await fetch(backendUrl, {
         method: 'POST',
         headers: {
@@ -131,51 +98,44 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(requestData)
       });
       
-      console.log("Backend response status:", backendResponse.status);
-      
       if (!backendResponse.ok) {
-        console.log("Backend response error:", backendResponse.status);
         let errorDetails;
         try {
           errorDetails = await backendResponse.json();
-          console.log("Error details:", errorDetails);
-        } catch (e) {
-          console.error("Failed to parse error response:", e);
+        } catch {
           errorDetails = { error: "Unknown error from backend service" };
         }
         
         return NextResponse.json(
-          {
-            error: "Failed to submit verification method to backend service",
+          { 
+            error: "Failed to submit verification code to backend service",
             details: errorDetails
           },
           { status: backendResponse.status }
         );
       }
       
-      console.log("Backend request successful");
       const responseData = await backendResponse.json();
-      console.log("Backend response data:", responseData);
       
       return NextResponse.json({
         success: true,
-        message: "Verification method submitted successfully",
+        message: "Verification code submitted successfully",
         process_id: userProcess.id,
         details: responseData
       });
     } catch (error: any) {
-      console.error("Error submitting verification method to backend:", error);
+      console.error("Error submitting verification code:", error);
       
       return NextResponse.json(
-        {
-          error: "Failed to communicate with backend service",
-          message: error.message
+        { 
+          error: "Failed to communicate with backend service", 
+          message: error.message 
         },
         { status: 503 }
       );
     }
   } catch (error: any) {
-    console.error("Uncaught error in API route handler:", error);
+    console.error("Error processing verification submission:", error);
     
     return NextResponse.json(
       { error: "Internal server error", message: error.message },
