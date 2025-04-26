@@ -4,9 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { SessionValidation } from '@/lib/sessionvalidation';
 import { preparePythonBackendHeaders } from '@/lib/apikeysHandling';
 
-export async function POST(request: NextRequest) {
-  console.log("API route handler called: /api/external/submit-verification-method");
-  
+export async function POST(request: NextRequest) {  
   try {
     console.log("Validating session...");
     const auth = await SessionValidation();

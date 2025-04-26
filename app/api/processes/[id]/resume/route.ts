@@ -47,7 +47,7 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
     await prisma.userProcess.update({ 
         where: {id: processId}, 
         data: { 
-            status: ProcessStatus.PROCESSING
+            status: ProcessStatus.PENDING //change  it later 
         }
     });  
 
@@ -78,15 +78,15 @@ async function sendDataToResume(authId: string,authRole: string, processId: stri
 
         const data =  await ProcessCommand["resume"](authId, processId, matches);  
 
-        console.log("output data: ",  data , "==============================================================================================");  
-
+        console.log(data);
+        
         const headers = await preparePythonBackendHeaders(
             authId, 
             processId,  
             authRole
         );
             
-        const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}/resume-process`, {  
+        const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}resume-process`, {  
             method: "POST", 
             headers: headers, 
             body: JSON.stringify(data) 

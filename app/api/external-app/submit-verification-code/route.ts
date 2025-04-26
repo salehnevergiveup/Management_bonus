@@ -6,10 +6,13 @@ import { preparePythonBackendHeaders } from '@/lib/apikeysHandling';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("dfsdfsfdsdppppppppppppppppppppppppppppppppppppppppppppp")
+    console.log("[DEBUG] Starting POST /submit-verification-code");
+    
     const auth = await SessionValidation();
+    console.log("[DEBUG] Authenticated user:", auth);
     
     if (!auth) {
+      console.warn("[WARN] Unauthorized access attempt");
       return NextResponse.json(
         { error: "Unauthorized: User must be logged in" },
         { status: 401 }
@@ -17,8 +20,10 @@ export async function POST(request: NextRequest) {
     }
     
     const { code, thread_id } = await request.json();
+    console.log("[DEBUG] Received payload:", { code, thread_id });
 
     if (!code) {
+      console.warn("[WARN] Missing verification code");
       return NextResponse.json(
         { error: "Missing verification code" },
         { status: 400 }
@@ -28,10 +33,12 @@ export async function POST(request: NextRequest) {
     let userProcess = null;
     
     if (auth.role === Roles.Admin) {
-      // For admin: find the first active process in the system
+      console.log("[DEBUG] User is admin, fetching latest active process");
       userProcess = await prisma.userProcess.findFirst({
         where: {
-          status: ProcessStatus.PROCESSING
+          status:{
+            in : [ProcessStatus.PROCESSING, ProcessStatus.PENDING] 
+          }
         },
         include: {
           user: {
@@ -45,19 +52,24 @@ export async function POST(request: NextRequest) {
         }
       });
     } else {
-      // For regular user: find their own active process
+      console.log("[DEBUG] User is regular, fetching their own process");
       userProcess = await prisma.userProcess.findFirst({
         where: {
           user_id: auth.id,
-          status: ProcessStatus.PROCESSING
+          status: {
+            in : [ProcessStatus.PROCESSING, ProcessStatus.PENDING]    
+          }
         },
         orderBy: {
           created_at: 'desc'
         }
       });
     }
+
+    console.log("[DEBUG] Fetched userProcess:", userProcess);
     
     if (!userProcess) {
+      console.warn("[WARN] No active process found for user");
       return NextResponse.json(
         { error: "No active process found" },
         { status: 404 }
@@ -73,6 +85,7 @@ export async function POST(request: NextRequest) {
       
       if (user && user.role) {
         role = user.role.name;
+        console.log("[DEBUG] Updated role from DB:", role);
       }
     }
     
@@ -81,14 +94,18 @@ export async function POST(request: NextRequest) {
       userProcess.id,
       role
     );
+    console.log("[DEBUG] Prepared backend headers:", headers);
     
     const requestData = {
-      verification_code: code,  
+      verification_code: code,
       thread_id: thread_id
     };
+    console.log("[DEBUG] Sending data to backend service:", requestData);
     
     try {
       const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-verification-code`
+      console.log("[DEBUG] Backend URL:", backendUrl);
+
       const backendResponse = await fetch(backendUrl, {
         method: 'POST',
         headers: {
@@ -97,7 +114,9 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify(requestData)
       });
-      
+
+      console.log("[DEBUG] Backend response status:", backendResponse.status);
+
       if (!backendResponse.ok) {
         let errorDetails;
         try {
@@ -105,7 +124,9 @@ export async function POST(request: NextRequest) {
         } catch {
           errorDetails = { error: "Unknown error from backend service" };
         }
-        
+
+        console.error("[ERROR] Backend service returned error:", errorDetails);
+
         return NextResponse.json(
           { 
             error: "Failed to submit verification code to backend service",
@@ -114,18 +135,20 @@ export async function POST(request: NextRequest) {
           { status: backendResponse.status }
         );
       }
-      
+
       const responseData = await backendResponse.json();
-      
+      console.log("[DEBUG] Backend response data:", responseData);
+
       return NextResponse.json({
         success: true,
         message: "Verification code submitted successfully",
         process_id: userProcess.id,
         details: responseData
       });
+
     } catch (error: any) {
-      console.error("Error submitting verification code:", error);
-      
+      console.error("[ERROR] Exception while calling backend service:", error);
+
       return NextResponse.json(
         { 
           error: "Failed to communicate with backend service", 
@@ -135,8 +158,8 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error("Error processing verification submission:", error);
-    
+    console.error("[ERROR] General exception during verification submission:", error);
+
     return NextResponse.json(
       { error: "Internal server error", message: error.message },
       { status: 500 }

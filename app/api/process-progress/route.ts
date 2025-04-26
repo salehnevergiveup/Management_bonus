@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         )
     } 
 
-    if(auth.id !==  process.user_id || auth.role !==  Roles.Admin) {  
+    if(auth.id !==  process.user_id && auth.role !==  Roles.Admin) {  
       return  NextResponse.json(
         {},  
         {

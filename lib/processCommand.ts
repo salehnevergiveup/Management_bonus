@@ -592,6 +592,8 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
         sub_accounts: subAccountsResult
       };
       
+      console.log(JSON.stringify(result)) 
+
       return result;
       
     } catch (error) {

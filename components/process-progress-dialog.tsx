@@ -143,7 +143,7 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
             ) : (
               <XCircle className="h-5 w-5 text-red-500" />
             )}
-            <h3 className="font-medium">Event: {formatName(item.event_name)}</h3>
+            <h3 className="font-medium">Event: {formatName(item.process_stage)}</h3>
           </div>
           <Badge
             variant={item.status === "success" ? "success" : "destructive"}
@@ -156,15 +156,10 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
         <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
           {item.thread_id && (
             <div className="text-sm">
-              <p className="text-muted-foreground">Thread ID:</p>
+              <p className="text-muted-foreground">Account Name:</p>
               <p className="font-mono text-xs">{item.thread_id}</p>
             </div>
           )}
-         
-          <div>
-            <p className="text-muted-foreground">Process ID:</p>
-            <p className="font-mono text-xs">{item.process_id}</p>
-          </div>
 
           <div>
               <p className="text-muted-foreground">Created At:</p>
@@ -173,14 +168,10 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-muted-foreground">Process Stage:</p>
-            <p>{formatName(item.process_stage)}</p>
-          </div>
 
           {item.thread_stage && (
             <div>
-              <p className="text-muted-foreground">Thread Stage:</p>
+              <p className="text-muted-foreground">Process Sub-Stage:</p>
               <p>{formatName(item.thread_stage)}</p>
             </div>
           )}
