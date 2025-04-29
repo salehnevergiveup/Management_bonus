@@ -13,11 +13,7 @@ interface ConfirmDialogProps {
     thread_id?: string;
     processId?: string;
     threadId?: string;
-    data?: {
-      message?: string;
-      timeout?: number;
-      title?: string;
-    };
+    data?: any
     isOpen?: boolean;
     timestamp?: number;
     type?: string;
@@ -35,15 +31,15 @@ const ConfirmTransferDialog = ({
   data, 
   isOpen, 
   onClose,
-  endpoint = "/api/confirm-transfer" 
+  endpoint = "/api/external-app/submit-confirmation" 
 }: ConfirmDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   console.log("ConfirmTransferDialog rendering with data:", data);
   
   // Handle both data formats - direct props and nested data
-  const threadId = data.threadId || data.thread_id || "";
-  const processId = data.processId || "";
+  const threadId = data.threadId || data.data.thread_id || "";
+  const processId = data.processId || data.process_id;
   
   // Handle nested data format or direct format
   const message = data.data?.message || data.message || "";

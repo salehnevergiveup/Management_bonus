@@ -6,6 +6,7 @@ import { verifyApi } from '@lib/apikeysHandling';
 export async function POST(request: Request) {
     try {
       // Verify API headers and extract auth info
+      console.log("testing if the process work or not")
       const verification = await verifyApi(request.clone(), "automation");
       if (!verification.valid) {
         return NextResponse.json(

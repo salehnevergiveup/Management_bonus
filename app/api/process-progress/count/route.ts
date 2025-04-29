@@ -37,14 +37,14 @@ export async function GET(request: Request) {
       )
     } 
 
-    const processProgress = await prisma.processProgress.findMany({
+    const processProgressCount = await prisma.processProgress.count({
       where: {
-        process_id: process.id, 
+        process_id: process.id,  
         event_name: Events.PROGRESS_TRACKER
       }
     })
     
-    return NextResponse.json(processProgress, { status: 200 });
+    return NextResponse.json({"count": processProgressCount}, { status: 200 });
 
   } catch (error: any) {
     console.error("Error fetching processes:", error);

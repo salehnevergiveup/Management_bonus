@@ -9,6 +9,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SSEComponent from "@components/event-listener";
 import FloatingProcessButton from "@components/floating-process-button";
+import FormLoader from "@components/forms-loader";
 
 export default function ProtectedLayout({
   children,
@@ -31,6 +32,7 @@ export default function ProtectedLayout({
             <main className="flex-1 p-4 overflow-auto w-full">
               {children}
               <SSEComponent/>
+              <FormLoader/>
               <ToastContainer />
             </main>
           </div>

@@ -27,7 +27,9 @@ export interface Transfer {
     account: string;
     amount: number;
     status?: string;  
-    id?: string
+    id?: string,
+    username?: string,  
+    password?: string
   }
   
 export interface Wallet {

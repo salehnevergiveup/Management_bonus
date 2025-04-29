@@ -62,7 +62,7 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const thread_id = data.threadId;  
+    const thread_id = data.threadId ?? data.data.thread_id;  
     const payload: VerificationMethodPayload = {
       verification_method: verificationMethod, 
       thread_id
@@ -87,7 +87,7 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
   }
 
   const handleTimeout = () => {
-    console.log("Verification method form timed out for thread:", data.thread_id);
+    console.log("Verification method form timed out for thread:", data.threadId ?? data.data.thread_id);
     onClose();
   };
 
@@ -96,12 +96,11 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
   return (
     <DraggableCard
       title="Select Verification Method"
-      badge={<Badge color={AppColor.SUCCESS} text={data.threadId} />}
+      badge={<Badge color={AppColor.SUCCESS} text={data.threadId ?? data.data.thread_id} />}
       timer={data.data.timeout && <Timer seconds={data.data.timeout} onTimeout={handleTimeout} />}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-      
         {data.data.message && (
           <div className="mb-4 text-sm text-gray-600">
             {data.data.message}

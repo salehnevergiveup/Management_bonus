@@ -31,25 +31,41 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { transfer_account_id, transfer_status } = body || {};
+    const { account, currency,status } = body || {};
 
-    if (!transfer_account_id || !transfer_status) {
+    if (!account || !status) {
       return NextResponse.json(
         { error: "Missing required fields: transfer_account_id or transfer_status" },
         { status: 400 }
       );
     }
+     const transfer_account_id =  await prisma.transferAccount.findUnique({
+        where:  {  
+            username: account
+        },  
+        select: { 
+            id: true
+        }
+     }) 
 
+     if(!transfer_account_id) {  
+        return NextResponse.json(
+            { error: "Missing required fields: transfer_account_id or transfer_status" },
+            { status: 400 }
+          );
+     }
+     
     // ⚙️ Update transfer account status
     const updated = await prisma.userProcess_TransferAccount.update({
       where: {
-        user_process_id_transfer_account_id: {
+        user_process_id_transfer_account_id_currency: {
           user_process_id: processId,
-          transfer_account_id: transfer_account_id
+          transfer_account_id: transfer_account_id.id,
+          currency: currency
         }
       },
       data: {
-        transfer_status
+        transfer_status: status
       }
     });
 

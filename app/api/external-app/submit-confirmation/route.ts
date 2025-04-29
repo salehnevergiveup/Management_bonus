@@ -29,7 +29,10 @@ export async function POST(request: Request) {
 
     if (auth.role === Roles.Admin) {
       userProcess = await prisma.userProcess.findFirst({
-        where: { status: ProcessStatus.PROCESSING },
+        where: {status: {
+            in : [ProcessStatus.PROCESSING, ProcessStatus.PENDING]    
+          }
+         },
         include: {
           user: { include: { role: true } }
         },
@@ -39,7 +42,9 @@ export async function POST(request: Request) {
       userProcess = await prisma.userProcess.findFirst({
         where: {
           user_id: auth.id,
-          status: ProcessStatus.PROCESSING
+          status: {
+            in : [ProcessStatus.PROCESSING, ProcessStatus.PENDING]    
+          }
         },
         orderBy: { created_at: 'desc' }
       });

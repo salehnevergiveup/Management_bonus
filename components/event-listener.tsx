@@ -4,10 +4,8 @@ import React, { useState, useEffect } from 'react';
 import LiveNotification from '@components/live-notifications';
 import VerificationOptionsForm from '@/components/verification-options-form';
 import VerificationCodeForm from '@/components/verification-code-form';
-import DetailsDialog from '@/components/details-dialog';
 import ConfirmTransferDialog from '@components/confirm-dialog';
 import { Events, FormType } from '@constants/enums';
-import ProcessProgressDialog from '@/components/process-progress-dialog';
 
 type BaseFormData = {
   formId: string;
@@ -25,16 +23,12 @@ const SSEListener = ({
   const [eventType, setEventType] = useState('connection');
   const [notificationData, setNotificationData] = useState<any>(null);
   
-  // Different form states - separated by type
   const [verificationOptionsForms, setVerificationOptionsForms] = useState<BaseFormData[]>([]);
   const [verificationCodeForms, setVerificationCodeForms] = useState<BaseFormData[]>([]);
  
-  // Confirm transfer dialog state
   const [confirmTransferData, setConfirmTransferData] = useState<any>(null);
   const [showConfirmTransfer, setShowConfirmTransfer] = useState(false);
 
-  // Process progress dialog state
-  const [showProgress, setShowProgress] = useState(false);
 
   useEffect(() => {
     const eventSource = new EventSource('/api/events');
@@ -54,25 +48,28 @@ const SSEListener = ({
       }
     });
 
-    // Event listener for verification option forms
     eventSource.addEventListener(Events.VERIFICATION_OPTIONS, (event) => {
       setEventType(Events.VERIFICATION_OPTIONS);
       try {
         const parsedData = JSON.parse(event.data);
         const formId = `form-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         
-        // Create a new form object with ID and open state
         const newForm: BaseFormData = {
           ...parsedData,
           formId,
           isOpen: true,
           timestamp: Date.now(),
-          type: FormType.verification_method // Ensure correct type
+          type: FormType.verification_method
         };
         
-        handleNewVerificationOptionsForm(newForm);
+        setVerificationOptionsForms(prev => 
+          prev.map(form => ({ ...form, isOpen: false }))
+        );
         
-        // Set timeout to auto-close if provided
+        setTimeout(() => {
+          setVerificationOptionsForms(prev => [...prev, newForm]);
+        }, 300);
+        
         if (parsedData.timeout && typeof parsedData.timeout === 'number') {
           setTimeout(() => {
             closeVerificationOptionsForm(formId);
@@ -83,25 +80,28 @@ const SSEListener = ({
       }
     });
 
-    // Event listener for verification code forms
     eventSource.addEventListener(Events.VERIFICATION_CODE, (event) => {
       setEventType(Events.VERIFICATION_CODE);
       try {
         const parsedData = JSON.parse(event.data);
         const formId = `form-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         
-        // Create a new form object with ID and open state
         const newForm: BaseFormData = {
           ...parsedData,
           formId,
           isOpen: true,
           timestamp: Date.now(),
-          type: FormType.verification // Ensure correct type
+          type: FormType.verification
         };
         
-        handleNewVerificationCodeForm(newForm);
+        setVerificationCodeForms(prev => 
+          prev.map(form => ({ ...form, isOpen: false }))
+        );
         
-        // Set timeout to auto-close if provided
+        setTimeout(() => {
+          setVerificationCodeForms(prev => [...prev, newForm]);
+        }, 300);
+        
         if (parsedData.timeout && typeof parsedData.timeout === 'number') {
           setTimeout(() => {
             closeVerificationCodeForm(formId);
@@ -112,27 +112,20 @@ const SSEListener = ({
       }
     });
 
-    // Event listener for process_tracker - direct control approach
-    eventSource.addEventListener(Events.PROGRESS_TRACKER, (event) => {
-      setEventType(Events.PROGRESS_TRACKER);
-      try {
-        setShowProgress(true);
-      } catch (err) {
-        console.error('Error handling process tracker event:', err);
-      }
-    });
-    
-    // Event listener for confirm_transfer
     eventSource.addEventListener(Events.CONFIRMATION_DIALOG, (event) => {
       console.log("event is triggered ====================================")
 
       setEventType(Events.CONFIRMATION_DIALOG);
       try {
         const parsedData = JSON.parse(event.data);
-        setConfirmTransferData(parsedData);
-        setShowConfirmTransfer(true);
         
-        // Set timeout to auto-close if provided
+        setShowConfirmTransfer(false);
+        
+        setTimeout(() => {
+          setConfirmTransferData(parsedData);
+          setShowConfirmTransfer(true);
+        }, 300);
+        
         if (parsedData.timeout && typeof parsedData.timeout === 'number') {
           setTimeout(() => {
             closeConfirmTransferDialog();
@@ -161,55 +154,6 @@ const SSEListener = ({
     };
   }, []);
 
-  // Handler for new verification method forms
-  const handleNewVerificationOptionsForm = (newForm: BaseFormData) => {
-    setVerificationOptionsForms((prevForms) => {
-      // Check if there's already an open form with the same thread_id
-      const existingOpenForms = prevForms.filter(
-        (f) => f.thread_id === newForm.thread_id && f.isOpen
-      );
-      
-      let updatedForms = [...prevForms];
-      
-      // Close any existing forms with the same thread_id
-      if (existingOpenForms.length > 0) {
-        updatedForms = updatedForms.map(form => 
-          (form.thread_id === newForm.thread_id && form.isOpen)
-            ? { ...form, isOpen: false } 
-            : form
-        );
-      }
-      
-      return [...updatedForms, newForm];
-    });
-  };
-
-  // Handler for new verification forms
-  const handleNewVerificationCodeForm = (newForm: BaseFormData) => {
-    setVerificationCodeForms((prevForms) => {
-      // Check if there's already an open form with the same thread_id
-      const existingOpenForms = prevForms.filter(
-        (f) => f.thread_id === newForm.thread_id && f.isOpen
-      );
-      
-      let updatedForms = [...prevForms];
-      
-      if (existingOpenForms.length > 0) {
-        updatedForms = updatedForms.map(form => 
-          (form.thread_id === newForm.thread_id && form.isOpen)
-            ? { ...form, isOpen: false } 
-            : form
-        );
-      }
-      
-      return [...updatedForms, newForm];
-    });
-  };
-
-  console.log("Verification option forms:", verificationOptionsForms);
-console.log("Verification code forms:");
-
-  // Close handlers for each form type
   const closeVerificationOptionsForm = (formId: string) => {
     setVerificationOptionsForms((prevForms) => 
       prevForms.map((form) => 
@@ -219,7 +163,6 @@ console.log("Verification code forms:");
       )
     );
     
-    // Clean up after animation
     setTimeout(() => {
       setVerificationOptionsForms((prevForms) => 
         prevForms.filter((form) => form.isOpen || form.formId !== formId)
@@ -236,7 +179,6 @@ console.log("Verification code forms:");
       )
     );
     
-    // Clean up after animation
     setTimeout(() => {
       setVerificationCodeForms((prevForms) => 
         prevForms.filter((form) => form.isOpen || form.formId !== formId)
@@ -244,11 +186,9 @@ console.log("Verification code forms:");
     }, 3000);
   };
 
-  
   const closeConfirmTransferDialog = () => {
     setShowConfirmTransfer(false);
     
-    // Clear the data after dialog closes and a short delay
     setTimeout(() => {
       setConfirmTransferData(null);
     }, 300);
@@ -278,20 +218,16 @@ console.log("Verification code forms:");
     }
   }, [eventType, notificationData]);
 
-  // Initial positioning of forms in a grid pattern
-  const getGridPosition = () => ({
+  const centerPosition = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)'
-  });
-
-  
+  };
 
   return (
     <>
       {eventType === 'notification' && <LiveNotification data={notificationData} />}
       
-
       {/* Show Confirm Transfer Dialog when appropriate */}
       {confirmTransferData && (
         <ConfirmTransferDialog
@@ -301,23 +237,16 @@ console.log("Verification code forms:");
         />
       )}
 
-      {/* Show Process Progress Dialog */}
-      {showProgress && <ProcessProgressDialog 
-        open={showProgress}
-        onOpenChange={setShowProgress}
-      />}
-      
-      {/* Render Verification Method Forms */}
+      {/* Render Verification Method Forms - only show the most recent open one */}
       <div className="fixed inset-0 pointer-events-none">
-        {verificationOptionsForms.map((form, index) => (
+        {verificationOptionsForms.map((form) => (
           form?.isOpen && (
             <div 
               key={form?.formId}
               className="pointer-events-auto absolute animate-fade-in"
               style={{
-                ...getGridPosition(),
-                zIndex: 1000 - index,
-                left: `calc(50% + ${index * 50}px)`, // Offset each form horizontally
+                ...centerPosition,
+                zIndex: 1000,
               }}
             >
               <VerificationOptionsForm
@@ -330,16 +259,16 @@ console.log("Verification code forms:");
         ))}
       </div>
 
-      {/* Render Verification Forms */}
+      {/* Render Verification Forms - only show the most recent open one */}
       <div className="fixed inset-0 pointer-events-none">
-        {verificationCodeForms.map((form, index) => (
+        {verificationCodeForms.map((form) => (
           form?.isOpen && (
             <div 
               key={form?.formId}
               className="pointer-events-auto absolute animate-fade-in"
               style={{
-                ...getGridPosition(),
-                zIndex: 1000 - index,
+                ...centerPosition,
+                zIndex: 1000,
               }}
             >
               <VerificationCodeForm

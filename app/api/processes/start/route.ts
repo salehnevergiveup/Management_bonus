@@ -5,10 +5,40 @@ import { prisma } from '@/lib/prisma';
 import { preparePythonBackendHeaders } from '@/lib/apikeysHandling';
 import ProcessCommand from "@lib/processCommand";
 
+// Simple in-memory rate limiter
+const rateLimiter = {
+  lastRequestTime: 0,
+  minInterval: 10000, // 10 seconds in milliseconds
+  
+  canMakeRequest(): boolean {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    return timeSinceLastRequest >= this.minInterval;
+  },
+  
+  recordRequest(): void {
+    this.lastRequestTime = Date.now();
+  }
+};
+
 export async function POST(request: Request) {
   let processId = ""; 
   
   try {
+    // Check rate limit before processing the request
+    if (!rateLimiter.canMakeRequest()) {
+      return NextResponse.json(
+        { 
+          error: "Rate limit exceeded", 
+          message: "Please wait 10 seconds before making another request"
+        },
+        { status: 429 }  // 429 Too Many Requests
+      );
+    }
+    
+    // Record this request
+    rateLimiter.recordRequest();
+    
     const auth = await SessionValidation();
     
     if (!auth) {

@@ -43,8 +43,8 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
       // Structure the payload according to what the API expects
       const payload = { 
         code, 
-        thread_id: data.threadId,
-        process_id: data.processId 
+        thread_id: data.threadId ?? data.data.thread_id,
+        process_id: data.processId ?? data.process_id 
       };
 
       const res = await fetch("api/external-app/submit-verification-code", {
@@ -67,7 +67,7 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
   }
 
   const handleTimeout = () => {
-    console.log("Verification form timed out for thread:", data.thread);
+    console.log("Verification form timed out for thread:", data.threadId ?? data.data.thread_id);
     onClose();
   };
 
@@ -76,7 +76,7 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
   return (
     <DraggableCard
       title="Enter Verification Code"
-      badge={<Badge color={AppColor.SUCCESS} text={data.threadId} />}
+      badge={<Badge color={AppColor.SUCCESS} text={data.threadId ??data.data.thread_id} />}
       timer={data.data.timeout && <Timer seconds={data.data.timeout} onTimeout={handleTimeout} />}
       onClose={onClose}
     >

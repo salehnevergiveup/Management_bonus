@@ -509,7 +509,9 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
               walletsByCurrency[currency].push({
                 account: subAccount.username,
                 amount: totalAmount,
-                status: accountStatus
+                status: accountStatus,
+                username: subAccount.username, // Added this line
+                password: subAccount.password 
               });
             });
           });
