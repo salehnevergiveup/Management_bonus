@@ -3,9 +3,9 @@ import { DispatchDto } from "@/types/dispatch.type"
 import {prisma} from "@/lib/prisma";
 import { eventEmitter } from "./eventemitter";
 import ProcessCommand from "./processCommand";
+import { stat } from "fs";
 
 const saveToDatabase =  async (dispatchData: DispatchDto) => {
-  console.log("saving to the database ===============================================")
   return  prisma.processProgress.create({  
     data: {  
       process_id: dispatchData.processId,  
@@ -21,7 +21,7 @@ const saveToDatabase =  async (dispatchData: DispatchDto) => {
 
 const dispatchProgress = async (dispatchData: DispatchDto) => {
   try {
-    const { threadId, processId, data } = dispatchData;
+    const { threadId, processId, data, eventName } = dispatchData;
 
     if (!processId || !data) {
       throw new Error("Missing threadId, processId, or data for PROGRESS_TRACKER event");
@@ -32,7 +32,7 @@ const dispatchProgress = async (dispatchData: DispatchDto) => {
     }
 
     await saveToDatabase(dispatchData);
-    eventEmitter.emit(dispatchData.userId, dispatchData.eventName, {
+    eventEmitter.emit(dispatchData.userId, eventName, {
       threadId,
       processId,
       data
@@ -45,7 +45,7 @@ const dispatchProgress = async (dispatchData: DispatchDto) => {
 
 const dispatchConfirmation = async (dispatchData: DispatchDto) => {
   try {
-    const { threadId, processId, data } = dispatchData;
+    const { threadId, processId, data, eventName} = dispatchData;
 
     if (!threadId || !processId || !data) {
       throw new Error("Missing threadId, processId, or data for CONFIRMATION_DIALOG event");
@@ -57,7 +57,7 @@ const dispatchConfirmation = async (dispatchData: DispatchDto) => {
 
     await saveToDatabase(dispatchData);
 
-    eventEmitter.emit(dispatchData.userId, dispatchData.eventName, {
+    eventEmitter.emit(dispatchData.userId, eventName, {
       threadId,
       processId,
       data
@@ -68,11 +68,9 @@ const dispatchConfirmation = async (dispatchData: DispatchDto) => {
   }
 };
 
-
-
 const dispatchVerificationOption = async (dispatchData: DispatchDto) => {
   try {
-    const { threadId, processId, data } = dispatchData;
+    const { threadId, processId, data, eventName } = dispatchData;
 
     if (!threadId || !processId || !data) {
       throw new Error("Missing threadId, processId, or data for VERIFICATION_METHOD event");
@@ -84,7 +82,7 @@ const dispatchVerificationOption = async (dispatchData: DispatchDto) => {
 
     await saveToDatabase(dispatchData);
 
-    eventEmitter.emit(dispatchData.userId, dispatchData.eventName, {
+    eventEmitter.emit(dispatchData.userId, eventName, {
       threadId,
       processId,
       data
@@ -95,10 +93,9 @@ const dispatchVerificationOption = async (dispatchData: DispatchDto) => {
   }
 };
 
-
 const dispatchVerificationCode = async (dispatchData: DispatchDto) => {
   try {
-    const { threadId, processId, data } = dispatchData;
+    const { threadId, processId, data, eventName } = dispatchData;
 
     if (!threadId || !processId || !data) {
       throw new Error("Missing threadId, processId, or data for VERIFICATION_CODE event");
@@ -110,7 +107,7 @@ const dispatchVerificationCode = async (dispatchData: DispatchDto) => {
 
     await saveToDatabase(dispatchData);
 
-    eventEmitter.emit(dispatchData.userId, dispatchData.eventName, {
+    eventEmitter.emit(dispatchData.userId, eventName, {
       threadId,
       processId,
       data
@@ -121,6 +118,88 @@ const dispatchVerificationCode = async (dispatchData: DispatchDto) => {
   }
 };
 
+const dispatchMatchStatus  = async(dispatchData: DispatchDto ) =>  {  
+  try {  
+    console.log("testing matches status event  ")
+    const {status, data, eventName}  = dispatchData;
+
+    if(!status || !data) {  
+      throw new Error("Missing status or data for the matches status")
+    }
+    
+    const id = data.id
+
+    if(!id) {  
+      throw new Error("Missing id of the account")
+    }
+    
+    await prisma.match.update({
+      where:{  
+        id: id
+      },  
+      data:  {  
+        status: status, 
+        updated_at: new Date()
+      }
+    })
+    
+    eventEmitter.emit(dispatchData.userId, eventName, {  
+      status,  
+      id, 
+      updated_at: new Date()
+    });
+
+  }catch(error) {  
+    throw new Error(`[dispatchMatchStatus] ${String(error)}`)
+  }
+}
+
+const dispatchTransferStatus = async (dispatchData: DispatchDto) =>  {  
+   try {  
+    console.log("testing transfer account status event  ")
+
+         const { data, eventName, processId, status} = dispatchData;
+     
+         if (!data || !eventName || !status) {
+             throw new Error("Missing required fields: data or eventName" );
+         }
+
+         const  {account, currency} = data;  
+
+         if(!account || !currency) {  
+          throw new Error("Missing required fields:  account user name or currency")
+         }
+
+         const transfer_account_id =  await prisma.transferAccount.findUnique({
+             where:  {  
+                 username: account
+             },  
+             select: { 
+                 id: true
+             }
+          }) 
+  
+          if(!transfer_account_id) {  
+            throw new Error ("Missing required fields: transfer_account_id or transfer_status") 
+          }
+          
+         const updated = await prisma.userProcess_TransferAccount.update({
+           where: {
+             user_process_id_transfer_account_id_currency: {
+               user_process_id: processId,
+               transfer_account_id: transfer_account_id.id,
+               currency: currency
+             }
+           },
+           data: {
+             transfer_status: status
+           }
+         });
+
+  }catch(error) {  
+    throw new Error(`[dispatchTransferStatus] ${String(error)}`)
+  }
+}
 
 export const dispatch = async (
     processId: string,
@@ -144,20 +223,22 @@ export const dispatch = async (
       threadId
     };
 
-    
     const command = {
       [Events.VERIFICATION_OPTIONS]: async (dispatchData: any) =>await dispatchVerificationOption(dispatchData),
       [Events.VERIFICATION_CODE]: async (dispatchData: any) => await dispatchVerificationCode(dispatchData),
       [Events.CONFIRMATION_DIALOG]:async(dispatchData: any) => await dispatchConfirmation(dispatchData),
       [Events.PROGRESS_TRACKER]: async (dispatchData:any) => await dispatchProgress(dispatchData),
+      [Events.MATCHES_STATUS]: async (dispatchData: any) => await dispatchMatchStatus(dispatchData),  
+      [Events.TRANSFER_STATUS]: async (dispatchData: any) => await dispatchTransferStatus(dispatchData)
     };
     
     try {  
       const eventKey = dispatchData.eventName as keyof typeof command;
-
+       
       await command[eventKey](dispatchData)
 
     }catch(error) {  
+      console.log("=".repeat(100), eventName)
       ProcessCommand["notify all"](userId, `unable to dispatch the event: ${error}`, NotificationType.ERROR)
     }
 }

@@ -39,6 +39,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    console.log("event name is:",event_name);
     await dispatch(
       processId,
       userId,

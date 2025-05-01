@@ -48,6 +48,7 @@ export default function AccountTurnoverPage() {
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [showAll, setShowAll] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [turnoverToDelete, setTurnoverToDelete] = useState<AccountTurnover | null>(null);
@@ -67,7 +68,7 @@ export default function AccountTurnoverPage() {
   const [formTurnover, setFormTurnover] = useState("");
   const [formErrors, setFormErrors] = useState<{ username?: string; game?: string }>({});
 
-  // Filter and paginate turnovers on the client side
+  // Filter turnovers on the client side
   const filteredTurnovers = useMemo(() => {
     if (!searchTerm) return accountTurnovers;
     
@@ -80,14 +81,36 @@ export default function AccountTurnoverPage() {
 
   // Calculate pagination
   const paginatedTurnovers = useMemo(() => {
+    if (showAll) {
+      return filteredTurnovers;
+    }
+    
     const startIndex = (currentPage - 1) * pageSize;
     return filteredTurnovers.slice(startIndex, startIndex + pageSize);
-  }, [filteredTurnovers, currentPage, pageSize]);
+  }, [filteredTurnovers, currentPage, pageSize, showAll]);
 
   const totalPages = useMemo(() => 
-    Math.max(1, Math.ceil(filteredTurnovers.length / pageSize)), 
-    [filteredTurnovers, pageSize]
+    showAll ? 1 : Math.max(1, Math.ceil(filteredTurnovers.length / pageSize)), 
+    [filteredTurnovers, pageSize, showAll]
   );
+
+  // Handle page size change including "show all" option
+  const handlePageSizeChange = (value: string) => {
+    if (value === "all") {
+      setShowAll(true);
+    } else {
+      setShowAll(false);
+      setPageSize(Number(value));
+    }
+    setCurrentPage(1);
+  };
+
+  // Ensure current page is valid when data or page size changes
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   const fetchAccountTurnovers = async () => {
     if (auth) {
@@ -97,7 +120,7 @@ export default function AccountTurnoverPage() {
       }
     }
     try {
-      const response = await fetch(`/api/account-turnovers`);
+      const response = await fetch(`/api/account-turnovers?all=true`);
   
       if (!response.ok) {
         throw new Error("Failed to fetch account turnovers");
@@ -222,59 +245,58 @@ export default function AccountTurnoverPage() {
     }
   };
 
-const createMatch = async () => {
-
-  if (!selectedBonus) {
-    toast.error("Please select a bonus method");
-    return;
-  }
-
-  try {
-    let processId = null;
-    
-    if (accountTurnovers && accountTurnovers.length > 0) {
-      const turnoverWithProcessId = accountTurnovers.find(t => t.process_id);
-      if (turnoverWithProcessId) {
-        processId = turnoverWithProcessId.process_id;
-      }
-    }
-    
-    if (!processId) {
-      throw new Error("process Id not found")
-    }
-
-    const response = await fetch("/api/matches", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bonus_id: selectedBonus,
-        process_id: processId
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to create match");
-    }
-
-    if (data.warning) {
-      toast.error(data.warning);
-      setSelectedBonus("");
-      setCreateMatchDialogOpen(false);
+  const createMatch = async () => {
+    if (!selectedBonus) {
+      toast.error("Please select a bonus method");
       return;
     }
 
-    toast.success(data.message || "Match created successfully");
-    setSelectedBonus("");
-    setCreateMatchDialogOpen(false);
-  } catch (error) {
-    console.error("Error creating match:", error);
-    toast.error(error instanceof Error ? error.message : "Failed to create match");
-  }
-};
+    try {
+      let processId = null;
+      
+      if (accountTurnovers && accountTurnovers.length > 0) {
+        const turnoverWithProcessId = accountTurnovers.find(t => t.process_id);
+        if (turnoverWithProcessId) {
+          processId = turnoverWithProcessId.process_id;
+        }
+      }
+      
+      if (!processId) {
+        throw new Error("Process ID not found")
+      }
+    
+      const response = await fetch("/api/matches", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bonus_id: selectedBonus,
+          process_id: processId
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create match");
+      }
+
+      if (data.warning) {
+        toast.error(data.warning);
+        setSelectedBonus("");
+        setCreateMatchDialogOpen(false);
+        return;
+      }
+
+      toast.success(data.message || "Match created successfully");
+      setSelectedBonus("");
+      setCreateMatchDialogOpen(false);
+    } catch (error) {
+      console.error("Error creating match:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create match");
+    }
+  };
 
   const handleViewExchangeRates = () => {
     setExchangeRatesDialogOpen(true);
@@ -309,6 +331,7 @@ const createMatch = async () => {
     return new Date(dateString).toLocaleString();
   };
 
+  // Client-side pagination navigation - no API requests
   const goToPage = (page: number) => {
     setCurrentPage(page);
   };
@@ -320,10 +343,10 @@ const createMatch = async () => {
   };
 
   // Calculate pagination display values
-  const startItem = filteredTurnovers.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endItem = Math.min(currentPage * pageSize, filteredTurnovers.length);
-  const hasPreviousPage = currentPage > 1;
-  const hasNextPage = currentPage < totalPages;
+  const startItem = filteredTurnovers.length === 0 ? 0 : showAll ? 1 : (currentPage - 1) * pageSize + 1;
+  const endItem = showAll ? filteredTurnovers.length : Math.min(currentPage * pageSize, filteredTurnovers.length);
+  const hasPreviousPage = !showAll && currentPage > 1;
+  const hasNextPage = !showAll && currentPage < totalPages;
 
   return (
     <div className="container mx-auto py-6">
@@ -357,10 +380,8 @@ const createMatch = async () => {
               Refresh
             </Button>
             <Select
-              value={pageSize.toString()}
-              onValueChange={(val) => {
-                setPageSize(Number(val));
-              }}
+              value={showAll ? "all" : pageSize.toString()}
+              onValueChange={handlePageSizeChange}
             >
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Rows per page" />
@@ -370,6 +391,7 @@ const createMatch = async () => {
                 <SelectItem value="10">10 rows</SelectItem>
                 <SelectItem value="20">20 rows</SelectItem>
                 <SelectItem value="50">50 rows</SelectItem>
+                <SelectItem value="all">Show All</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -452,17 +474,23 @@ const createMatch = async () => {
           {filteredTurnovers.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{startItem}</span> to{" "}
-                <span className="font-medium">{endItem}</span>{" "}
-                of <span className="font-medium">{filteredTurnovers.length}</span> account turnovers
+                {showAll ? (
+                  <>Showing all <span className="font-medium">{filteredTurnovers.length}</span> account turnovers</>
+                ) : (
+                  <>
+                    Showing <span className="font-medium">{startItem}</span> to{" "}
+                    <span className="font-medium">{endItem}</span>{" "}
+                    of <span className="font-medium">{filteredTurnovers.length}</span> account turnovers
+                  </>
+                )}
               </div>
               
-              {totalPages > 1 && (
+              {!showAll && totalPages > 1 && (
                 <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(1)} 
-                    disabled={isLoading || !hasPreviousPage}
+                    disabled={!hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -471,7 +499,7 @@ const createMatch = async () => {
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(currentPage - 1)} 
-                    disabled={isLoading || !hasPreviousPage}
+                    disabled={!hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -483,7 +511,7 @@ const createMatch = async () => {
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(currentPage + 1)} 
-                    disabled={isLoading || !hasNextPage}
+                    disabled={!hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -492,7 +520,7 @@ const createMatch = async () => {
                   <Button 
                     variant="outline" 
                     onClick={() => goToPage(totalPages)} 
-                    disabled={isLoading || !hasNextPage}
+                    disabled={!hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
@@ -505,6 +533,7 @@ const createMatch = async () => {
         </CardContent>
       </Card>
 
+      {/* Dialog components remain the same */}
       {/* Exchange Rates Dialog */}
       <Dialog open={exchangeRatesDialogOpen} onOpenChange={setExchangeRatesDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
@@ -549,7 +578,7 @@ const createMatch = async () => {
         </DialogContent>
       </Dialog>
 
-            {/* Create Match Dialog */}
+      {/* Create Match Dialog */}
       <Dialog open={createMatchDialogOpen} onOpenChange={setCreateMatchDialogOpen}>
         <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] p-4 sm:p-6">
           <DialogHeader>

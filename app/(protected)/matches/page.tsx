@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";  // Added useRef
 import { Search, RotateCcw, PlayCircle, Square, RefreshCw, CheckSquare, Filter } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AppColor, Roles, ProcessStatus } from "@/constants/enums";
+import { AppColor, Roles, ProcessStatus, Events } from "@/constants/enums";  // Added Events
 import { hasPermission, createRequest, fetchRequests } from "@/lib/requstHandling";
 import { RequestData } from "@/types/request-data.type";
 
@@ -74,6 +74,11 @@ export default function MatchManagementPage() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<null | { match: Match; action: string }>(null);
   const router = useRouter();
+  
+  // Added state for real-time updates
+  const [updatingMatches, setUpdatingMatches] = useState<Set<string>>(new Set());
+  const [updatingProcesses, setUpdatingProcesses] = useState<Set<string>>(new Set());
+  const eventSourceRef = useRef<EventSource | null>(null);
   
   // Selected matches
   const [selectedMatches, setSelectedMatches] = useState<string[]>([]);
@@ -157,6 +162,82 @@ export default function MatchManagementPage() {
     }
   };
 
+// Setup SSE for real-time updates
+// Setup SSE for real-time updates
+useEffect(() => {
+  // Close any existing connection
+  if (eventSourceRef.current) {
+    eventSourceRef.current.close();
+  }
+
+  // Initialize SSE connection
+  eventSourceRef.current = new EventSource('/api/events');
+  
+  // Listen for match status updates
+  eventSourceRef.current.addEventListener(Events.MATCHES_STATUS, (event) => {
+    try {
+      console.log("Event received from SSE");
+      const data = JSON.parse(event.data);
+      console.log("Status update data:", data);
+      
+      // Handle match updates - note we're using data.id not data.matchId
+      if (data.id) {
+        updateSingleMatch(data);
+      }
+      
+
+    } catch (error) {
+      console.error("Error handling status update:", error);
+    }
+  });
+  
+  // Clean up function
+  return () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  };
+}, []); // Empty dependency array so it only runs once
+
+// Update a single match when receiving real-time update
+const updateSingleMatch = (data: any) => {
+  if (!data || !data.id) {
+    console.log("Invalid update data received:", data);
+    return;
+  }
+  
+  console.log(`Attempting to update match ID: ${data.id}`);
+  
+  setMatches(prevMatches => {
+    // Find the match index
+    const matchIndex = prevMatches.findIndex(match => match.id === data.id);
+    
+    // If match not found, return unchanged state
+    if (matchIndex === -1) {
+      console.log(`No match found with ID: ${data.id}`);
+      return prevMatches;
+    }
+    
+    // Log the update details
+    console.log(`Updating match ${data.id} status from ${prevMatches[matchIndex].status} to ${data.status || prevMatches[matchIndex].status}`);
+    
+    // Create a copy of the matches array
+    const newMatches = [...prevMatches];
+    
+    // Update the specific match
+    newMatches[matchIndex] = {
+      ...newMatches[matchIndex],
+      status: data.status !== undefined ? data.status : newMatches[matchIndex].status,
+      transfer_account: data.transferAccount !== undefined ? data.transferAccount : newMatches[matchIndex].transfer_account,
+      transfer_account_id: data.transferAccount?.id !== undefined ? data.transferAccount.id : newMatches[matchIndex].transfer_account_id,
+      updated_at: data.updated_at || new Date().toISOString()
+    };
+    
+    return newMatches;
+  });
+};
+
   useEffect(() => {
     if (!isLoading && auth) {
       fetchMatches();
@@ -223,6 +304,9 @@ export default function MatchManagementPage() {
 
   // Paginate the matches
   const paginatedMatches = useMemo(() => {
+    if (pageSize === -1) { // Show all matches
+      return filteredMatches;
+    }
     const startIndex = (currentPage - 1) * pageSize;
     return filteredMatches.slice(startIndex, startIndex + pageSize);
   }, [filteredMatches, currentPage, pageSize]);
@@ -571,6 +655,7 @@ export default function MatchManagementPage() {
                 <SelectItem value="20">20 rows</SelectItem>
                 <SelectItem value="50">50 rows</SelectItem>
                 <SelectItem value="100">100 rows</SelectItem>
+                <SelectItem value="-1">All rows</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -632,12 +717,12 @@ export default function MatchManagementPage() {
             <div className="text-sm text-muted-foreground">
               Showing <span className="font-medium">{filteredMatches.length > 0 ? 1 + (currentPage - 1) * pageSize : 0}</span> to{" "}
               <span className="font-medium">
-                {Math.min(currentPage * pageSize, filteredMatches.length)}
+                {pageSize === -1 ? filteredMatches.length : Math.min(currentPage * pageSize, filteredMatches.length)}
               </span>{" "}
               of <span className="font-medium">{filteredMatches.length}</span> matches
             </div>
             
-            {totalPages > 1 && (
+            {totalPages > 1 && pageSize !== -1 && (
               <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
                 <Button 
                   variant="outline" 
@@ -728,6 +813,7 @@ export default function MatchManagementPage() {
           : 'Confirm'}
       />
 
+
       {/* Resume Dialog with Selected Matches */}
       <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -763,7 +849,7 @@ export default function MatchManagementPage() {
                 )}
               </TableBody>
             </Table>
-          </div>Can
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setResumeDialogOpen(false)}>
               Cancel
@@ -829,7 +915,6 @@ export default function MatchManagementPage() {
       
     </div>
   );
-
   // Helper function to render the table with process grouping
   function renderTable() {
     return (

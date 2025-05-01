@@ -16,7 +16,9 @@ export enum Events {
     CONFIRMATION_DIALOG =  "confirmation_dialog",
     VERIFICATION_OPTIONS = "verification_options",
     VERIFICATION_CODE =  "verification_code",
-    PROGRESS_TRACKER = "process tracker"
+    PROGRESS_TRACKER = "process_tracker",
+    MATCHES_STATUS = "matches_status",  
+    TRANSFER_STATUS = "transfer_status"
 }
 
 export enum FormType {

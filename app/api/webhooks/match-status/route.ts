@@ -4,7 +4,6 @@ import { verifyApi } from "@/lib/apikeysHandling";
 
 export async function PUT(request: Request) {  
     try {  
-        console.log("testing enpoint")
         //verify the auth 
         const apiKey = request.headers.get("X-API-Key");
         if (!apiKey) {
@@ -13,7 +12,6 @@ export async function PUT(request: Request) {
             { status: 401 }
           );
         }
-        console.log("testing enpoint 1")
         const verification = await verifyApi(request.clone(), "automation");
         if (!verification.valid) {
           return NextResponse.json(
@@ -21,7 +19,6 @@ export async function PUT(request: Request) {
             { status: 401 }
           );
         }
-        console.log("testing enpoint 3")
         const { userId, processId } = verification;
     
         if (!processId) {
@@ -30,19 +27,14 @@ export async function PUT(request: Request) {
             { status: 400 }
           );
         }
-        console.log("testing enpoint 4")
         const body = await request.json();
         const {id, status }  =  body;  
-        console.log("testing enpoint 5")
         if(!id || !status) {  
          return NextResponse.json(
           { error: "Missing required fields: transfer_account_id or transfer_status" },
           {status: 400}
          )
         }
-
-        console.log("id is: ",id);
-        console.log("status is:",status);
 
         const update = await prisma.match.update({  
           where: {  
@@ -60,8 +52,6 @@ export async function PUT(request: Request) {
     
     }catch(error) {  
         
-        console.log("something went wrong: ", error); 
-
         return NextResponse.json(
             {
                 error: "Server side error, unable to update the player status "

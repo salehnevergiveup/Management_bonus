@@ -18,8 +18,7 @@ type BaseFormData = {
   [key: string]: any; 
 };
 
-const SSEListener = ({ 
-}) => {
+const SSEListener = () => {
   const [eventType, setEventType] = useState('connection');
   const [notificationData, setNotificationData] = useState<any>(null);
   
@@ -35,7 +34,6 @@ const SSEListener = ({
  
     eventSource.addEventListener('connected', (event) => {
       setEventType('connection');
-      console.log('app is connected'); 
     });
     
     eventSource.addEventListener('notification', (event) => {
@@ -62,9 +60,7 @@ const SSEListener = ({
           type: FormType.verification_method
         };
         
-        setVerificationOptionsForms(prev => 
-          prev.map(form => ({ ...form, isOpen: false }))
-        );
+        // Removed the line that was closing all existing forms
         
         setTimeout(() => {
           setVerificationOptionsForms(prev => [...prev, newForm]);
@@ -94,9 +90,7 @@ const SSEListener = ({
           type: FormType.verification
         };
         
-        setVerificationCodeForms(prev => 
-          prev.map(form => ({ ...form, isOpen: false }))
-        );
+        // Removed the line that was closing all existing forms
         
         setTimeout(() => {
           setVerificationCodeForms(prev => [...prev, newForm]);
@@ -113,13 +107,13 @@ const SSEListener = ({
     });
 
     eventSource.addEventListener(Events.CONFIRMATION_DIALOG, (event) => {
-      console.log("event is triggered ====================================")
 
       setEventType(Events.CONFIRMATION_DIALOG);
       try {
         const parsedData = JSON.parse(event.data);
         
-        setShowConfirmTransfer(false);
+        // Don't close the confirmation dialog if it's already showing
+        // Just update with new data if needed
         
         setTimeout(() => {
           setConfirmTransferData(parsedData);
@@ -209,7 +203,6 @@ const SSEListener = ({
             throw new Error('Failed to update progress');
           }
           const result = await res.json();
-          console.log('Progress updated:', result);
         } catch (error) {
           console.error('Error updating progress:', error);
         }
@@ -218,10 +211,32 @@ const SSEListener = ({
     }
   }, [eventType, notificationData]);
 
-  const centerPosition = {
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)'
+  // Modified to visually separate different types of forms
+  const getFormStyle = (index: any, formType: any) => {
+    const baseStyle = {
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)'
+    };
+    
+    // Add offset based on form type to prevent complete overlap
+    if (formType === FormType.verification_method) {
+      return {
+        ...baseStyle,
+        zIndex: 1000 + index,
+        marginLeft: `-${index * 20}px`,
+        marginTop: `-${index * 20}px`
+      };
+    } else if (formType === FormType.verification) {
+      return {
+        ...baseStyle,
+        zIndex: 1200 + index,
+        marginLeft: `${index * 20}px`,
+        marginTop: `${index * 20}px`
+      };
+    }
+
+    return baseStyle;
   };
 
   return (
@@ -237,44 +252,38 @@ const SSEListener = ({
         />
       )}
 
-      {/* Render Verification Method Forms - only show the most recent open one */}
+      {/* Render Verification Method Forms - show all open ones */}
       <div className="fixed inset-0 pointer-events-none">
-        {verificationOptionsForms.map((form) => (
-          form?.isOpen && (
+        {verificationOptionsForms.map((form, index) => (
+          form.isOpen && (
             <div 
-              key={form?.formId}
+              key={form.formId}
               className="pointer-events-auto absolute animate-fade-in"
-              style={{
-                ...centerPosition,
-                zIndex: 1000,
-              }}
+              style={getFormStyle(index, form.type)}
             >
               <VerificationOptionsForm
                 data={form}
                 isOpen={true}
-                onClose={() => closeVerificationOptionsForm(form?.formId)}
+                onClose={() => closeVerificationOptionsForm(form.formId)}
               />
             </div>
           )
         ))}
       </div>
 
-      {/* Render Verification Forms - only show the most recent open one */}
+      {/* Render Verification Forms - show all open ones */}
       <div className="fixed inset-0 pointer-events-none">
-        {verificationCodeForms.map((form) => (
-          form?.isOpen && (
+        {verificationCodeForms.map((form, index) => (
+          form.isOpen && (
             <div 
-              key={form?.formId}
+              key={form.formId}
               className="pointer-events-auto absolute animate-fade-in"
-              style={{
-                ...centerPosition,
-                zIndex: 1000,
-              }}
+              style={getFormStyle(index, form.type)}
             >
               <VerificationCodeForm
                 data={form}
                 isOpen={true}
-                onClose={() => closeVerificationCodeForm(form?.formId)}
+                onClose={() => closeVerificationCodeForm(form.formId)}
               />
             </div>
           )

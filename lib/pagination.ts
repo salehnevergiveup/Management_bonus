@@ -7,7 +7,7 @@ export async function Pagination<T>(
   total: number,
   queryOptions: any
 ): Promise<PaginatedResponse<T>> {
-  const limit = parseInt(url.searchParams.get("limit") || "50");
+  const limit = parseInt(url.searchParams.get("limit") || "300");
   const page = parseInt(url.searchParams.get("page") || "1");
   const fetchAll = url.searchParams.get("all") === "true";
   const skip = (page - 1) * limit;
