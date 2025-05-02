@@ -458,6 +458,12 @@ const updateSingleMatch = (data: any) => {
 
   // Handle checkbox selection
   const toggleMatchSelection = (matchId: string) => {
+    const match = matches.find(m => m.id === matchId);
+    
+    if (match && (match.status.toLowerCase() === "success" || match.transfer_account_id === null)) {
+      return;
+    }
+    
     setSelectedMatches(prevSelected => {
       if (prevSelected.includes(matchId)) {
         return prevSelected.filter(id => id !== matchId);
@@ -471,8 +477,14 @@ const updateSingleMatch = (data: any) => {
     if (selectAllChecked) {
       setSelectedMatches([]);
     } else {
-      const processMatches = paginatedMatches.map(match => match.id);
-      setSelectedMatches(processMatches)
+      const validMatches = paginatedMatches
+        .filter(match => 
+          match.status.toLowerCase() !== "success" && 
+          match.transfer_account_id !== null
+        )
+        .map(match => match.id);
+      
+      setSelectedMatches(validMatches);
     }
     setSelectAllChecked(!selectAllChecked);
   };
@@ -517,7 +529,11 @@ const updateSingleMatch = (data: any) => {
           if (selectedMatches.length > 0) {
             // Get full match data for selected matches
             const selectedMatchData: any[] = matches
-              .filter(m => selectedMatches.includes(m.id) && m.transfer_account_id !== null)
+              .filter(m => 
+                selectedMatches.includes(m.id) && 
+                m.transfer_account_id !== null && 
+                m.status.toLowerCase() !== "success"
+              )
               .map(m => ({
                 id: m.id,
                 username: m.username,
@@ -948,7 +964,10 @@ const updateSingleMatch = (data: any) => {
                                 size="sm" 
                                 variant="outline" 
                                 onClick={() => handleProcessAction(process, 'resume')}
-                                disabled={selectedMatches.length === 0}
+                                disabled={!selectedMatches.some(id => {
+                                  const match = matches.find(m => m.id === id);
+                                  return match && match.status.toLowerCase() !== "success" && match.transfer_account_id !== null;
+                                })}
                               >
                                 <PlayCircle className="h-4 w-4 mr-1" />
                                 Resume
@@ -1039,13 +1058,13 @@ const updateSingleMatch = (data: any) => {
                       <TableRow key={match.id}>
                         {process.status !== ProcessStatus.PROCESSING && (
                           <TableCell className="w-[50px]">
-                            <Checkbox
-                              checked={selectedMatches.includes(match.id)}
-                              onCheckedChange={() => toggleMatchSelection(match.id)}
-                              aria-label={`Select match ${match.id}`}
-                              disabled={match.transfer_account_id === null}
-                            />
-                          </TableCell>
+                          <Checkbox
+                            checked={selectedMatches.includes(match.id)}
+                            onCheckedChange={() => toggleMatchSelection(match.id)}
+                            aria-label={`Select match ${match.id}`}
+                            disabled={match.transfer_account_id === null || match.status.toLowerCase() === "success"}
+                          />
+                        </TableCell>
                         )}
                         <TableCell className="font-medium">{match.username}</TableCell>
                         <TableCell>{match.bonus?.name || "N/A"}</TableCell>
