@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";  // Added useRef
-import { Search, RotateCcw, PlayCircle, Square, RefreshCw, CheckSquare, Filter } from "lucide-react";
+import { Search, RotateCcw, PlayCircle, Square, RefreshCw, CheckSquare, Filter, Edit } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,9 +77,13 @@ export default function MatchManagementPage() {
   const [selectedAction, setSelectedAction] = useState<null | { match: Match; action: string }>(null);
   const router = useRouter();
   
+  // State for updating match amount
+const [editAmountDialogOpen, setEditAmountDialogOpen] = useState(false);
+const [matchToEdit, setMatchToEdit] = useState<Match | null>(null);
+const [newAmount, setNewAmount] = useState("");
+const [amountError, setAmountError] = useState("");
+
   // Added state for real-time updates
-  const [updatingMatches, setUpdatingMatches] = useState<Set<string>>(new Set());
-  const [updatingProcesses, setUpdatingProcesses] = useState<Set<string>>(new Set());
   const eventSourceRef = useRef<EventSource | null>(null);
   
   // Selected matches
@@ -132,14 +136,19 @@ export default function MatchManagementPage() {
   // Load accepted permission requests
   const loadPermissions = async () => {
     if (!auth) return;
-    
     try {
-      const map = await fetchRequests('Process', 'accepted');
-      setPermissionsMap(map);
+      // Load both Process and Match permissions
+      const processPermissions = await fetchRequests('Process', 'accepted');
+      const matchPermissions = await fetchRequests('Match', 'accepted');
+      
+      // Combine the maps
+      const combinedMap = new Map([...processPermissions, ...matchPermissions]);
+      setPermissionsMap(combinedMap);
     } catch (error) {
       console.error("Error loading permissions:", error);
     }
   };
+
 
   // Complete a permission after use
   const markPermissionComplete = async (modelId: string, action: string) => {
@@ -660,6 +669,98 @@ const updateSingleMatch = (data: any) => {
     setCurrentPage(page);
   };
 
+  // Handle edit action for match amount
+const handleEditAmount = (match: Match) => {
+  if (match.status.toLowerCase() === "success") {
+    toast.error("Cannot edit amount for successful matches");
+    return;
+  }
+  
+  // If user has permission (admin or has accepted request), open edit dialog
+  if (auth?.can("matches:edit") || hasPermission(permissionsMap, match.id, "edit")) {
+    setMatchToEdit(match);
+    setNewAmount(match.amount.toString());
+    setAmountError("");
+    setEditAmountDialogOpen(true);
+  } else {
+    // Otherwise, prepare to request permission
+    setMatchToEdit(match);
+    setNewAmount(match.amount.toString());
+    setAmountError("");
+    setRequestAction("edit");
+    setRequestMessage("");
+    setEditAmountDialogOpen(true);
+  }
+};
+
+    // Update match amount
+    const updateMatchAmount = async () => {
+      if (!matchToEdit || !newAmount) return;
+      
+      // Validate the amount
+      const amount = parseFloat(newAmount);
+      if (isNaN(amount) || amount <= 0) {
+        setAmountError("Please enter a valid positive amount");
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/matches/${matchToEdit.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ amount }),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to update match amount");
+        }
+        
+        // If this was a permission-based edit, mark it as complete
+        if (!auth?.can("matches:edit") && hasPermission(permissionsMap, matchToEdit.id, "edit")) {
+          setCompletePermission({
+            modelId: matchToEdit.id,
+            action: "edit"
+          });
+        }
+        
+        toast.success("Match amount updated successfully");
+        setEditAmountDialogOpen(false);
+        fetchMatches(); // Refresh the data
+      } catch (error) {
+        console.error("Error updating match amount:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to update match amount");
+      }
+    };
+
+    // Submit permission request for amount change
+    const submitAmountChangeRequest = async () => {
+      if (!matchToEdit || !newAmount || !auth || requestMessage.length < 10) return;
+      
+      try {
+        const result = await createRequest(
+          "Match",
+          matchToEdit.id,
+          "edit",
+          `Request to change amount from ${matchToEdit.amount} to ${newAmount} ${matchToEdit.currency}. Reason: ${requestMessage}`,
+          auth.id
+        );
+        
+        if (result.success) {
+          toast.success("Permission request submitted successfully");
+          setEditAmountDialogOpen(false);
+        } else {
+          toast.error(result.error || "Failed to submit request");
+        }
+      } catch (error) {
+        console.error("Error submitting permission request:", error);
+        toast.error("Failed to submit permission request");
+      }
+    };
+
+
   return (
     <div className="container mx-auto py-6">
       <Breadcrumb items={[{ label: "Match Management" }]} />
@@ -967,6 +1068,77 @@ const updateSingleMatch = (data: any) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Edit Amount Dialog */}
+        <Dialog open={editAmountDialogOpen} onOpenChange={setEditAmountDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit") 
+                  ? "Edit Match Amount" 
+                  : "Request to Edit Match Amount"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Username</Label>
+                <p className="font-medium">{matchToEdit?.username}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Current Amount</Label>
+                <p className="font-medium">{matchToEdit ? formatCurrency(matchToEdit.amount, matchToEdit.currency) : ""}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new_amount">New Amount</Label>
+                <Input
+                  id="new_amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="Enter new amount"
+                  value={newAmount}
+                  onChange={(e) => {
+                    setNewAmount(e.target.value);
+                    setAmountError("");
+                  }}
+                />
+                {amountError && <p className="text-sm text-red-500">{amountError}</p>}
+              </div>
+              
+              {/* If user doesn't have permission and is requesting */}
+              {!auth?.can("matches:edit") && !hasPermission(permissionsMap, matchToEdit?.id || "", "edit") && (
+                <div className="space-y-2">
+                  <Label htmlFor="request_message">Reason for Request</Label>
+                  <Textarea
+                    id="request_message"
+                    placeholder="Explain why you need to change this amount..."
+                    value={requestMessage}
+                    onChange={(e) => setRequestMessage(e.target.value)}
+                    rows={4}
+                  />
+                  {requestMessage.length < 10 && requestMessage.length > 0 && (
+                    <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
+                  )}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditAmountDialogOpen(false)}>
+                Cancel
+              </Button>
+              {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit") ? (
+                <Button onClick={updateMatchAmount} disabled={!newAmount || amountError !== ""}>
+                  Update Amount
+                </Button>
+              ) : (
+                <Button 
+                  onClick={submitAmountChangeRequest}
+                  disabled={!newAmount || requestMessage.length < 10 || amountError !== ""}
+                >
+                  Submit Request
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       {/* Refilter Dialog for Process */}
       <Dialog open={refilterDialogOpen} onOpenChange={setRefilterDialogOpen}>
@@ -1222,6 +1394,36 @@ const updateSingleMatch = (data: any) => {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Rematch this individual player</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+
+                            {/* Edit Amount button - only for non-success matches */}
+                            {match.status.toLowerCase() !== "success" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => handleEditAmount(match)}
+                                    className="mr-1"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                    {/* Add text to button if user has permission but isn't admin */}
+                                    {!auth?.can("matches:edit") && hasPermission(permissionsMap, match.id, "edit") && (
+                                      <span className="ml-1 text-xs">Execute</span>
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    {auth?.can("matches:edit") 
+                                      ? "Edit match amount" 
+                                      : hasPermission(permissionsMap, match.id, "edit")
+                                        ? "Execute permitted edit action"
+                                        : "Request to edit match amount"
+                                    }
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             )}

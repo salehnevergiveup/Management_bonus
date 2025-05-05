@@ -17,19 +17,19 @@ const main = async () => {
   console.log("Running Seeders...");
   
   try {
-        await TruncateSeeder(); 
+        // await TruncateSeeder(); 
         await SeedPermissions(); 
         await SeedRoles(); 
         await AutomationApiKey();
         await SeedAdminUser(); 
         await SeedManagementUsers(); 
-        await SeedNotifications(); 
-        await SeedProcesses();
+        // await SeedNotifications(); 
+        // await SeedProcesses();
         await SeedAgentAccounts(); 
         await SeedTransferAccounts();
         await SeedPlayers(); 
         // await SeedMatches(); 
-        await SeedRequests(); 
+        // await SeedRequests(); 
         await SeedBonuses();
 
     console.log("✅ All seeders executed successfully.");

@@ -6,25 +6,49 @@ export const SeedBonuses = async () => {
   try {
     // Define the bonus data
     const bonusFunction = `function calculateTurnoverBonus(turnoverData, exchangeRates, baselineData) {
+      // Parse baselineData if it's a string
+      if (typeof baselineData === 'string') {
+        baselineData = JSON.parse(baselineData);
+      }
+      
+      // Verify that required properties exist in baselineData
+      if (!baselineData.games || !baselineData.turnoverThresholds || !baselineData.defaultCurrency) {
+        return [];
+      }
+      
       const bonuses = [];
       const { games, turnoverThresholds, defaultCurrency } = baselineData;
       
       Object.keys(turnoverData).forEach(username => {
         const userData = turnoverData[username];
         
+        if (!userData.games || !Array.isArray(userData.games)) {
+          return;
+        }
+        
         userData.games.forEach(gameData => {
           const { id, game, turnover, currency, createdAt } = gameData;
           
+          if (!id || !game || turnover === undefined || !currency) {
+            return;
+          }
+          
+          // Skip games not in our categories
           if (!games[game]) {
-            console.log(\`Game not found in categories: \${game}\`);
             return;
           }
           
           const category = games[game];
           
+          // Get the appropriate thresholds based on game category
           const categoryThresholds = turnoverThresholds[category];
+          if (!categoryThresholds || !Array.isArray(categoryThresholds)) {
+            return;
+          }
           
+          // Find the correct payout threshold
           let payout = 0;
+          
           for (let i = categoryThresholds.length - 1; i >= 0; i--) {
             if (turnover >= categoryThresholds[i].turnover) {
               payout = categoryThresholds[i].payout;
@@ -32,30 +56,33 @@ export const SeedBonuses = async () => {
             }
           }
           
+          // If turnover didn't meet minimum threshold, no bonus
           if (payout === 0) {
-            console.log(\`No bonus for \${username} - \${game}: turnover \${turnover} didn't meet minimum threshold\`);
             return;
           }
           
+          // Convert payout to user's currency if different from base currency
           let convertedPayout = payout;
           
           if (currency !== defaultCurrency) {
+            // First check direct conversion rate
             if (exchangeRates[defaultCurrency] && exchangeRates[defaultCurrency][currency]) {
               convertedPayout = payout * exchangeRates[defaultCurrency][currency];
             } 
+            // If no direct conversion, try reverse
             else if (exchangeRates[currency] && exchangeRates[currency][defaultCurrency]) {
               convertedPayout = payout / exchangeRates[currency][defaultCurrency];
             }
-            console.log(\`Converted payout for \${username}: \${payout} \${defaultCurrency} -> \${convertedPayout} \${currency}\`);
           }
           
+          // Add bonus to results with the ID and game fields included
           bonuses.push({
             username,
             amount: convertedPayout,
             currency,
-            game,        
-            turnoverId: id, 
-            createdAt  
+            game,            
+            turnover_id: id,  
+            createdAt       
           });
         });
       });

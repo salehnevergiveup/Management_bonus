@@ -31,9 +31,9 @@ export const SeedRoles = async () => {
     "bonus:create", "bonus:delete", 
     "transfer-accounts:delete", "transfer-accounts:edit", "transfer-accounts:create",  
     "agent-accounts:delete", "agent-accounts:edit", "agent-accounts:create",
-    "players:delete", "players:edit", "players:create",
     "bonuses:delete", "bonuses:edit", "bonuses:create", 
-    "requests:edit",//meaning accept or reject
+    "api-keys:delete","api-keys:edit","api-keys:create","api-keys:view",
+    "requests:edit",
   ];
 
   const managementRolePermissions = permissions
