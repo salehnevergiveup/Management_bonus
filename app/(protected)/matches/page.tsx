@@ -48,6 +48,8 @@ interface Match {
   id: string;
   username: string;
   transfer_account_id: string | null;
+  game: string;
+  turnover_id: string;
   process_id: string;
   bonus_id: string;
   status: string; // pending, failed, success
@@ -84,6 +86,9 @@ export default function MatchManagementPage() {
   const [selectedMatches, setSelectedMatches] = useState<string[]>([]);
   const [selectAllChecked, setSelectAllChecked] = useState(false);
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
+
+  const [refilterDialogOpen, setRefilterDialogOpen] = useState(false);
+  const [selectedBonusId, setSelectedBonusId] = useState<string>("");
 
   // Permission related states
   const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
@@ -380,9 +385,9 @@ const updateSingleMatch = (data: any) => {
   const canShowProcessAction = (processStatus: string, action: string) => {
     switch (processStatus) {
       case ProcessStatus.PENDING:
-        return (action === 'resume' || action === 'rematch' || action === 'terminate');
+        return (action === 'resume' || action === 'rematch' || action === 'terminate' || action == 'refilter');
       case ProcessStatus.COMPLETED:
-        return (action === 'rematch' || action === 'terminate');
+        return (action === 'rematch' || action === 'terminate' ||action == 'refilter');
       case ProcessStatus.PROCESSING:
         return false; // No actions while processing
       default:
@@ -391,6 +396,31 @@ const updateSingleMatch = (data: any) => {
   };
   
   const handleProcessAction = (process: { id: string, status: string }, action: string) => {
+
+     // Add this section for refiltering
+  if (action === 'refilter-process') {
+      // Get all non-success matches for this process
+      const nonSuccessMatches = matches.filter(m => 
+        m.process_id === process.id && m.status.toLowerCase() !== "success"
+      );
+      
+      if (nonSuccessMatches.length === 0) {
+        toast.error("No eligible matches found for refiltering");
+        return;
+      }
+      
+      // Use the first match of the process as a reference
+      const matchForProcess = nonSuccessMatches[0];
+      if (matchForProcess) {
+        setSelectedAction({ 
+          match: matchForProcess, 
+          action: 'refilter-process' 
+        });
+        setSelectedBonusId(""); // Reset selected bonus
+        setRefilterDialogOpen(true);
+      }
+      return;
+    }
     // Check if user has permission for restricted actions (terminate) If user not admin
     const needsPermission = (action === 'terminate') && 
                             auth?.role !== Roles.Admin;
@@ -555,7 +585,19 @@ const updateSingleMatch = (data: any) => {
             return;
           }
           break;
-          
+
+        case 'refilter-single':
+          endpoint = `/api/matches/refilter/${match.id}`;
+          method = 'PUT';
+          body = { bonus_id: match.bonus_id}; 
+          break;
+
+        case 'refilter-process':
+          endpoint = `/api/matches/refilter`;
+          method = 'PUT';
+          body = { bonus_id: selectedBonusId}; 
+          break;
+
         case 'rematch-process':
           endpoint = `/api/matches/rematch`;
           method = 'PUT';
@@ -606,9 +648,11 @@ const updateSingleMatch = (data: any) => {
       console.error(`Error during ${action}:`, error);
       toast.error(`Failed to perform ${action.replace('-', ' ')} action`);
     } finally {
-      setConfirmDialogOpen(false);
-      setResumeDialogOpen(false);
-      setSelectedAction(null);
+    setConfirmDialogOpen(false);
+    setRefilterDialogOpen(false);
+    setResumeDialogOpen(false);
+    setSelectedAction(null);
+    setSelectedBonusId("");
     }
   };
 
@@ -785,50 +829,46 @@ const updateSingleMatch = (data: any) => {
         </CardContent>
       </Card>
 
-      {/* Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={confirmDialogOpen}
-        onClose={() => setConfirmDialogOpen(false)}
-        onConfirm={executeAction}
-        title={`Confirm ${selectedAction?.action?.replace('-', ' ') || ''}`}
-        children={
-          <>
-            {selectedAction?.action === 'rematch-process' ? (
-              <div className="space-y-3">
-                <p>All unmatched users will be matched again. Do you want to continue?</p>
-                <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    This will attempt to find transfer accounts for all currently unmatched players in this process.
-                  </p>
-                </div>
+    {/* Confirmation Dialog */}
+    <ConfirmationDialog
+      isOpen={confirmDialogOpen}
+      onClose={() => setConfirmDialogOpen(false)}
+      onConfirm={executeAction}
+      title={`Confirm ${selectedAction?.action?.replace('-', ' ') || ''}`}
+      children={
+        <>
+          {selectedAction?.action === 'rematch-process' ? (
+            <div className="space-y-3">
+              <p>All unmatched users will be matched again. Do you want to continue?</p>
+               <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+               <p className="text-sm text-yellow-800">
+                  This will attempt to find transfer accounts for all currently unmatched players in this process.
+                </p>
               </div>
-            ) : selectedAction?.action === 'terminate' ? (
-              <div className="space-y-3">
-                <p>Are you sure you want to terminate this process?</p>
-                
-                <div className="bg-red-50 p-4 rounded border border-red-300 space-y-2">
-                  <p className="text-sm font-semibold text-red-700">
-                    Warning: This action cannot be undone!
-                  </p>
-                  <ul className="text-sm text-red-700 list-disc pl-5 space-y-1">
-                    <li>All matches in this process will be permanently erased</li>
-                    <li>All turnovers will be permanently erased</li>
-                    <li>Match data will be converted to historical records</li>
-                    <li>You will <span className="font-bold underline">not</span> be able to recover these matches after termination</li>
-                    <li>Transfer accounts used in this process will be reset</li>
-                  </ul>
-                </div>
+            </div>
+          ) : selectedAction?.action === 'terminate' ? (
+            <div className="space-y-3">
+              <p>Are you sure you want to terminate this process?</p>
+              {/* Existing terminate warnings */}
+            </div>
+          ) : selectedAction?.action === 'refilter-single' ? (
+            <div className="space-y-3">
+              <p>Are you sure you want to refilter this match using its current bonus?</p>
+              <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  This will attempt to refilter the player using the bonus <strong>{selectedAction?.match.bonus?.name || "Unknown"}</strong>.
+                </p>
               </div>
-            ) : (
-              <p>Are you sure you want to {selectedAction?.action?.replace('-', ' ')} this {selectedAction?.action?.includes('process') ? 'process' : 'match'}?</p>
-            )}
-          </>
-        }
-        confirmText={selectedAction?.action 
-          ? selectedAction.action.split('-')[0].charAt(0).toUpperCase() + selectedAction.action.split('-')[0].slice(1) 
-          : 'Confirm'}
-      />
-
+            </div>
+          ) : (
+            <p>Are you sure you want to {selectedAction?.action?.replace('-', ' ')} this {selectedAction?.action?.includes('process') ? 'process' : 'match'}?</p>
+          )}
+        </>
+      }
+      confirmText={selectedAction?.action 
+        ? selectedAction.action.split('-')[0].charAt(0).toUpperCase() + selectedAction.action.split('-')[0].slice(1) 
+        : 'Confirm'}
+    />
 
       {/* Resume Dialog with Selected Matches */}
       <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
@@ -928,7 +968,60 @@ const updateSingleMatch = (data: any) => {
         </DialogContent>
       </Dialog>
 
-      
+      {/* Refilter Dialog for Process */}
+      <Dialog open={refilterDialogOpen} onOpenChange={setRefilterDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              Refilter Process with Selected Bonus
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="bonus_select">Select Bonus</Label>
+              <Select
+                value={selectedBonusId}
+                onValueChange={setSelectedBonusId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a bonus" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableBonuses.map(bonus => (
+                    <SelectItem key={bonus.id} value={bonus.id}>
+                      {bonus.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {selectedBonusId && (
+              <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                <p className="text-sm text-yellow-800">
+                  <strong>Warning:</strong> This will refilter all non-successful matches in this process 
+                  using the bonus <strong>{availableBonuses.find(b => b.id === selectedBonusId)?.name || "selected"}</strong>.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRefilterDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedAction && selectedBonusId) {
+                  executeAction();
+                }
+              }}
+              disabled={!selectedBonusId}
+            >
+              Refilter Process
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
   // Helper function to render the table with process grouping
@@ -997,7 +1090,26 @@ const updateSingleMatch = (data: any) => {
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        
+
+                        {/* Add Refilter All button */}
+                        {canShowProcessAction(process.status, 'rematch') && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleProcessAction(process, 'refilter-process')}
+                              >
+                                <Filter className="h-4 w-4 mr-1" />
+                                Refilter All
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Refilter all non-successful players in this process</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
                         {canShowProcessAction(process.status, 'terminate') && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1037,6 +1149,7 @@ const updateSingleMatch = (data: any) => {
                     )}
                     <TableHead>Username</TableHead>
                     <TableHead>Bonus</TableHead>
+                    <TableHead>Game</TableHead>
                     <TableHead>Transfer Account</TableHead>
                     <TableHead>Match Status</TableHead>
                     <TableHead>Amount</TableHead>
@@ -1068,6 +1181,9 @@ const updateSingleMatch = (data: any) => {
                         )}
                         <TableCell className="font-medium">{match.username}</TableCell>
                         <TableCell>{match.bonus?.name || "N/A"}</TableCell>
+                        <TableCell>
+                          {match?.game}
+                        </TableCell> 
                         <TableCell>
                           {match.transfer_account_id ? (
                             <span className="font-medium">{match.transfer_account?.username || "Transfer Account"}</span>
@@ -1106,6 +1222,24 @@ const updateSingleMatch = (data: any) => {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Rematch this individual player</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+
+                            {/* Add Refilter button (for all non-success matches) */}
+                            {match.status.toLowerCase() !== "success" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => handleSingleMatchAction(match, 'refilter-single')}
+                                  >
+                                    <Filter className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Refilter this player</p>
                                 </TooltipContent>
                               </Tooltip>
                             )}

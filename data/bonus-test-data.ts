@@ -8,63 +8,63 @@ export const turnoverData = {
     "WAZIR7505": {
       username: "WAZIR7505",
       games: [
-        { game: "LUCKY365", currency: "MYR", turnover: 1311.50, createdAt: "2025-04-06 18:15:18.256" },
-        { game: "LION KING", currency: "MYR", turnover: 2546.10, createdAt: "2025-04-06 18:15:18.259" },
-        { game: "MEGA888", currency: "USD", turnover: 250.75, createdAt: "2025-04-06 19:22:14.112" }
+        { id: "1",  game: "LUCKY365", currency: "MYR", turnover: 1311.50, createdAt: "2025-04-06 18:15:18.256" },
+        { id: "2", game: "LION KING", currency: "MYR", turnover: 2546.10, createdAt: "2025-04-06 18:15:18.259" },
+        {id: "3",  game: "MEGA888", currency: "USD", turnover: 250.75, createdAt: "2025-04-06 19:22:14.112" }
       ]
     },
     "RYKARL69": {
       username: "RYKARL69",
       games: [
-        { game: "PLAY8", currency: "MYR", turnover: 17.66, createdAt: "2025-04-06 18:15:18.257" },
-        { game: "LION KING", currency: "MYR", turnover: 26.80, createdAt: "2025-04-06 18:15:18.256" },
-        { game: "LUCKY365", currency: "EUR", turnover: 35.20, createdAt: "2025-04-06 20:15:22.111" }
+        { id: "4", game: "PLAY8", currency: "MYR", turnover: 17.66, createdAt: "2025-04-06 18:15:18.257" },
+        {id: "5",  game: "LION KING", currency: "MYR", turnover: 26.80, createdAt: "2025-04-06 18:15:18.256" },
+        { id: "6", game: "LUCKY365", currency: "EUR", turnover: 35.20, createdAt: "2025-04-06 20:15:22.111" }
       ]
     },
     "JAPANSTYLE11": {
       username: "JAPANSTYLE11",
       games: [
-        { game: "LUCKY365", currency: "MYR", turnover: 435.60, createdAt: "2025-04-06 18:15:18.257" },
-        { game: "918KISS", currency: "JPY", turnover: 15000.00, createdAt: "2025-04-06 16:44:12.789" }
+        { id: "7", game: "LUCKY365", currency: "MYR", turnover: 435.60, createdAt: "2025-04-06 18:15:18.257" },
+        { id: "8", game: "918KISS", currency: "JPY", turnover: 15000.00, createdAt: "2025-04-06 16:44:12.789" }
       ]
     },
     "LANTODAK1194": {
       username: "LANTODAK1194",
       games: [
-        { game: "EKOR", currency: "MYR", turnover: 187.00, createdAt: "2025-04-06 18:15:18.259" }
+        { id: "9", game: "EKOR", currency: "MYR", turnover: 187.00, createdAt: "2025-04-06 18:15:18.259" }
       ]
     },
     "MOLEK3KALI": {
       username: "MOLEK3KALI",
       games: [
-        { game: "LUCKY365", currency: "MYR", turnover: 4811.05, createdAt: "2025-04-06 18:15:18.259" },
-        { game: "JOKER", currency: "USD", turnover: 350.45, createdAt: "2025-04-06 17:22:45.123" }
+        {id: "10", game: "LUCKY365", currency: "MYR", turnover: 4811.05, createdAt: "2025-04-06 18:15:18.259" },
+        { id: "11", game: "JOKER", currency: "USD", turnover: 350.45, createdAt: "2025-04-06 17:22:45.123" }
       ]
     },
     "NASHAFIZI90": {
       username: "NASHAFIZI90",
       games: [
-        { game: "MEGA88", currency: "MYR", turnover: 487.41, createdAt: "2025-04-06 18:15:18.258" }
+        { id: "12", game: "MEGA88", currency: "MYR", turnover: 487.41, createdAt: "2025-04-06 18:15:18.258" }
       ]
     },
     "ESIKUIL65": {
       username: "ESIKUIL65",
       games: [
-        { game: "LUCKY365", currency: "MYR", turnover: 161.37, createdAt: "2025-04-06 18:15:18.258" },
-        { game: "PRAGMATIC", currency: "EUR", turnover: 75.20, createdAt: "2025-04-06 21:18:44.326" }
+        {id: "13",   game: "LUCKY365", currency: "MYR", turnover: 161.37, createdAt: "2025-04-06 18:15:18.258" },
+        {id: "14",   game: "PRAGMATIC", currency: "EUR", turnover: 75.20, createdAt: "2025-04-06 21:18:44.326" }
       ]
     },
     "SALAHU77": {
       username: "SALAHU77",
       games: [
-        { game: "LUCKY365", currency: "MYR", turnover: 192.22, createdAt: "2025-04-06 18:15:18.258" }
+        {id: "15",   game: "LUCKY365", currency: "MYR", turnover: 192.22, createdAt: "2025-04-06 18:15:18.258" }
       ]
     },
     "HENGZAI0108": {
       username: "HENGZAI0108",
       games: [
-        { game: "LUCKY365", currency: "MYR", turnover: 980.10, createdAt: "2025-04-06 18:15:18.258" },
-        { game: "PUSSY888", currency: "SGD", turnover: 215.75, createdAt: "2025-04-06 19:45:33.129" }
+        {id: "16",   game: "LUCKY365", currency: "MYR", turnover: 980.10, createdAt: "2025-04-06 18:15:18.258" },
+        {id: "17",   game: "PUSSY888", currency: "SGD", turnover: 215.75, createdAt: "2025-04-06 19:45:33.129" }
       ]
     }
   };

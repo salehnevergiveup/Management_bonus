@@ -4,34 +4,120 @@ import { prisma } from '@/lib/prisma';
 import {Bonus, TurnoverData, ExchangeRates, BonusResult} from '@/types/bonus.type' 
 import {TransferAccount, Account, ResumeResult, Match, Transfer,Wallet } from '@/types/resume-data.type' 
 import {functionGenerator} from "@/lib/convertStringToFunction"
-import {ProcessPayload} from  "@/types/update-process.type"
 
 
 const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null>  => {
    try{  
-     const turnoverData: TurnoverData = await getTurnoverData()
-     const exchangeRateData: ExchangeRates = await getExchangeRates(); 
-     console.log("turnover from filter command: ", turnoverData)
-     if(!turnoverData ||
-        !exchangeRateData
-     ) {  
-        console.log("turnover data or exchange range data could not be papered"); 
-        notifyAll(authId, "turnover data or exchange rate not found",NotificationType.ERROR);
-        return null;
+      const turnoverData: TurnoverData = await getTurnoverData()
+      const exchangeRateData: ExchangeRates = await getExchangeRates(); 
+      if(!turnoverData ||
+          !exchangeRateData
+      ) {  
+          notifyAll(authId, "turnover data or exchange rate not found",NotificationType.ERROR);
+          return null;
 
-    }
-    const newFunction = functionGenerator(bonus.function)
-    const data = newFunction(turnoverData, exchangeRateData, bonus.baseline);  
-    notifyAll(authId, "data filtering done successfully",NotificationType.SUCCESS);
-    return data; 
+      }
+      const newFunction = functionGenerator(bonus.function)
+      const data = newFunction(turnoverData, exchangeRateData, bonus.baseline);  
 
+      notifyAll(authId, "data filtering done successfully",NotificationType.SUCCESS);
+      return data; 
    }catch(error) {  
-    console.log("something want wrong while preparing the filtered data")
     notifyAll(authId, "turnover data or exchange rate not found",NotificationType.ERROR);
     return null; 
    }
 
   };
+
+  export const refilter = async (
+    authId: string,
+    bonus: Bonus
+  )=>
+  {
+    try {
+      await prisma.$transaction(async (tx) => {
+        const matches = await tx.match.findMany({
+          where: {
+            bonus_id: bonus.id,
+            status: {
+              not: MatchStatus.SUCCESS
+            }
+          },
+        });
+        if (matches.length === 0) {
+          throw new Error("No eligible matches found for refiltering");
+        }
+        const turnoverIds = matches.map(match => match.turnover_id);
+        const processId = matches[0].process_id;  
+        const turnoverData: TurnoverData = await getTurnoverData({
+          id: { in: turnoverIds },  
+          process_id: processId
+
+        });
+        const exchangeRates: ExchangeRates = await getExchangeRates() 
+        const newFunction = functionGenerator(bonus.function);
+        const bonusResults = newFunction(turnoverData, exchangeRates, bonus.baseline);
+
+        for (const result of bonusResults) {
+          const match = matches.find(m => m.turnover_id === result.turnover_id);
+          if (match) {
+            await tx.match.update({
+              where: { id: match.id },
+              data: {
+                amount: result.amount,
+                updated_at: new Date()
+              }
+            });
+          }
+        }
+      });
+      notifyAll(authId, "Refiltering completed successfully", NotificationType.SUCCESS);
+    } catch (error) {
+      console.error("Error in refilterMatches:", error);
+      notifyAll(authId, "Error while executing the refilter function", NotificationType.ERROR);
+    }
+  };
+
+  const refilterSinglePlayer = async(authId: string,bonus: Bonus, match: any ) => { 
+    try {  
+      await prisma.$transaction(async (tx) => {
+           const turnoverId = match.turnover_id;  
+           const processId = match.process_id;  
+
+           const turnoverData: TurnoverData = await getTurnoverData({
+            id: turnoverId,  
+            process_id: processId
+  
+          });
+
+          const exchangeRates: ExchangeRates = await getExchangeRates();
+
+          if(!turnoverData) {  
+            throw new Error("unable to find the turnover data")
+          }
+
+          const newFunction = functionGenerator(bonus.function);
+          const bonusResults = newFunction(turnoverData, exchangeRates, bonus.baseline);
+
+          if(!bonusResults) {  
+            throw new Error(`unable to refilter ${match.username} match`)
+          }
+
+          await tx.match.update({ 
+            where: { id: match.id },
+                data: {
+                  amount: bonusResults[0].amount,
+                  updated_at: new Date()
+                }
+          })
+
+        notifyAll(authId, "Refiltering completed successfully", NotificationType.SUCCESS);
+
+      })
+    }catch(error) {  
+        notifyAll(authId, "Error while executing the refilter function", NotificationType.ERROR);
+    }
+  }
 
   const match = async (authId: string, collectedUsers: BonusResult[], bonusId: string, processId: string) => {
     try {
@@ -62,6 +148,8 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
           process_id: processId,
           currency: user.currency,
           amount: user.amount,
+          turnover_id: user.turnover_id,
+          game: user.game,
           username: user.username,
           bonus_id: bonusId,
           transfer_account_id: transferAccountId,
@@ -85,7 +173,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
       }
       const uniquePairsArray = Array.from(uniquePairs.values());
       
-      console.log(`Processing ${createList.length} matches with ${uniquePairsArray.length} unique transfer account-currency pairs`);
       
       // Batch processing for matches
       const batchSize = 100;
@@ -94,7 +181,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
       for (let i = 0; i < batches; i++) {
         const batchStart = i * batchSize;
         const collectedUsersBatch = createList.slice(batchStart, batchStart + batchSize);
-        console.log(`Batch ${i+1}/${batches}: Creating ${collectedUsersBatch.length} matches`);
         
         await prisma.$transaction(async (tx) => {
           await tx.match.createMany({ data: collectedUsersBatch });
@@ -103,7 +189,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
       
       // Create entries in the pivot table with currency
       if (uniquePairsArray.length > 0) {
-        console.log(`Creating ${uniquePairsArray.length} pivot entries for process ID: ${processId}`);
         
         const pivotBatchSize = 100;
         const pivotBatches = Math.ceil(uniquePairsArray.length / pivotBatchSize);
@@ -112,7 +197,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
           const batchStart = i * pivotBatchSize;
           const pairsBatch = uniquePairsArray.slice(batchStart, batchStart + pivotBatchSize);
           
-          console.log(`Batch ${i+1}/${pivotBatches}: Creating pivot entries for ${pairsBatch.length} transfer account-currency pairs`);
           
           await prisma.$transaction(async (tx) => {
             // Create pivot table entries with progress field and currency
@@ -205,7 +289,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
             }
           });
           
-          console.log(`Connected transfer account ${player.transfer_account_id} to process ${processId} with currency ${currency}`);
         } else {
           console.log(`Transfer account ${player.transfer_account_id} already connected to process ${processId} with currency ${currency}`);
         }
@@ -231,7 +314,7 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
   const rematch = async (authId: string) => {
     try {
       const matches = await prisma.match.findMany({ 
-        where: { transfer_account_id: null },
+        where: { transfer_account_id: null,  status: { not: MatchStatus.SUCCESS} },
         select: {
           id: true,
           username: true,
@@ -307,7 +390,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
       const uniqueRelationships = Array.from(relationshipDetails.values());
       
       if (uniqueRelationships.length > 0) {
-        console.log(`Creating pivot entries for ${uniqueRelationships.length} unique process-account-currency combinations`);
         
         // Check which combinations don't already exist
         const existingRelationships = await Promise.all(
@@ -594,7 +676,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
         sub_accounts: subAccountsResult
       };
       
-      console.log(JSON.stringify(result)) 
 
       return result;
       
@@ -829,9 +910,11 @@ const notifyAdmins = async (notification: any) => {
     }
 };
 
-export const getTurnoverData = async (): Promise<TurnoverData> => {
+export const  getTurnoverData = async (filter : any  = {} ): Promise<TurnoverData> => {
     const turnoverRecords = await prisma.accountTurnover.findMany({
+      where:  filter,
       select: {
+        id: true, 
         username: true,
         game: true,
         currency: true,
@@ -846,7 +929,7 @@ export const getTurnoverData = async (): Promise<TurnoverData> => {
     const turnoverData: TurnoverData = {};
   
     for (const record of turnoverRecords) {
-      const { username, game, currency, turnover, createdAt } = record;
+      const { id,username, game, currency, turnover, createdAt } = record;
   
       if (!turnoverData[username]) {
         turnoverData[username] = {
@@ -856,6 +939,7 @@ export const getTurnoverData = async (): Promise<TurnoverData> => {
       }
   
       turnoverData[username].games.push({
+        id,
         game,
         currency,
         turnover: Number(turnover),
@@ -894,6 +978,8 @@ export const getExchangeRates = async (): Promise<ExchangeRates> => {
 
 export const ProcessCommand = {  
     "filter": (authId: string, bonus: Bonus) =>  filter(authId, bonus),
+    "refilter": (authId: string, bonus: Bonus) => refilter(authId, bonus), 
+    "refilter player": (authId: string,bonus: Bonus, match: any) =>  refilterSinglePlayer(authId,bonus,  match),
     "match": (authId: string, collectedUsers: BonusResult[],bonusId:string, process_id: string) => match(authId, collectedUsers,bonusId, process_id),
     "rematch player": (authId: string, matchId: string) => rematchSinglePlayer(authId, matchId),  
     "rematch": (authId: string) => rematch(authId),  

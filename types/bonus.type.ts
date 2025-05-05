@@ -9,6 +9,7 @@ export interface Bonus {
   }
   
 export interface GameData {
+  id: string;
   game: string;
   currency: string;
   turnover: number;
@@ -31,6 +32,8 @@ export interface ExchangeRates {
 }
 
 export interface BonusResult {
+  turnover_id: string;  
+  game: string;
   username: string;
   amount: number;
   currency: string;

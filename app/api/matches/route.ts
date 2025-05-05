@@ -64,7 +64,6 @@ export async function GET(request: Request) {
 // this is to create the turnover data the request made from the selenium 
 export async function POST(request: Request) {  
   try {  
-    console.log("here1");
     const auth = await SessionValidation();
 
     if (!auth) {  
@@ -73,7 +72,7 @@ export async function POST(request: Request) {
         {status: 401}
       );
     }
-    console.log("here2");
+
     const body = await request.json(); 
 
     if (!body) {  
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
         {status: 400}
       );
     } 
-    console.log("here3");
+
     if (!body.bonus_id || !body.process_id) {  
       return NextResponse.json(
         {error: "Unable to find the bonus_id or process_id"},
@@ -91,17 +90,14 @@ export async function POST(request: Request) {
     }
     const bonusId = body.bonus_id; 
     const processId = body.process_id;  
-    console.log("here4");
     
     const matchesWithBonusId = await prisma.match.count({where: {bonus_id: bonusId}});  
-    console.log("here5");
     if (matchesWithBonusId > 0) {  
       return NextResponse.json(
         {error: "Incoming players have been filtered with this bonus already"},
         {status: 400} 
       );
     }
-    console.log("here6");
     
     const bonusDB = await prisma.bonus.findUnique({where: {id: bonusId}}); 
     const process = await prisma.userProcess.findUnique({
@@ -110,7 +106,6 @@ export async function POST(request: Request) {
         status: ProcessStatus.PENDING
       }
     });
-    console.log("here7");
     
     if (!bonusDB) {  
       return NextResponse.json(
@@ -118,7 +113,6 @@ export async function POST(request: Request) {
         {status: 404}
       );
     }
-    console.log("here8");
     
     if (!process) {  
       return NextResponse.json(
@@ -126,7 +120,6 @@ export async function POST(request: Request) {
         {status: 404}
       );
     }
-    console.log("here9");
     
     const bonus: Bonus = {
       ...bonusDB!,                
@@ -134,13 +127,10 @@ export async function POST(request: Request) {
       updated_at: bonusDB!.updated_at?.toISOString()
     };
     
-    console.log("testing");
-    
     // Call the background process but don't await its completion
     // This is the async part that will continue after response is sent
-    createMatchesData(auth.id, bonus, process.id);
+    await createMatchesData(auth.id, bonus, process.id);
     
-    console.log("here10");
     return NextResponse.json(
       {
         success: true, 
@@ -159,7 +149,6 @@ export async function POST(request: Request) {
 }
 
 async function createMatchesData(authId: string, bonus: Bonus, processId: string){  
-  console.log("start background task "); 
 
   const bonusResult  =  await ProcessCommand["filter"](authId, bonus);  
 
@@ -168,7 +157,6 @@ async function createMatchesData(authId: string, bonus: Bonus, processId: string
 
   await ProcessCommand["match"](authId, bonusResult,bonus.id, processId);  
 
-  console.log("background task finished");
 }
 
 //this is to update the matches and the transfer accounts back from the selenium 

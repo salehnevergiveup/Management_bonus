@@ -96,7 +96,7 @@ const ConfirmTransferDialog = ({
   console.log("ConfirmTransferDialog rendering with data:", data);
   
   // Handle both data formats - direct props and nested data
-  const threadId = data.threadId || data.thread_id || (data.data?.thread_id) || "";
+  const threadId = data.threadId || (data.data?.thread_id);
   const processId = data.processId || data.process_id || (data.data?.process_id);
   
   // Handle nested data format or direct format with better logging

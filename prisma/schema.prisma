@@ -154,6 +154,8 @@ model AccountTurnover {
   turnover  Decimal
   createdAt DateTime @default(now())
   process    UserProcess @relation(fields: [process_id], references: [id], onDelete: Cascade)
+
+  matches             Match[]
 }
 
 model ExchangeRate {
@@ -178,7 +180,7 @@ model Player {
 
 model Bonus {
   id          String   @id @default(uuid())
-  name        String
+  name        String   @unique  
   description String   @db.Text
   function    String   @db.Text
   baseline    Json?            
@@ -193,6 +195,8 @@ model Bonus {
 model Match {
   id                  String   @id @default(uuid())
   username            String
+  game                String
+  turnover_id         String? 
   transfer_account_id String?
   process_id          String
   bonus_id            String    
@@ -201,10 +205,12 @@ model Match {
   currency            String // "USD" or "MYR"
   created_at          DateTime @default(now())
   updated_at          DateTime? 
-
+  
+  account_turnover AccountTurnover?  @relation(fields:  [turnover_id], references: [id], onDelete: SetNull)
   transfer_account TransferAccount? @relation(fields: [transfer_account_id], references: [id], onDelete: SetNull)
   process          UserProcess      @relation(fields: [process_id], references: [id], onDelete: Cascade)
   bonus       Bonus?  @relation(fields: [bonus_id], references: [id])
+
   @@index([process_id])
   @@index([bonus_id])
   @@index([transfer_account_id])

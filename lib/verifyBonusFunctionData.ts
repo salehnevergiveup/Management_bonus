@@ -31,11 +31,23 @@ export function validateBonusResultType(output: any[]) {
     } else if (typeof item.username !== 'string') {
       errors.push(`Item at index ${index} has 'username' that is not a string`);
     }
+
+    if (!('turnover_id' in item)) {
+      errors.push(`Item at index  is missing 'turnover id' property`);
+    } else if (typeof item.turnover_id !== 'string') {
+      errors.push(`Item at index  has 'turnover id' that is not a string`);
+    }
     
     if (!('amount' in item)) {
       errors.push(`Item at index ${index} is missing 'amount' property`);
     } else if (typeof item.amount !== 'number' || isNaN(item.amount)) {
       errors.push(`Item at index ${index} has 'amount' that is not a number`);
+    }
+
+    if (!('game' in item)) {
+      errors.push(`Item at index ${index} is missing 'game' property`);
+    } else if (typeof item.amount !== 'number' || isNaN(item.amount)) {
+      errors.push(`Item at index ${index} has 'game' that is not a number`);
     }
     
     if (!('currency' in item)) {

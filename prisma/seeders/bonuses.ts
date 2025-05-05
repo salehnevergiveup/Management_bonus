@@ -6,70 +6,62 @@ export const SeedBonuses = async () => {
   try {
     // Define the bonus data
     const bonusFunction = `function calculateTurnoverBonus(turnoverData, exchangeRates, baselineData) {
-  const bonuses = [];
-  const { games, turnoverThresholds, defaultCurrency } = baselineData;
-  
-  // Process each user's data
-  Object.keys(turnoverData).forEach(username => {
-    const userData = turnoverData[username];
-    
-    // Process each game
-    userData.games.forEach(gameData => {
-      const { game, turnover, currency } = gameData;
+      const bonuses = [];
+      const { games, turnoverThresholds, defaultCurrency } = baselineData;
       
-      // Skip games not in our categories
-      if (!games[game]) {
-        console.log(\`Game not found in categories: \${game}\`);
-        return;
-      }
-      
-      // Get game category (high or low)
-      const category = games[game];
-      
-      // Get the appropriate thresholds based on game category
-      const categoryThresholds = turnoverThresholds[category];
-      
-      // Find the correct payout threshold
-      let payout = 0;
-      for (let i = categoryThresholds.length - 1; i >= 0; i--) {
-        if (turnover >= categoryThresholds[i].turnover) {
-          payout = categoryThresholds[i].payout;
-          break;
-        }
-      }
-      
-      // If turnover didn't meet minimum threshold, no bonus
-      if (payout === 0) {
-        console.log(\`No bonus for \${username} - \${game}: turnover \${turnover} didn't meet minimum threshold\`);
-        return;
-      }
-      
-      // Convert payout to user's currency if different from base currency
-      let convertedPayout = payout;
-      
-      if (currency !== defaultCurrency) {
-        // First check direct conversion rate
-        if (exchangeRates[defaultCurrency] && exchangeRates[defaultCurrency][currency]) {
-          convertedPayout = payout * exchangeRates[defaultCurrency][currency];
-        } 
-        // If no direct conversion, try reverse
-        else if (exchangeRates[currency] && exchangeRates[currency][defaultCurrency]) {
-          convertedPayout = payout / exchangeRates[currency][defaultCurrency];
-        }
-        console.log(\`Converted payout for \${username}: \${payout} \${defaultCurrency} -> \${convertedPayout} \${currency}\`);
-      }
-      
-      // Add bonus to results
-      bonuses.push({
-        username,
-        amount: convertedPayout,
-        currency
+      Object.keys(turnoverData).forEach(username => {
+        const userData = turnoverData[username];
+        
+        userData.games.forEach(gameData => {
+          const { id, game, turnover, currency, createdAt } = gameData;
+          
+          if (!games[game]) {
+            console.log(\`Game not found in categories: \${game}\`);
+            return;
+          }
+          
+          const category = games[game];
+          
+          const categoryThresholds = turnoverThresholds[category];
+          
+          let payout = 0;
+          for (let i = categoryThresholds.length - 1; i >= 0; i--) {
+            if (turnover >= categoryThresholds[i].turnover) {
+              payout = categoryThresholds[i].payout;
+              break;
+            }
+          }
+          
+          if (payout === 0) {
+            console.log(\`No bonus for \${username} - \${game}: turnover \${turnover} didn't meet minimum threshold\`);
+            return;
+          }
+          
+          let convertedPayout = payout;
+          
+          if (currency !== defaultCurrency) {
+            if (exchangeRates[defaultCurrency] && exchangeRates[defaultCurrency][currency]) {
+              convertedPayout = payout * exchangeRates[defaultCurrency][currency];
+            } 
+            else if (exchangeRates[currency] && exchangeRates[currency][defaultCurrency]) {
+              convertedPayout = payout / exchangeRates[currency][defaultCurrency];
+            }
+            console.log(\`Converted payout for \${username}: \${payout} \${defaultCurrency} -> \${convertedPayout} \${currency}\`);
+          }
+          
+          bonuses.push({
+            username,
+            amount: convertedPayout,
+            currency,
+            game,        
+            turnoverId: id, 
+            createdAt  
+          });
+        });
       });
-    });
-  });
-  
-  return bonuses;
-}`;
+      
+      return bonuses;
+    }`;
 
     const bonusBaseline = {
       "games": {
