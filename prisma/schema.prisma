@@ -74,7 +74,6 @@ model UserProcess {
   matches          Match[]
   agent_account    agentAccount[]
   process_TransferAccount    UserProcess_TransferAccount[]
-  transferHistory     TransferHistory[]
   accountTurnover    AccountTurnover[]
   progressLogs      ProcessProgress[]  
   @@index([user_id])
@@ -128,7 +127,6 @@ model TransferAccount {
 
   players             Player[]
   matches             Match[]
-  transferHistory     TransferHistory[]
 
   process_TransferAccount           UserProcess_TransferAccount[]
 }
@@ -188,7 +186,6 @@ model Bonus {
   updated_at  DateTime? 
 
   matches     Match[]  
-  transferHistory     TransferHistory[]
 
 }
 
@@ -200,35 +197,13 @@ model Match {
   transfer_account_id String?
   process_id          String
   bonus_id            String    
-  status              String   @default("pending") // "pending", "failed", "success"
+  status              String   @default("pending") 
   amount              Float
   currency            String // "USD" or "MYR"
   created_at          DateTime @default(now())
   updated_at          DateTime? 
   
   account_turnover AccountTurnover?  @relation(fields:  [turnover_id], references: [id], onDelete: SetNull)
-  transfer_account TransferAccount? @relation(fields: [transfer_account_id], references: [id], onDelete: SetNull)
-  process          UserProcess      @relation(fields: [process_id], references: [id], onDelete: Cascade)
-  bonus       Bonus?  @relation(fields: [bonus_id], references: [id])
-
-  @@index([process_id])
-  @@index([bonus_id])
-  @@index([transfer_account_id])
-}
-
-model TransferHistory {  
-  id                  String @id @default(uuid())
-  username            String
-  process_id          String
-  status              String @default("failed")
-  amount              Float
-  currency            String
-  transfer_account_id String? 
-  bonus_id            String 
-  date_from           DateTime
-  date_to             DateTime
-  terminated_at       DateTime @default(now())
-
   transfer_account TransferAccount? @relation(fields: [transfer_account_id], references: [id], onDelete: SetNull)
   process          UserProcess      @relation(fields: [process_id], references: [id], onDelete: Cascade)
   bonus       Bonus?  @relation(fields: [bonus_id], references: [id])

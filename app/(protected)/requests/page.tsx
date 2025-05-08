@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ConfirmationDialog } from "@/components/dialog";
 import { Badge } from "@/components/badge";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AppColor,RequestStatus } from "@/constants/enums";
 import toast from "react-hot-toast";
 import {PaginationData} from  "@/types/pagination-data.type"
@@ -58,6 +59,12 @@ export default function RequestManagementPage() {
   const router = useRouter();
   const isAdmin = auth?.role === "admin";
 
+  // Selected requests and bulk action states
+  const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
+  const [selectAllChecked, setSelectAllChecked] = useState(false);
+  const [bulkActionDialog, setBulkActionDialog] = useState(false);
+  const [bulkAction, setBulkAction] = useState<{ type: string; value: string | null } | null>(null);
+
   // Fetch all request data
   const fetchRequests = async () => {
     if (auth) {
@@ -67,10 +74,6 @@ export default function RequestManagementPage() {
       }
     }
     try {
-      // Only fetch with pagination parameters
-      const queryParams = new URLSearchParams();
-      queryParams.append("page", "1");
-
       const response = await fetch(`/api/requests?all=true`);
 
       if (!response.ok) {
@@ -89,6 +92,12 @@ export default function RequestManagementPage() {
   useEffect(() => {
     fetchRequests();
   }, [isLoading, auth, router]);
+
+  // Reset selections when filters change
+  useEffect(() => {
+    setSelectedRequests([]);
+    setSelectAllChecked(false);
+  }, [statusFilter, searchTerm]);
 
   // Filter requests based on search term and status filter
   useEffect(() => {
@@ -170,6 +179,69 @@ export default function RequestManagementPage() {
     }
   };
 
+  // Bulk update status
+  const bulkUpdateStatus = async () => {
+    if (!bulkAction || selectedRequests.length === 0) return;
+
+    try {
+      const response = await fetch(`/api/requests`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestIds: selectedRequests,
+          status: bulkAction.value
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update requests");
+      }
+
+      toast.success(`Successfully updated ${selectedRequests.length} requests`);
+      setBulkActionDialog(false);
+      setSelectedRequests([]);
+      setSelectAllChecked(false);
+      fetchRequests(); // Refresh data after update
+    } catch (error) {
+      console.error("Error updating requests:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update requests");
+    }
+  };
+
+  // Bulk delete
+  const bulkDelete = async () => {
+    if (selectedRequests.length === 0) return;
+
+    try {
+      const response = await fetch(`/api/requests`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestIds: selectedRequests
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete requests");
+      }
+
+      toast.success(`Successfully deleted ${selectedRequests.length} requests`);
+      setBulkActionDialog(false);
+      setSelectedRequests([]);
+      setSelectAllChecked(false);
+      fetchRequests(); // Refresh data after delete
+    } catch (error) {
+      console.error("Error deleting requests:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete requests");
+    }
+  };
+
   const deleteRequest = async () => {
     if (!requestToDelete) return;
 
@@ -239,6 +311,51 @@ export default function RequestManagementPage() {
     }
   };
 
+  // Handle checkbox selection
+  const toggleRequestSelection = (requestId: string) => {
+    setSelectedRequests(prevSelected => {
+      if (prevSelected.includes(requestId)) {
+        return prevSelected.filter(id => id !== requestId);
+      } else {
+        return [...prevSelected, requestId];
+      }
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAllChecked) {
+      setSelectedRequests([]);
+    } else {
+      const allRequestIds = paginatedRequests.map(request => request.id);
+      setSelectedRequests(allRequestIds);
+    }
+    setSelectAllChecked(!selectAllChecked);
+  };
+
+  // Handle bulk actions
+  const handleBulkAction = (action: string, value?: string) => {
+    if (selectedRequests.length === 0) {
+      toast.error("Please select at least one request");
+      return;
+    }
+
+    setBulkAction({ type: action, value: value || null });
+    setBulkActionDialog(true);
+  };
+
+  const executeBulkAction = async () => {
+    if (!bulkAction) return;
+
+    switch (bulkAction.type) {
+      case 'status':
+        await bulkUpdateStatus();
+        break;
+      case 'delete':
+        await bulkDelete();
+        break;
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
       <Breadcrumb items={[{ label: "Request Management" }]} />
@@ -293,12 +410,81 @@ export default function RequestManagementPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedRequests.length} request{selectedRequests.length !== 1 ? 's' : ''} selected
+              </span>
+              {selectedRequests.length > 0 && (
+                <>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => {
+                      setSelectedRequests([]);
+                      setSelectAllChecked(false);
+                    }}
+                  >
+                    Clear selection
+                  </Button>
+                  
+                  {isAdmin && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-green-50 hover:bg-green-100 border-green-200"
+                        onClick={() => handleBulkAction('status', RequestStatus.ACCEPTED)}
+                      >
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                        Accept All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-red-50 hover:bg-red-100 border-red-200"
+                        onClick={() => handleBulkAction('status', RequestStatus.REJECTED)}
+                      >
+                        <XCircle className="h-4 w-4 text-red-500 mr-1" />
+                        Reject All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
+                        onClick={() => handleBulkAction('status', RequestStatus.PENDING)}
+                      >
+                        <Clock className="h-4 w-4 text-yellow-500 mr-1" />
+                        Pending All
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-red-50 hover:bg-red-100 border-red-200"
+                    onClick={() => handleBulkAction('delete')}
+                  >
+                    <Trash className="h-4 w-4 text-red-500 mr-1" />
+                    Delete All
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={selectAllChecked}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </TableHead>
                   <TableHead>Requestor</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Model</TableHead>
@@ -312,19 +498,26 @@ export default function RequestManagementPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                       Loading requests...
                     </TableCell>
                   </TableRow>
                 ) : paginatedRequests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                       No requests found
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedRequests.map((request) => (
                     <TableRow key={request.id}>
+                      <TableCell className="w-[50px]">
+                        <Checkbox
+                          checked={selectedRequests.includes(request.id)}
+                          onCheckedChange={() => toggleRequestSelection(request.id)}
+                          aria-label={`Select request ${request.id}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{request.sender?.username || 'Unknown'}</TableCell>
                       <TableCell>{request.action || 'N/A'}</TableCell>
                       <TableCell>{request.model_name}</TableCell>
@@ -558,6 +751,30 @@ export default function RequestManagementPage() {
           </>
         }
         confirmText="Delete"
+      />
+
+      {/* Bulk Action Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={bulkActionDialog}
+        onClose={() => setBulkActionDialog(false)}
+        onConfirm={executeBulkAction}
+        title={bulkAction?.type === 'delete' ? 'Confirm Bulk Delete' : 'Confirm Bulk Status Update'}
+        children={
+          <>
+            {bulkAction?.type === 'delete' ? (
+              <>
+                <p>Are you sure you want to delete <strong>{selectedRequests.length}</strong> selected requests?</p>
+                <p className="mt-2 text-red-600">This action cannot be undone.</p>
+              </>
+            ) : (
+              <>
+                <p>Are you sure you want to update the status of <strong>{selectedRequests.length}</strong> selected requests to <strong>{bulkAction?.value}</strong>?</p>
+                <p className="mt-2">This will notify all affected requestors of the status change.</p>
+              </>
+            )}
+          </>
+        }
+        confirmText={bulkAction?.type === 'delete' ? 'Delete All' : 'Update All'}
       />
     </div>
   );

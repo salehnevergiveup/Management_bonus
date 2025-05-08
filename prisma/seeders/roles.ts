@@ -29,7 +29,8 @@ export const SeedRoles = async () => {
   const notAllowed = [
     "users:view", "users:edit", "users:create", "users:delete",
     "bonus:create", "bonus:delete", 
-    "transfer-accounts:delete", "transfer-accounts:edit", "transfer-accounts:create",  
+    "transfer-accounts:delete", "transfer-accounts:edit", "transfer-accounts:create",
+    "matches:delete", "matches:edit", "matches:create",  
     "agent-accounts:delete", "agent-accounts:edit", "agent-accounts:create",
     "bonuses:delete", "bonuses:edit", "bonuses:create", 
     "api-keys:delete","api-keys:edit","api-keys:create","api-keys:view",

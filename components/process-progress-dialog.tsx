@@ -21,6 +21,7 @@ export type ProcessProgressItem = {
   } | null
   event_name: string
   status: string
+  created_at: string | null
 }
 
 interface ProcessProgressDialogProps {
@@ -163,7 +164,7 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
 
           <div>
               <p className="text-muted-foreground">Created At:</p>
-              <p>{formatName(item.created_at)}</p>
+              <p>{formatName(item.created_at || "")}</p>
           </div>
         </div>
 

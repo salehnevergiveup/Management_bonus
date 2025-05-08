@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Roles } from '@/constants/enums';
 import crypto from 'crypto';
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await SessionValidation();
   
   if (!auth) {
@@ -22,7 +22,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
   
   try {
-    const id = params.id;
+    const {id} = await params;
     const body = await request.json();
     
     const apiKey = await prisma.aPIKey.findUnique({
@@ -154,7 +154,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await SessionValidation();
   
   if (!auth) {
@@ -172,7 +172,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
   
   try {
-    const id = params.id;
+    const {id} = await params;
     
     const apiKey = await prisma.aPIKey.findUnique({
       where: { id },
@@ -206,7 +206,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await SessionValidation();
   
   if (!auth) {
@@ -224,7 +224,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   }
   
   try {
-    const id = params.id;
+    const {id} = await params;
     
     const apiKey = await prisma.aPIKey.findUnique({
       where: { id }

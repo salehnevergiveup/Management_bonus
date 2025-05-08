@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     // Get exchange rates
     const exchangeRates = await prisma.exchangeRate.findMany();
 
-    const res: GetResponse = {
+    const res: any = {
       data: {
         accountTurnovers: paginationResult.data,
         exchangeRates: exchangeRates

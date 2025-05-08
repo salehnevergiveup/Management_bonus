@@ -123,9 +123,8 @@ export async function POST(request: Request) {
     }
 
     // Check for active process
-    const activeProcess = await prisma.userProcess.findFirst({
+    const activeProcess = await prisma.userProcess.findMany({
       where: {
-        user_id: auth.id,
         status: {
           in: [ProcessStatus.PENDING, ProcessStatus.PROCESSING]
         }
@@ -136,8 +135,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { 
           error: "Active process already exists",
-          process_id: activeProcess.id,
-          status: activeProcess.status
         },
         { status: 409 } 
       );

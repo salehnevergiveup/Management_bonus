@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, Play, RotateCw, MoreHorizontal, Calendar } from "lucide-react";
+import { Eye, Play,MoreHorizontal, Calendar } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
-import { ProcessStatus, AppColor, Roles } from "@/constants/enums";
-import { hasPermission, createRequest, fetchRequests } from "@/lib/requstHandling";
+import { ProcessStatus, AppColor } from "@/constants/enums";
 import { PaginationData } from "@/types/pagination-data.type";
-import { RequestData } from "@/types/request-data.type";
 
 interface AgentAccount {
   id: string;
@@ -74,12 +71,6 @@ export default function ProcessManagementPage() {
   const router = useRouter();
   const [agentAccounts, setAgentAccounts] = useState<AgentAccount[]>([]);
 
-  // Permissions related states
-  const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [requestMessage, setRequestMessage] = useState("");
-  const [completePermission, setCompletePermission] = useState<{modelId: string, action: string} | null>(null);
-
   // Date selection states
   const [startProcessDialogOpen, setStartProcessDialogOpen] = useState(false);
   const [fromDate, setFromDate] = useState("");
@@ -87,49 +78,6 @@ export default function ProcessManagementPage() {
   const [dateErrors, setDateErrors] = useState<{fromDate?: string; toDate?: string}>({});
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const todayDate = new Date().toISOString().split('T')[0]; 
-
-  // Load accepted permission requests
-  const loadPermissions = async () => {
-    if (!auth) return;
-    
-    try {
-      const map = await fetchRequests('Process', 'accepted');
-      setPermissionsMap(map);
-    } catch (error) {
-      console.error("Error loading permissions:", error);
-    }
-  };
-
-  // Complete a permission after use
-  const markPermissionComplete = async (modelId: string, action: string) => {
-    try {
-      let key = "";  
-      if (action === "create") {  
-        key = `new:${action}`;
-      } else {  
-        key = `${modelId}:${action}`;
-      }
-      const permission = permissionsMap.get(key);
-      
-      if (permission) {
-        const response = await fetch(`/api/requests/${permission.id}`, {
-          method: 'DELETE'
-        });
-        
-        if (response.ok) {
-          const newMap = new Map(permissionsMap);
-          newMap.delete(key);
-          setPermissionsMap(newMap);
-          return true;
-        }
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Error completing permission:", error);
-      return false;
-    }
-  };
 
   const fetchProcesses = async () => {
     if (auth) {
@@ -200,25 +148,12 @@ export default function ProcessManagementPage() {
       fetchProcesses();
       fetchProcesses();
       fetchAgentAccounts();
-      loadPermissions();
     } else {
       // Keep the button hidden while loading by setting this to true
       setHasPendingOrProcessing(true);
     }
   }, [isLoading, auth, router, currentPage, pageSize]);
 
-  // Handle permission completion
-  useEffect(() => {
-    if (completePermission) {
-      markPermissionComplete(completePermission.modelId, completePermission.action)
-        .then(success => {
-          if (success) {
-            toast.success("Permission used successfully");
-          }
-          setCompletePermission(null);
-        });
-    }
-  }, [completePermission]);
 
   const validateDateRange = () => {
     const errors: {fromDate?: string; toDate?: string} = {};
@@ -285,17 +220,12 @@ export default function ProcessManagementPage() {
   };
   
   const handleStartProcessClick = () => {
-    if (auth?.role === Roles.Admin || hasPermission(permissionsMap, "new", "create")) {
-      // Reset form
-      setFromDate("");
-      setToDate("");
-      setDateErrors({});
-      setStartProcessDialogOpen(true);
-    } else {
-      // Open request dialog
-      setRequestMessage("");
-      setRequestDialogOpen(true);
-    }
+    // Reset form
+    setFromDate("");
+    setToDate("");
+    setDateErrors({});
+    setSelectedAgents([]);
+    setStartProcessDialogOpen(true);
   };
 
   const startProcess = async () => {
@@ -319,14 +249,6 @@ export default function ProcessManagementPage() {
         throw new Error(errorData.error || "Failed to start process");
       }
 
-      // If this was a permission-based create, mark it as complete
-      if (auth?.role !== Roles.Admin && hasPermission(permissionsMap, "new", "create")) {
-        setCompletePermission({
-          modelId: "new",
-          action: "create"
-        });
-      }
-
       const result = await response.json();
       toast.success(result.message);
       setStartProcessDialogOpen(false);
@@ -334,31 +256,6 @@ export default function ProcessManagementPage() {
     } catch (error) {
       console.error("Error starting process:", error);
       toast.error(error instanceof Error ? error.message : "Failed to start process");
-    }
-  };
-
-  // Submit permission request
-  const submitPermissionRequest = async () => {
-    if (!auth || requestMessage.length < 10) return;
-    
-    try {
-      const result = await createRequest(
-        "Process",
-        "new",
-        "create",
-        requestMessage,
-        auth.id
-      );
-      
-      if (result.success) {
-        toast.success("Permission request submitted successfully");
-        setRequestDialogOpen(false);
-      } else {
-        toast.error(result.error || "Failed to submit request");
-      }
-    } catch (error) {
-      console.error("Error submitting permission request:", error);
-      toast.error("Failed to submit permission request");
     }
   };
 
@@ -399,9 +296,7 @@ export default function ProcessManagementPage() {
             {!hasPendingOrProcessing && (
               <Button onClick={handleStartProcessClick}>
                 <Play className="mr-2 h-4 w-4" />
-                {auth?.role === Roles.Admin || hasPermission(permissionsMap, "new", "create") 
-                  ? "Start Process" 
-                  : "Request to Start Process"}
+                 Start Process
               </Button>
             )}
             <Select
@@ -473,7 +368,7 @@ export default function ProcessManagementPage() {
                           className={`px-2 py-1 rounded-full  ${
                             process.status === ProcessStatus.PROCESSING
                               ? AppColor.INFO
-                              : process.status === ProcessStatus.COMPLETED
+                              : process.status === ProcessStatus.SUCCESS
                                 ? AppColor.SUCCESS
                                 : process.status === ProcessStatus.FAILED? 
                                   AppColor.ERROR
@@ -663,41 +558,6 @@ export default function ProcessManagementPage() {
               Cancel
             </Button>
             <Button onClick={startProcess}>Start Process</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Permission Request Dialog */}
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Request Permission to Start Process</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="request_message">Reason for Request</Label>
-              <Textarea
-                id="request_message"
-                placeholder="Explain why you need to start a process..."
-                value={requestMessage}
-                onChange={(e) => setRequestMessage(e.target.value)}
-                rows={4}
-              />
-              {requestMessage.length < 10 && requestMessage.length > 0 && (
-                <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={submitPermissionRequest}
-              disabled={!requestMessage || requestMessage.length < 10}
-            >
-              Submit Request
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -143,7 +143,7 @@ export default function DashboardPage() {
       totalTransferAccounts: data.transferAccounts?.length > 0 ? data.transferAccounts.reduce((sum, item) => sum + (item.count || 0), 0) : 0,
       totalPlayers: data.players?.length > 0 ? data.players.reduce((sum, item) => sum + (item.count || 0), 0) : 0,
       totalProcesses: {
-        completed: data.processes?.filter(p => p.status === ProcessStatus.COMPLETED)?.length || 0,
+        completed: data.processes?.filter(p => p.status === ProcessStatus.SUCCESS)?.length || 0,
         failed: data.processes?.filter(p => p.status === ProcessStatus.FAILED)?.length || 0
       },
       totalNotifications: {

@@ -46,7 +46,7 @@ export async function GET(request: Request) {
         }
       });
 
-    processProgressForms = processProgressForms.filter((form) => {
+    processProgressForms = processProgressForms.filter((form: any) => {
         try {
           if (!form.data) {
             return false;

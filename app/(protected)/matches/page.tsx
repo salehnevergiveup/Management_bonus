@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";  // Added useRef
-import { Search, RotateCcw, PlayCircle, Square, RefreshCw, CheckSquare, Filter, Edit } from "lucide-react";
+import { Search, RotateCcw, PlayCircle, Square, RefreshCw, CheckSquare, Filter, Edit , CheckCircle, PauseCircle } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,10 +77,11 @@ export default function MatchManagementPage() {
   const [selectedAction, setSelectedAction] = useState<null | { match: Match; action: string }>(null);
   const router = useRouter();
   
-  // State for updating match amount
-const [editAmountDialogOpen, setEditAmountDialogOpen] = useState(false);
+// State for updating match amount and status
+const [editDialogOpen, setEditDialogOpen] = useState(false);
 const [matchToEdit, setMatchToEdit] = useState<Match | null>(null);
 const [newAmount, setNewAmount] = useState("");
+const [newStatus, setNewStatus] = useState("");
 const [amountError, setAmountError] = useState("");
 
   // Added state for real-time updates
@@ -366,7 +367,7 @@ const updateSingleMatch = (data: any) => {
     switch (status) {
       case ProcessStatus.PROCESSING:
         return AppColor.INFO;
-      case ProcessStatus.COMPLETED:
+      case ProcessStatus.SUCCESS:
         return AppColor.SUCCESS;
       case ProcessStatus.FAILED:
         return AppColor.ERROR;
@@ -390,24 +391,41 @@ const updateSingleMatch = (data: any) => {
         return AppColor.INFO;
     }
   };
-
-  const canShowProcessAction = (processStatus: string, action: string) => {
-    switch (processStatus) {
-      case ProcessStatus.PENDING:
-        return (action === 'resume' || action === 'rematch' || action === 'terminate' || action == 'refilter');
-      case ProcessStatus.COMPLETED:
-        return (action === 'rematch' || action === 'terminate' ||action == 'refilter');
-      case ProcessStatus.PROCESSING:
-        return false; // No actions while processing
-      default:
-        return false;
-    }
-  };
   
+  // Update the handleProcessAction function to include the new actions
   const handleProcessAction = (process: { id: string, status: string }, action: string) => {
+    if (action === 'mark-success') {
+      if (!isAllMatchesSuccess(process.id)) {
+        toast.error("All matches must have 'success' status to mark the process as success");
+        return;
+      }
+      
+      const matchForProcess = matches.find(m => m.process_id === process.id);
+      if (matchForProcess) {
+        setSelectedAction({ 
+          match: matchForProcess, 
+          action: 'mark-success' 
+        });
+        setConfirmDialogOpen(true);
+      }
+      return;
+    }
+    
+    // Add this section for the mark-onhold action
+    if (action === 'mark-onhold') {
+      const matchForProcess = matches.find(m => m.process_id === process.id);
+      if (matchForProcess) {
+        setSelectedAction({ 
+          match: matchForProcess, 
+          action: 'mark-onhold' 
+        });
+        setConfirmDialogOpen(true);
+      }
+      return;
+    }
 
-     // Add this section for refiltering
-  if (action === 'refilter-process') {
+    // Add this section for refiltering (already in your code, included for completeness)
+    if (action === 'refilter-process') {
       // Get all non-success matches for this process
       const nonSuccessMatches = matches.filter(m => 
         m.process_id === process.id && m.status.toLowerCase() !== "success"
@@ -430,6 +448,7 @@ const updateSingleMatch = (data: any) => {
       }
       return;
     }
+    
     // Check if user has permission for restricted actions (terminate) If user not admin
     const needsPermission = (action === 'terminate') && 
                             auth?.role !== Roles.Admin;
@@ -443,7 +462,7 @@ const updateSingleMatch = (data: any) => {
       setRequestMessage("");
       setRequestDialogOpen(true);
       return;
-    }else if (action === 'terminate') {
+    } else if (action === 'terminate') {
       const matchForProcess = matches.find(m => m.process_id === process.id);
       if (matchForProcess) {
         setSelectedAction({ 
@@ -454,7 +473,7 @@ const updateSingleMatch = (data: any) => {
       }
       return;
     }
-  
+
     // If resume action with selected matches
     if (action === 'resume') {
       if (selectedMatches.length > 0) {
@@ -488,8 +507,7 @@ const updateSingleMatch = (data: any) => {
       }
       return;
     }
-  }
-  
+  };
   const handleSingleMatchAction = (match: Match, action: string) => {
     setSelectedAction({ match, action });
     setConfirmDialogOpen(true);
@@ -595,6 +613,16 @@ const updateSingleMatch = (data: any) => {
           }
           break;
 
+        case 'mark-success':
+          endpoint = `/api/processes/${match.process_id}/success`;
+          method = 'PUT';
+          break;
+
+        case 'mark-onhold':
+          endpoint = `/api/processes/${match.process_id}/on-hold`;
+          method = 'PUT';
+          break;
+
         case 'refilter-single':
           endpoint = `/api/matches/refilter/${match.id}`;
           method = 'PUT';
@@ -619,7 +647,7 @@ const updateSingleMatch = (data: any) => {
           
         case 'terminate':
           endpoint = `/api/processes/${match.process_id}/terminate`;
-          method = 'DELETE';
+          method = 'POST';
           break;
       }
       
@@ -669,98 +697,171 @@ const updateSingleMatch = (data: any) => {
     setCurrentPage(page);
   };
 
-  // Handle edit action for match amount
-const handleEditAmount = (match: Match) => {
-  if (match.status.toLowerCase() === "success") {
-    toast.error("Cannot edit amount for successful matches");
-    return;
-  }
+
+  // Handle edit action for match amount and status
+const handleEdit = (match: Match) => {
+  const hasDirectPermission = auth?.role === Roles.Admin || auth?.can("matches:edit");
   
-  // If user has permission (admin or has accepted request), open edit dialog
-  if (auth?.can("matches:edit") || hasPermission(permissionsMap, match.id, "edit")) {
+  const hasAcceptedRequest = hasPermission(permissionsMap, match.id, "edit");
+  
+  if (hasDirectPermission || hasAcceptedRequest) {
     setMatchToEdit(match);
-    setNewAmount(match.amount.toString());
+    setNewAmount("");
+    setNewStatus(""); 
     setAmountError("");
-    setEditAmountDialogOpen(true);
+    setEditDialogOpen(true);
   } else {
-    // Otherwise, prepare to request permission
     setMatchToEdit(match);
-    setNewAmount(match.amount.toString());
+    setNewAmount(""); 
+    setNewStatus(""); 
     setAmountError("");
     setRequestAction("edit");
     setRequestMessage("");
-    setEditAmountDialogOpen(true);
+    setEditDialogOpen(true);
   }
 };
 
-    // Update match amount
-    const updateMatchAmount = async () => {
-      if (!matchToEdit || !newAmount) return;
+// Update match amount and status
+const updateMatch = async () => {
+  if (!matchToEdit) return;
+  
+  // Check if any field is being updated
+  if (!newAmount && !newStatus) {
+    toast.error("Please update either the amount or status");
+    return;
+  }
+  
+  // Initialize the update data object
+  const updateData: { amount?: number; status?: string } = {};
+  
+  // Add amount to update data if provided and not empty
+  if (newAmount.trim() !== '') {
+    // Validate the amount
+    const amount = parseFloat(newAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setAmountError("Please enter a valid positive amount");
+      return;
+    }status
+    updateData.amount = amount;
+  }
+  
+  // Add status to update data if provided
+  if (newStatus) {
+    updateData.status = newStatus;
+  }
+
+  console.log("stats is " +  newStatus.repeat(100))
+  
+  try {
+    const response = await fetch(`/api/matches/${matchToEdit.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updateData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update match");
+    }
+    
+    // If this was a permission-based edit, mark it as complete
+    if (!auth?.can("matches:edit") && hasPermission(permissionsMap, matchToEdit.id, "edit")) {
+      setCompletePermission({
+        modelId: matchToEdit.id,
+        action: "edit"
+      });
+    }
+    
+    toast.success("Match updated successfully");
+    setEditDialogOpen(false);
+    fetchMatches(); // Refresh the data
+  } catch (error) {
+    console.error("Error updating match:", error);
+    toast.error(error instanceof Error ? error.message : "Failed to update match");
+  }
+};
+
+  // Submit permission request for match changes
+  const submitMatchChangeRequest = async () => {
+    if (!matchToEdit || (!newAmount.trim() && !newStatus) || !auth || requestMessage.length < 10) {
+      toast.error("Please update either amount or status and provide a reason");
+      return;
+    }
+    
+    try {
+      // Build a descriptive message about what's being changed
+      let changeDescription = "Request to change match: ";
       
-      // Validate the amount
-      const amount = parseFloat(newAmount);
-      if (isNaN(amount) || amount <= 0) {
-        setAmountError("Please enter a valid positive amount");
-        return;
-      }
-      
-      try {
-        const response = await fetch(`/api/matches/${matchToEdit.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ amount }),
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to update match amount");
+      // Add amount change details if amount is being changed and not empty
+      if (newAmount.trim() !== '') {
+        const parsedAmount = parseFloat(newAmount);
+        // Validate amount
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+          setAmountError("Please enter a valid positive amount");
+          return;
         }
         
-        // If this was a permission-based edit, mark it as complete
-        if (!auth?.can("matches:edit") && hasPermission(permissionsMap, matchToEdit.id, "edit")) {
-          setCompletePermission({
-            modelId: matchToEdit.id,
-            action: "edit"
-          });
-        }
+        changeDescription += `Amount from ${matchToEdit.amount} to ${newAmount} ${matchToEdit.currency}`;
         
-        toast.success("Match amount updated successfully");
-        setEditAmountDialogOpen(false);
-        fetchMatches(); // Refresh the data
-      } catch (error) {
-        console.error("Error updating match amount:", error);
-        toast.error(error instanceof Error ? error.message : "Failed to update match amount");
+        // Add comma if both fields are changing
+        if (newStatus) {
+          changeDescription += ", ";
+        }
       }
-    };
-
-    // Submit permission request for amount change
-    const submitAmountChangeRequest = async () => {
-      if (!matchToEdit || !newAmount || !auth || requestMessage.length < 10) return;
       
-      try {
-        const result = await createRequest(
-          "Match",
-          matchToEdit.id,
-          "edit",
-          `Request to change amount from ${matchToEdit.amount} to ${newAmount} ${matchToEdit.currency}. Reason: ${requestMessage}`,
-          auth.id
-        );
-        
-        if (result.success) {
-          toast.success("Permission request submitted successfully");
-          setEditAmountDialogOpen(false);
-        } else {
-          toast.error(result.error || "Failed to submit request");
-        }
-      } catch (error) {
-        console.error("Error submitting permission request:", error);
-        toast.error("Failed to submit permission request");
+      // Add status change details if status is being changed
+      if (newStatus) {
+        changeDescription += `Status from ${matchToEdit.status} to ${newStatus}`;
       }
-    };
+      
+      // Add the reason
+      changeDescription += `. Reason: ${requestMessage}`;
+      
+      const result = await createRequest(
+        "Match",
+        matchToEdit.id,
+        "edit",
+        changeDescription,
+        auth.id
+      );
+      
+      if (result.success) {
+        toast.success("Permission request submitted successfully");
+        setEditDialogOpen(false);
+      } else {
+        toast.error(result.error || "Failed to submit request");
+      }
+    } catch (error) {
+      console.error("Error submitting permission request:", error);
+      toast.error("Failed to submit permission request");
+    }
+  };
 
+  const isAllMatchesSuccess = (processId: string): boolean => {
+    const processMatches = matches.filter(match => match.process_id === processId);
+    
+    if (processMatches.length === 0) {
+      return false;
+    }
+    
+    return processMatches.every(match => match.status.toLowerCase() === 'success');
+  };
 
+  const canShowProcessAction = (processStatus: string, action: string) => {
+    switch (processStatus) {
+      case ProcessStatus.PENDING:
+        return (action === 'resume' || action === 'rematch' || action === 'terminate' || 
+                action === 'refilter' || action === 'mark-success' || action === 'mark-onhold');
+      case ProcessStatus.SUCCESS:
+        return (action === 'rematch' || action === 'terminate' || action === 'refilter');
+      case ProcessStatus.PROCESSING:
+        return (action === 'terminate' || action === 'mark-onhold'); 
+      default:
+        return false;
+    }
+  };
   return (
     <div className="container mx-auto py-6">
       <Breadcrumb items={[{ label: "Match Management" }]} />
@@ -780,6 +881,7 @@ const handleEditAmount = (match: Match) => {
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="success">Success</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="onhold ">onHold</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>
@@ -941,8 +1043,8 @@ const handleEditAmount = (match: Match) => {
           {selectedAction?.action === 'rematch-process' ? (
             <div className="space-y-3">
               <p>All unmatched users will be matched again. Do you want to continue?</p>
-               <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-               <p className="text-sm text-yellow-800">
+              <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+              <p className="text-sm text-yellow-800">
                   This will attempt to find transfer accounts for all currently unmatched players in this process.
                 </p>
               </div>
@@ -950,7 +1052,29 @@ const handleEditAmount = (match: Match) => {
           ) : selectedAction?.action === 'terminate' ? (
             <div className="space-y-3">
               <p>Are you sure you want to terminate this process?</p>
-              {/* Existing terminate warnings */}
+              <div className="bg-red-50 p-3 rounded border border-red-200">
+                <p className="text-sm text-red-800">
+                  This will kill any running automation process and stop all further processing. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+          ) : selectedAction?.action === 'mark-success' ? (
+            <div className="space-y-3">
+              <p>Are you sure you want to mark this process as success?</p>
+              <div className="bg-green-50 p-3 rounded border border-green-200">
+                <p className="text-sm text-green-800">
+                  This will mark the process as completed successfully. All matches in this process already have 'success' status.
+                </p>
+              </div>
+            </div>
+          ) : selectedAction?.action === 'mark-onhold' ? (
+            <div className="space-y-3">
+              <p>Are you sure you want to put this process on hold?</p>
+              <div className="bg-amber-50 p-3 rounded border border-amber-200">
+                <p className="text-sm text-amber-800">
+                  This will pause the process. You can resume it later with selected matches.
+                </p>
+              </div>
             </div>
           ) : selectedAction?.action === 'refilter-single' ? (
             <div className="space-y-3">
@@ -1068,77 +1192,97 @@ const handleEditAmount = (match: Match) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Edit Amount Dialog */}
-        <Dialog open={editAmountDialogOpen} onOpenChange={setEditAmountDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>
-                {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit") 
-                  ? "Edit Match Amount" 
-                  : "Request to Edit Match Amount"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Username</Label>
-                <p className="font-medium">{matchToEdit?.username}</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Current Amount</Label>
-                <p className="font-medium">{matchToEdit ? formatCurrency(matchToEdit.amount, matchToEdit.currency) : ""}</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new_amount">New Amount</Label>
-                <Input
-                  id="new_amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="Enter new amount"
-                  value={newAmount}
-                  onChange={(e) => {
-                    setNewAmount(e.target.value);
-                    setAmountError("");
-                  }}
-                />
-                {amountError && <p className="text-sm text-red-500">{amountError}</p>}
-              </div>
-              
-              {/* If user doesn't have permission and is requesting */}
-              {!auth?.can("matches:edit") && !hasPermission(permissionsMap, matchToEdit?.id || "", "edit") && (
-                <div className="space-y-2">
-                  <Label htmlFor="request_message">Reason for Request</Label>
-                  <Textarea
-                    id="request_message"
-                    placeholder="Explain why you need to change this amount..."
-                    value={requestMessage}
-                    onChange={(e) => setRequestMessage(e.target.value)}
-                    rows={4}
-                  />
-                  {requestMessage.length < 10 && requestMessage.length > 0 && (
-                    <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
-                  )}
-                </div>
-              )}
+
+      {/* Edit Match Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit") 
+                ? "Edit Match Details" 
+                : "Request to Edit Match Details"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <p className="font-medium">{matchToEdit?.username}</p>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditAmountDialogOpen(false)}>
-                Cancel
+            <div className="space-y-2">
+              <Label>Current Amount</Label>
+              <p className="font-medium">{matchToEdit ? formatCurrency(matchToEdit.amount, matchToEdit.currency) : ""}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_amount">New Amount (Optional)</Label>
+              <Input
+                id="new_amount"
+                type="number"
+                step="0.01"
+                placeholder="Leave empty to keep current amount"
+                value={newAmount}
+                onChange={(e) => {
+                  setNewAmount(e.target.value);
+                  setAmountError("");
+                }}
+              />
+              {amountError && <p className="text-sm text-red-500">{amountError}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_status">Status</Label>
+              <Select
+                value={newStatus}
+                onValueChange={setNewStatus}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="success">Success</SelectItem>
+                  <SelectItem value="onhold ">onHold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* If user doesn't have permission and is requesting */}
+            {!auth?.can("matches:edit") && auth?.role !== Roles.Admin && !hasPermission(permissionsMap, matchToEdit?.id || "", "edit") && (
+              <div className="space-y-2">
+                <Label htmlFor="request_message">Reason for Request</Label>
+                <Textarea
+                  id="request_message"
+                  placeholder="Explain why you need to change these details..."
+                  value={requestMessage}
+                  onChange={(e) => setRequestMessage(e.target.value)}
+                  rows={4}
+                />
+                {requestMessage.length < 10 && requestMessage.length > 0 && (
+                  <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            {(auth?.role === Roles.Admin || auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit")) ? (
+              <Button 
+                onClick={updateMatch} 
+                disabled={(!newStatus && !newAmount) || (!!newAmount && amountError !== "")}
+              >
+                Update Match
               </Button>
-              {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit") ? (
-                <Button onClick={updateMatchAmount} disabled={!newAmount || amountError !== ""}>
-                  Update Amount
-                </Button>
-              ) : (
-                <Button 
-                  onClick={submitAmountChangeRequest}
-                  disabled={!newAmount || requestMessage.length < 10 || amountError !== ""}
-                >
-                  Submit Request
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            ) : (
+              <Button
+                onClick={submitMatchChangeRequest}
+                disabled={(!newStatus && !newAmount) || requestMessage.length < 10 || (!!newAmount && amountError !== "")}
+              >
+                Submit Request
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Refilter Dialog for Process */}
       <Dialog open={refilterDialogOpen} onOpenChange={setRefilterDialogOpen}>
@@ -1282,26 +1426,68 @@ const handleEditAmount = (match: Match) => {
                           </Tooltip>
                         )}
 
-                        {canShowProcessAction(process.status, 'terminate') && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-red-500 hover:text-red-700" 
-                                onClick={() => handleProcessAction(process, 'terminate')}
-                              >
-                                <Square className="h-4 w-4 mr-1" />
-                                Terminate
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>End the process entirely</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </>
+                    {/* Mark as Success button */}
+                    {canShowProcessAction(process.status, 'mark-success') && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-green-500 hover:text-green-700" 
+                            onClick={() => handleProcessAction(process, 'mark-success')}
+                            disabled={!isAllMatchesSuccess(process.id)}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Mark Success
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Mark this process as success. All matches must have success status.</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
+
+                    {/* Mark as On Hold button */}
+                    {canShowProcessAction(process.status, 'mark-onhold') && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-amber-500 hover:text-amber-700" 
+                            onClick={() => handleProcessAction(process, 'mark-onhold')}
+                          >
+                            <PauseCircle className="h-4 w-4 mr-1" />
+                            On Hold
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Put this process on hold. Processing will be paused.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    {/* Updated Terminate button with improved tooltip */}
+                    {canShowProcessAction(process.status, 'terminate') && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-red-500 hover:text-red-700" 
+                            onClick={() => handleProcessAction(process, 'terminate')}
+                          >
+                            <Square className="h-4 w-4 mr-1" />
+                            Terminate
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>End the process entirely. This will kill any running automation process.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                          </>
+                )}
                   </TooltipProvider>
                 </div>
               </div>
@@ -1398,31 +1584,30 @@ const handleEditAmount = (match: Match) => {
                               </Tooltip>
                             )}
 
-                            {/* Edit Amount button - only for non-success matches */}
                             {match.status.toLowerCase() !== "success" && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
-                                    onClick={() => handleEditAmount(match)}
+                                    onClick={() => handleEdit(match)}
                                     className="mr-1"
                                   >
                                     <Edit className="h-4 w-4" />
                                     {/* Add text to button if user has permission but isn't admin */}
-                                    {!auth?.can("matches:edit") && hasPermission(permissionsMap, match.id, "edit") && (
+                                    {(!auth?.can("matches:edit") || auth?.role !== "admin") && hasPermission(permissionsMap, match.id, "edit") && (
                                       <span className="ml-1 text-xs">Execute</span>
                                     )}
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>
-                                    {auth?.can("matches:edit") 
-                                      ? "Edit match amount" 
-                                      : hasPermission(permissionsMap, match.id, "edit")
-                                        ? "Execute permitted edit action"
-                                        : "Request to edit match amount"
-                                    }
+                                  {auth?.role === "admin" || auth?.can("matches:edit")
+                                    ? "Edit match details"
+                                    : hasPermission(permissionsMap, match.id, "edit")
+                                      ? "Execute permitted edit action"
+                                      : "Request to edit match details"
+                                  }
                                   </p>
                                 </TooltipContent>
                               </Tooltip>

@@ -689,81 +689,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
       return null;
     }
   };
-
-  const terminate = async (authId: string, processId: string) => {
-    try {
-      return await prisma.$transaction(async (tx) => {
-        const process = await tx.userProcess.findUnique({
-          where: { id: processId },
-          select: { from_date: true, to_date: true }
-        });
-        
-        // Get all transfer accounts linked to this process through the bridge table
-        const processTransferAccounts = await tx.userProcess_TransferAccount.findMany({
-          where: {
-            user_process_id: processId,
-          },
-          select: {
-            transfer_account_id: true,
-            currency: true
-          }
-        });
-
-        const matches = await tx.match.findMany({
-          where: { process_id: processId },
-          select: {
-            username: true,
-            bonus_id: true,
-            amount: true,
-            currency: true,
-            status: true,
-            transfer_account_id: true
-          }
-        });
-        
-        if (matches.length > 0) {
-          await tx.transferHistory.createMany({
-            data: matches.map(match => ({
-              username: match.username,
-              process_id: processId,
-              status: match.status === MatchStatus.PENDING ? MatchStatus.FAILED : match.status,
-              amount: match.amount,
-              currency: match.currency,
-              transfer_account_id: match.transfer_account_id,
-              bonus_id: match.bonus_id,
-              date_from: process?.from_date || new Date(),
-              date_to: process?.to_date || new Date()
-            }))
-          });
-        }
-        
-        await tx.match.deleteMany({
-          where: { process_id: processId }
-        });
-  
-        await tx.accountTurnover.deleteMany({
-          where: { process_id: processId }
-        }); 
-        
-      // Delete all the connections in the database  
-      if (processTransferAccounts.length > 0) {
-        await tx.userProcess_TransferAccount.deleteMany({
-          where :{  
-            user_process_id: processId 
-          }
-        });
-      }
-        notifyAll(authId, "Process terminated successfully", NotificationType.SUCCESS);
-        return { success: true, message: "Process terminated successfully" };
-      });
-      
-    } catch (error) {
-      console.error("Error terminating process:", error);
-      notifyAll(authId, "Error terminating process", NotificationType.ERROR);
-      throw new Error(`Failed to terminate process`);
-    }
-  };
-
   
   // async function update(updateProcessMatches: ProcessPayload): Promise<void> {
   //   try {
@@ -984,7 +909,6 @@ export const ProcessCommand = {
     "rematch player": (authId: string, matchId: string) => rematchSinglePlayer(authId, matchId),  
     "rematch": (authId: string) => rematch(authId),  
     "resume": (authId: string, processId: string, matches: any[]) => resume(authId, processId, matches),  
-    "terminate": (authId: string, processId: string) => terminate(authId, processId),  
     // "update": (updateProcessPayload: ProcessPayload) => update(updateProcessPayload), 
     "notify all":  (authId: string, message: string, type: string) => notifyAll(authId, message, type)
 };

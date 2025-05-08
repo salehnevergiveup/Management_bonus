@@ -62,7 +62,7 @@ export enum NotificationType {
 export enum ProcessStatus {
     PENDING = "pending", // one the process finished the stage one and not start the stage two 
     PROCESSING = "processing", // while the process is under processing 
-    COMPLETED = "completed",
+    SUCCESS = "success",
     ONBHOLD =  "on hold",
     FAILED = "failed"
 }

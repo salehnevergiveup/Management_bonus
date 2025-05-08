@@ -5,7 +5,6 @@ import {SeedNotifications} from "./seeders/notifications";
 import {SeedProcesses} from "./seeders/processes";
 import {SeedTransferAccounts} from "./seeders/transfer_accounts";
 import {SeedPlayers} from "./seeders/players";
-import {SeedMatches} from "./seeders/matches";
 import SeedRequests from "./seeders/request";
 import { AutomationApiKey } from "./seeders/api_key";
 import SeedAgentAccounts from "./seeders/agent_accounts";
@@ -23,13 +22,12 @@ const main = async () => {
         await AutomationApiKey();
         await SeedAdminUser(); 
         await SeedManagementUsers(); 
-        // await SeedNotifications(); 
+        await SeedNotifications(); 
         // await SeedProcesses();
         await SeedAgentAccounts(); 
         await SeedTransferAccounts();
         await SeedPlayers(); 
-        // await SeedMatches(); 
-        // await SeedRequests(); 
+        await SeedRequests(); 
         await SeedBonuses();
 
     console.log("✅ All seeders executed successfully.");
