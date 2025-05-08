@@ -46,12 +46,18 @@ export async function GET(request: Request) {
     }
     // Get account turnovers with pagination
     const countAccountTurnovers = await prisma.accountTurnover.count();
-    
+    const query  = { 
+      process : {  
+        where:  {  
+          status: ProcessStatus.PENDING
+        }
+      }
+    }
     const paginationResult = await Pagination(
       prisma.accountTurnover,
       new URL(request.url),
       countAccountTurnovers,
-      {}
+      query
     );
 
     // Get exchange rates

@@ -131,7 +131,7 @@ export async function POST(request: Request) {
       }
     });
 
-    if (activeProcess) {
+    if (activeProcess.length !== 0) {
       return NextResponse.json(
         { 
           error: "Active process already exists",

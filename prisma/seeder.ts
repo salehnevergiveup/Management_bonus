@@ -16,7 +16,7 @@ const main = async () => {
   console.log("Running Seeders...");
   
   try {
-        // await TruncateSeeder(); 
+        await TruncateSeeder(); 
         await SeedPermissions(); 
         await SeedRoles(); 
         await AutomationApiKey();
