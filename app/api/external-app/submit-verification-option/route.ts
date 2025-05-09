@@ -6,37 +6,30 @@ import { preparePythonBackendHeaders } from '@/lib/apikeysHandling';
 
 export async function POST(request: NextRequest) {  
   try {
-    console.log("Validating session...");
     const auth = await SessionValidation();
     
     if (!auth) {
-      console.log("Session validation failed: Unauthorized");
       return NextResponse.json(
         { error: "Unauthorized: User must be logged in" },
         { status: 401 }
       );
     }
     
-    console.log("Session validated successfully:", auth.id);
     
-    console.log("Parsing request body...");
     const body = await request.json().catch(e => {
       console.error("Failed to parse request JSON:", e);
       return {};
     });
     
-    console.log("Received request body:", body);
-    const { verification_method, thread_id } = body;
+    const { verification_method, thread_id, id } = body;
     
     if (!verification_method) {
-      console.log("Validation error: Missing verificationMethod");
       return NextResponse.json(
         { error: "Missing required field: verificationMethod is required" },
         { status: 400 }
       );
     }
     
-    console.log("Finding active user process...");
     let userProcess = null;
     
     if (auth.role === Roles.Admin) {
@@ -72,14 +65,11 @@ export async function POST(request: NextRequest) {
     }
     
     if (!userProcess) {
-      console.log("No active process found for user:", auth.id);
       return NextResponse.json(
         { error: "No active process found" },
         { status: 404 }
       );
     }
-    
-    console.log("Found active process:", userProcess.id);
     
     let role = auth.role;
     if (auth.role !== Roles.Admin) {
@@ -93,32 +83,24 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    console.log("User role:", role);
-    console.log("This is the process id sent back:", userProcess.id);
     
     // Prepare headers
-    console.log("Preparing headers for Python backend...");
     const headers = await preparePythonBackendHeaders(
       userProcess.user_id,
       userProcess.id,
       role
     );
     
-    console.log("Headers prepared:", Object.keys(headers));
-
     // Prepare request data
     const requestData = {
       verification_method: verification_method,  
       thread_id: thread_id
     };
     
-    console.log("Sending request to Python backend:", requestData);
-    
     try {
       // Check if the URL is properly formatted
       const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-verification-option`;
-      console.log("Backend URL:", backendUrl);
-      
+
       // Send request to Python backend
       const backendResponse = await fetch(backendUrl, {
         method: 'POST',
@@ -129,14 +111,10 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(requestData)
       });
       
-      console.log("Backend response status:", backendResponse.status);
-      
       if (!backendResponse.ok) {
-        console.log("Backend response error:", backendResponse.status);
         let errorDetails;
         try {
           errorDetails = await backendResponse.json();
-          console.log("Error details:", errorDetails);
         } catch (e) {
           console.error("Failed to parse error response:", e);
           errorDetails = { error: "Unknown error from backend service" };
@@ -151,9 +129,26 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      console.log("Backend request successful");
       const responseData = await backendResponse.json();
-      console.log("Backend response data:", responseData);
+
+      //set the timeout to 0 if the form is submitted
+     const processProgressData = await prisma.processProgress.findUnique({
+      where: { 
+        id
+      },  
+      select: { 
+        data: true 
+      }
+    })
+    let newProcessProgressData = JSON.parse(JSON.stringify(processProgressData))  
+    newProcessProgressData.data.timeout =  0;  
+
+    await prisma.processProgress.update({
+      where: {id}, 
+      data: { 
+        data: newProcessProgressData
+      }
+    })
       
       return NextResponse.json({
         success: true,

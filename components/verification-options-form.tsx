@@ -11,6 +11,7 @@ import Timer from "./ui/timer"
 
 // Define payload type for API request
 interface VerificationMethodPayload {
+  id: string; 
   verification_method: string;
   thread_id: string;
 }
@@ -63,8 +64,39 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const thread_id = data.threadId ?? data.data.thread_id;  
+    const id = data.id ?? data.data.id; 
     const payload: VerificationMethodPayload = {
+      id, 
       verification_method: verificationMethod, 
+      thread_id
+    }
+
+    try {
+      const res = await fetch("api/external-app/submit-verification-option", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      
+      if (!res.ok) {
+        throw new Error("Failed to submit verification method")
+      }
+      const result = await res.json()
+      console.log("Verification method submitted successfully:", result)
+      onClose()
+    } catch (error) {
+      console.error("Error submitting verification method:", error)
+    }
+  }
+
+
+  const handleCancel = async () => {
+
+    const thread_id = data.threadId ?? data.data.thread_id;  
+    const id = data.id ?? data.data.id; 
+    const payload: VerificationMethodPayload = {
+      id, 
+      verification_method: "None", 
       thread_id
     }
 
@@ -124,7 +156,7 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button type="submit" disabled={!verificationMethod}>Submit</Button>

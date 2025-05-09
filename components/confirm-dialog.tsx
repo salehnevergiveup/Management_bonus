@@ -66,6 +66,7 @@ const InfoDialog = ({ message, isOpen, onClose }: { message: string, isOpen: boo
 
 interface ConfirmDialogProps {
   data: {
+    id: string;
     formId?: string;
     thread_id?: string;
     processId?: string;
@@ -98,7 +99,7 @@ const ConfirmTransferDialog = ({
   // Handle both data formats - direct props and nested data
   const threadId = data.threadId || (data.data?.thread_id);
   const processId = data.processId || data.process_id || (data.data?.process_id);
-  
+  const id =  data.id || data.data?.id; 
   // Handle nested data format or direct format with better logging
   const fullMessage = data.data?.message || data.message || "";
   
@@ -136,6 +137,7 @@ const ConfirmTransferDialog = ({
   const handleConfirm = async () => {
     console.log("Confirm button clicked");
     setIsSubmitting(true)
+    console.log("p".repeat(200), id)
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -143,6 +145,7 @@ const ConfirmTransferDialog = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          id,
           confirmation: true,
           thread_id: threadId,
           processId: processId
@@ -171,6 +174,7 @@ const ConfirmTransferDialog = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          id, 
           confirmation: false,
           thread_id: threadId,
           processId: processId

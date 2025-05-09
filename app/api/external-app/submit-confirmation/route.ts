@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { confirmation, thread_id } = await request.json();
+    const { confirmation, thread_id, id} = await request.json();
 
     if (confirmation == null || !thread_id) {
       return NextResponse.json(
@@ -69,8 +69,26 @@ export async function POST(request: Request) {
       }
     }
     
-    // fire and forget 
-    retransferAmountRequest(userProcess.id, userProcess.user_id, role,thread_id,confirmation);
+    await retransferAmountRequest(userProcess.id, userProcess.user_id, role,thread_id,confirmation);
+    
+    //set the timeout to 0 if the form is submitted
+    const processProgressData = await prisma.processProgress.findUnique({
+      where: { 
+        id
+      },  
+      select: { 
+        data: true 
+      }
+    })
+    let newProcessProgressData = JSON.parse(JSON.stringify(processProgressData))  
+    newProcessProgressData.data.timeout =  0;  
+
+    await prisma.processProgress.update({
+      where: {id}, 
+      data: { 
+        data: newProcessProgressData
+      }
+    })
 
     return NextResponse.json(
       {
@@ -97,7 +115,6 @@ async function retransferAmountRequest(
   thread_id: string, 
   confirmation: boolean
 ) {
-  try {
     const headers = await preparePythonBackendHeaders(user_id, userProcess_id, role);
     const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-confirmation`;
 
@@ -115,9 +132,4 @@ async function retransferAmountRequest(
       throw new Error(`Backend responded with error: ${msg}`);
     }
 
-  } catch (error: any) {
-    console.error("Backend call failed:", error.message || error);
-    ProcessCommand['notify all'](user_id, "Failed to retransfer amount", NotificationType.ERROR);
-    throw error; 
-  }
 }

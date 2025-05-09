@@ -6,10 +6,7 @@ import { preparePythonBackendHeaders } from '@/lib/apikeysHandling';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("[DEBUG] Starting POST /submit-verification-code");
-    
     const auth = await SessionValidation();
-    console.log("[DEBUG] Authenticated user:", auth);
     
     if (!auth) {
       console.warn("[WARN] Unauthorized access attempt");
@@ -19,8 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const { code, thread_id } = await request.json();
-    console.log("[DEBUG] Received payload:", { code, thread_id });
+    const { code, thread_id,id} = await request.json();
 
     if (!code) {
       console.warn("[WARN] Missing verification code");
@@ -33,7 +29,6 @@ export async function POST(request: NextRequest) {
     let userProcess = null;
     
     if (auth.role === Roles.Admin) {
-      console.log("[DEBUG] User is admin, fetching latest active process");
       userProcess = await prisma.userProcess.findFirst({
         where: {
           status:{
@@ -52,7 +47,6 @@ export async function POST(request: NextRequest) {
         }
       });
     } else {
-      console.log("[DEBUG] User is regular, fetching their own process");
       userProcess = await prisma.userProcess.findFirst({
         where: {
           user_id: auth.id,
@@ -66,8 +60,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log("[DEBUG] Fetched userProcess:", userProcess);
-    
     if (!userProcess) {
       console.warn("[WARN] No active process found for user");
       return NextResponse.json(
@@ -85,7 +77,6 @@ export async function POST(request: NextRequest) {
       
       if (user && user.role) {
         role = user.role.name;
-        console.log("[DEBUG] Updated role from DB:", role);
       }
     }
     
@@ -94,17 +85,14 @@ export async function POST(request: NextRequest) {
       userProcess.id,
       role
     );
-    console.log("[DEBUG] Prepared backend headers:", headers);
     
     const requestData = {
       verification_code: code,
       thread_id: thread_id
     };
-    console.log("[DEBUG] Sending data to backend service:", requestData);
     
     try {
       const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-verification-code`
-      console.log("[DEBUG] Backend URL:", backendUrl);
 
       const backendResponse = await fetch(backendUrl, {
         method: 'POST',
@@ -115,7 +103,6 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(requestData)
       });
 
-      console.log("[DEBUG] Backend response status:", backendResponse.status);
 
       if (!backendResponse.ok) {
         let errorDetails;
@@ -137,8 +124,27 @@ export async function POST(request: NextRequest) {
       }
 
       const responseData = await backendResponse.json();
-      console.log("[DEBUG] Backend response data:", responseData);
 
+      
+      //set the timeout to 0 if the form is submitted
+      const processProgressData = await prisma.processProgress.findUnique({
+        where: { 
+          id
+        },  
+        select: { 
+          data: true 
+        }
+      })
+      let newProcessProgressData = JSON.parse(JSON.stringify(processProgressData))  
+      newProcessProgressData.data.timeout =  0;  
+  
+      await prisma.processProgress.update({
+        where: {id}, 
+        data: { 
+          data: newProcessProgressData
+        }
+      })
+  
       return NextResponse.json({
         success: true,
         message: "Verification code submitted successfully",

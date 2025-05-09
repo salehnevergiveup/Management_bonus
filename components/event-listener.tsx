@@ -8,6 +8,7 @@ import ConfirmTransferDialog from '@components/confirm-dialog';
 import { Events, FormType } from '@constants/enums';
 
 type BaseFormData = {
+  id: string,
   formId: string;
   thread_id: string;
   processId: string;

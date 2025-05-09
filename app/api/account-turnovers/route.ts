@@ -47,8 +47,8 @@ export async function GET(request: Request) {
     // Get account turnovers with pagination
     const countAccountTurnovers = await prisma.accountTurnover.count();
     const query  = { 
-      process : {  
-        where:  {  
+      where : {  
+        process:  {  
           status: ProcessStatus.PENDING
         }
       }

@@ -131,6 +131,7 @@ export async function POST(request: Request) {
       }
     });
 
+    console.log("active process:", activeProcess)
     if (activeProcess.length !== 0) {
       return NextResponse.json(
         { 

@@ -6,7 +6,7 @@ import ProcessCommand from "./processCommand";
 import { stat } from "fs";
 
 const saveToDatabase =  async (dispatchData: DispatchDto) => {
-  return  prisma.processProgress.create({  
+  const {id} = await prisma.processProgress.create({  
     data: {  
       process_id: dispatchData.processId,  
       process_stage: dispatchData.processStage,  
@@ -15,8 +15,17 @@ const saveToDatabase =  async (dispatchData: DispatchDto) => {
       data: dispatchData.data,  
       thread_stage: dispatchData.threadStage,  
       thread_id: dispatchData.threadId
+    }, 
+    select:  {  
+      id: true
     }
-  })   
+  }) ;  
+  
+  if(!id) {  
+    throw new Error("Unable to save the event")
+  }
+
+  return id
 };
 
 const dispatchProgress = async (dispatchData: DispatchDto) => {
@@ -31,8 +40,12 @@ const dispatchProgress = async (dispatchData: DispatchDto) => {
       throw new Error("PROGRESS_TRACKER event requires 'message' in data");
     }
 
-    await saveToDatabase(dispatchData);
+    const id  =  await saveToDatabase(dispatchData);
+    if(!id) {  
+      throw new Error("message")
+    }
     eventEmitter.emit(dispatchData.userId, eventName, {
+      id, 
       threadId,
       processId,
       data
@@ -55,9 +68,10 @@ const dispatchConfirmation = async (dispatchData: DispatchDto) => {
       throw new Error("CONFIRMATION_DIALOG event requires 'message' in data");
     }
 
-    await saveToDatabase(dispatchData);
+    const id =  await saveToDatabase(dispatchData);
 
     eventEmitter.emit(dispatchData.userId, eventName, {
+      id,
       threadId,
       processId,
       data
@@ -80,9 +94,10 @@ const dispatchVerificationOption = async (dispatchData: DispatchDto) => {
       throw new Error("VERIFICATION_METHOD event requires 'message', 'options', and 'timeout' in data");
     }
 
-    await saveToDatabase(dispatchData);
+    const id = await saveToDatabase(dispatchData);
 
     eventEmitter.emit(dispatchData.userId, eventName, {
+      id,
       threadId,
       processId,
       data
@@ -105,9 +120,10 @@ const dispatchVerificationCode = async (dispatchData: DispatchDto) => {
       throw new Error("VERIFICATION_CODE event requires 'message' and 'timeout' in data");
     }
 
-    await saveToDatabase(dispatchData);
+    const id = await saveToDatabase(dispatchData);
 
     eventEmitter.emit(dispatchData.userId, eventName, {
+      id,
       threadId,
       processId,
       data

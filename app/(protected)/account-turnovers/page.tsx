@@ -442,7 +442,7 @@ export default function AccountTurnoverPage() {
                       <TableCell className="font-medium">{turnover.username}</TableCell>
                       <TableCell>{turnover.game}</TableCell>
                       <TableCell>{turnover.currency}</TableCell>
-                      <TableCell>{turnover.turnover}</TableCell>
+                      <TableCell>{turnover.turnover? Number(turnover.turnover).toFixed(2) : "N/A"}</TableCell>
                       <TableCell>{turnover.createdAt ? formatDate(turnover.createdAt) : 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
