@@ -44,12 +44,25 @@ export async function GET(request: Request) {
             {status: 401}
         )
     }
+
     // Get account turnovers with pagination
-    const countAccountTurnovers = await prisma.accountTurnover.count();
+    const countAccountTurnovers = await prisma.accountTurnover.count({
+      where: { 
+        process: {
+          status: {
+            in: [ProcessStatus.PENDING, ProcessStatus.PROCESSING] // I assume you meant PROCESSING for the second one
+          }
+        }
+      }
+    });
+
     const query  = { 
       where : {  
         process:  {  
-          status: ProcessStatus.PENDING
+          status: {  
+            in: [ProcessStatus.PENDING, ProcessStatus.PROCESSING]
+          }
+           
         }
       }
     }

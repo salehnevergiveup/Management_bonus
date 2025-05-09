@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     const bonusId = body.bonus_id; 
     const processId = body.process_id;  
     
-    const matchesWithBonusId = await prisma.match.count({where: {bonus_id: bonusId}});  
+    const matchesWithBonusId = await prisma.match.count({where: {bonus_id: bonusId, process_id: processId}});  
     if (matchesWithBonusId > 0) {  
       return NextResponse.json(
         {error: "Incoming players have been filtered with this bonus already"},

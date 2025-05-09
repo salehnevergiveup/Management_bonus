@@ -3,6 +3,7 @@ import { SessionValidation } from "@lib/sessionvalidation";
 import { NextResponse } from "next/server";
 import {preparePythonBackendHeaders } from "@lib/apikeysHandling"
 import { NotificationType, ProcessStatus } from "@constants/enums";
+import { prisma } from "@/lib/prisma"; 
 
 const rateLimiter = {
   lastRequestTime: 0,
@@ -52,7 +53,7 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
     const terminateResult = await sendDataToTerminate(auth.id, auth.role, processId);
     
     if (terminateResult && terminateResult.success) {
-   
+      await prisma.userProcess.update({where:{id: processId}, data: {status:ProcessStatus.PENDING }})
       return NextResponse.json(
         {
           success: true,
@@ -84,7 +85,6 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
 }
 
 async function sendDataToTerminate(authId: string, authRole: string, processId: string) {
-  console.log("testing")
   const notificationFunction = ProcessCommand["notify all"];
   
   try {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, Play,MoreHorizontal, Calendar } from "lucide-react";
+import { Eye, Play,MoreHorizontal, Calendar, AlertCircle } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 import { ProcessStatus, AppColor } from "@/constants/enums";
 import { PaginationData } from "@/types/pagination-data.type";
+import { Alert, AlertDescription } from "@components/ui/alert";
 
 interface AgentAccount {
   id: string;
@@ -70,6 +71,9 @@ export default function ProcessManagementPage() {
   const [hasPendingOrProcessing, setHasPendingOrProcessing] = useState(true);
   const router = useRouter();
   const [agentAccounts, setAgentAccounts] = useState<AgentAccount[]>([]);
+  const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
+  const [selectedTerminateProcess, setSelectedTerminateProcess] = useState<Process | null>(null);
+  const [isTerminating, setIsTerminating] = useState(false);
 
   // Date selection states
   const [startProcessDialogOpen, setStartProcessDialogOpen] = useState(false);
@@ -126,6 +130,41 @@ export default function ProcessManagementPage() {
       console.error("Error fetching processes:", error);
       toast.error("Failed to fetch processes");
       setHasPendingOrProcessing(true);
+    }
+  };
+
+  const handleTerminate = (process: Process) => {
+    setSelectedTerminateProcess(process);
+    setTerminateDialogOpen(true);
+  };
+  
+  const confirmTerminate = async () => {
+    if (!selectedTerminateProcess) return;
+   
+    setIsTerminating(true);
+    try {
+      const response = await fetch(`/api/processes/${selectedTerminateProcess.id}/terminate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to terminate process");
+      }
+  
+      const result = await response.json();
+      toast.success(result.message || "Process terminated successfully");
+      setTerminateDialogOpen(false);
+      fetchProcesses(); // Refresh the list
+    } catch (error) {
+      console.error("Error terminating process:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to terminate process");
+    } finally {
+      setIsTerminating(false);
+      setSelectedTerminateProcess(null);
     }
   };
 
@@ -411,6 +450,15 @@ export default function ProcessManagementPage() {
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
+                          {(process.status === ProcessStatus.PENDING || process.status === ProcessStatus.PROCESSING) && (
+                          <DropdownMenuItem 
+                            onClick={() => handleTerminate(process)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <AlertCircle className="mr-2 h-4 w-4" />
+                            Terminate Process
+                          </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -631,6 +679,58 @@ export default function ProcessManagementPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Terminate Process Dialog */}
+      <Dialog open={terminateDialogOpen} onOpenChange={setTerminateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Terminate Process</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Are you sure you want to terminate this process? This action cannot be undone.
+              </AlertDescription>
+            </Alert>
+            {selectedTerminateProcess && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm">
+                  <strong>Process ID:</strong> {selectedTerminateProcess.id}
+                </p>
+                <p className="text-sm">
+                  <strong>Status:</strong> {selectedTerminateProcess.status}
+                </p>
+                <p className="text-sm">
+                  <strong>User:</strong> {selectedTerminateProcess.user?.name || 'Unknown'}
+                </p>
+                {selectedTerminateProcess.from_date && selectedTerminateProcess.to_date && (
+                  <>
+                    <p className="text-sm">
+                      <strong>Date Range:</strong> {new Date(selectedTerminateProcess.from_date).toLocaleDateString()} - {new Date(selectedTerminateProcess.to_date).toLocaleDateString()}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setTerminateDialogOpen(false)}
+              disabled={isTerminating}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmTerminate}
+              disabled={isTerminating}
+            >
+              {isTerminating ? "Terminating..." : "Terminate Process"}
             </Button>
           </DialogFooter>
         </DialogContent>
