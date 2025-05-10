@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import toast from "react-hot-toast";
+import CreateMatchDialog from "@components/create-match-dialog";
 
 interface TransferAccount {
   id: string;
@@ -94,6 +95,7 @@ const [amountError, setAmountError] = useState("");
 
   const [refilterDialogOpen, setRefilterDialogOpen] = useState(false);
   const [selectedBonusId, setSelectedBonusId] = useState<string>("");
+  const [createMatchDialogOpen, setCreateMatchDialogOpen] = useState(false)
 
   // Permission related states
   const [permissionsMap, setPermissionsMap] = useState<Map<string, RequestData>>(new Map());
@@ -697,7 +699,6 @@ const updateSingleMatch = (data: any) => {
     setCurrentPage(page);
   };
 
-
   // Handle edit action for match amount and status
 const handleEdit = (match: Match) => {
   const hasDirectPermission = auth?.role === Roles.Admin || auth?.can("matches:edit");
@@ -1151,7 +1152,12 @@ const updateMatch = async () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      {/*create match dialog*/}
+      <CreateMatchDialog
+        isOpen={createMatchDialogOpen}
+        onClose={() => setCreateMatchDialogOpen(false)}
+        isRequest={auth?.role != Roles.Admin}
+      />
       {/* Permission Request Dialog */}
       <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -1387,7 +1393,27 @@ const updateMatch = async () => {
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        
+                        {/*create match request button*/}
+                        <Tooltip>  
+                          <TooltipTrigger asChild>
+                            <Button
+                            size="sm"
+                            variant= "outline"
+                            onClick={()=>setCreateMatchDialogOpen(true)}
+                            >  
+                              <PlayCircle className="h-4 w-4 mr-1" /> 
+                              Create Match
+                            </Button>
+
+                          </TooltipTrigger>
+                          <TooltipContent>  
+                           <p>
+                            {auth?.role == Roles.Admin ?  "This will allowed you to make create match request" :  
+                             "This will allowed you to create a match"
+                            }
+                           </p>
+                          </TooltipContent>
+                        </Tooltip>
                         {/* Rematch button - for PENDING, SEM_COMPLETED, COMPLETED */}
                         {canShowProcessAction(process.status, 'rematch') && (
                           <Tooltip>

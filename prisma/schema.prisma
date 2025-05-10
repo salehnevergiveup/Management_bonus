@@ -192,11 +192,11 @@ model Bonus {
 model Match {
   id                  String   @id @default(uuid())
   username            String
-  game                String
+  game                String?
   turnover_id         String? 
   transfer_account_id String?
   process_id          String
-  bonus_id            String    
+  bonus_id            String?    
   status              String   @default("pending") 
   amount              Float
   currency            String // "USD" or "MYR"
