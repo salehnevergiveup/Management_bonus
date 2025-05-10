@@ -13,13 +13,12 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface Match {
   username: string;
-  currency: string;
-  transferAccountId: string;
-  transferAccountUsername?: string;
+  transfer_account_id: string | null;
+  process_id?: string;
   amount: number;
-  status: string;
+  currency: string;
+  transferAccountUsername?: string;
 }
-
 interface Player {
   id: string;
   account_username: string;
@@ -42,17 +41,17 @@ interface CreateMatchDialogProps {
   isOpen: boolean;
   onClose: () => void;
   isRequest?: boolean;
+  processId: string; 
 }
 
-export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }: CreateMatchDialogProps) {
+export default function CreateMatchDialog({ isOpen, onClose, isRequest = false, processId}: CreateMatchDialogProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([{
     username: "",
-    currency: "USD",
-    transferAccountId: "",
-    transferAccountUsername: "",
     amount: 0,
-    status: "pending"
+    currency: "USD",
+    transfer_account_id: null,
+    transferAccountUsername: "",
   }]);
   const [requestMessage, setRequestMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,11 +78,10 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
   const addMatch = () => {
     setMatches([...matches, {
       username: "",
-      currency: "USD",
-      transferAccountId: "",
-      transferAccountUsername: "",
       amount: 0,
-      status: "pending"
+      currency: "USD",
+      transfer_account_id: null,
+      transferAccountUsername: "",
     }]);
   };
 
@@ -95,7 +93,7 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
     }
   };
 
-  const updateMatch = (index: number, field: keyof Match, value: string | number) => {
+  const updateMatch = (index: number, field: keyof Match, value: string | number | null) => {
     const newMatches = [...matches];
     newMatches[index] = { ...newMatches[index], [field]: value };
 
@@ -103,10 +101,10 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
     if (field === "username" && typeof value === "string") {
       const matchingPlayer = players.find(p => p.account_username === value);
       if (matchingPlayer) {
-        newMatches[index].transferAccountId = matchingPlayer.transfer_account_id;
+        newMatches[index].transfer_account_id = matchingPlayer.transfer_account_id;
         newMatches[index].transferAccountUsername = matchingPlayer.transferAccount.username;
       } else {
-        newMatches[index].transferAccountId = "";
+        newMatches[index].transfer_account_id = null;
         newMatches[index].transferAccountUsername = "";
       }
     }
@@ -117,7 +115,7 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
   const validateMatches = () => {
     return matches.every(match => 
       match.username && 
-      match.transferAccountId && 
+      match.transfer_account_id && 
       match.amount > 0 && 
       match.currency
     );
@@ -128,10 +126,8 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
       username: match.username,
       amount: match.amount,
       currency: match.currency,
-      transfer_account_id: match.transferAccountId,
-      status: "pending",
-      process_id: "default-process-id",
-      game: "default-game" 
+      transfer_account_id: match.transfer_account_id,
+      process_id: processId,
     }));
   };
 
@@ -145,7 +141,8 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
           username: match.username,
           amount: match.amount,
           currency: match.currency,
-          transfer_account_id: match.transferAccountId
+          transfer_account_id: match.transfer_account_id,
+          process_id: processId,
         })),
         reason: requestMessage
       })
@@ -172,7 +169,7 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
       payload = handleCreateMatchRequest();
       method = "POST";
     } else {
-      endpoint = "/api/matches";
+      endpoint = "/api/matches/create-matches";
       payload = { matches: handleCreateMatch() };
       method = "POST";
     }
@@ -185,7 +182,7 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
         },
         body: JSON.stringify(payload)
       });
-
+     
       if (!response.ok) {
         throw Error("Unable to create matches");
       }
@@ -193,11 +190,10 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
       onClose();
       setMatches([{
         username: "",
-        currency: "USD",
-        transferAccountId: "",
-        transferAccountUsername: "",
         amount: 0,
-        status: "pending"
+        currency: "USD",
+        transfer_account_id: null,
+        transferAccountUsername: "",
       }]);
       setRequestMessage("");
     } catch (error: any) {
@@ -233,9 +229,9 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
                         setSearchQuery(e.target.value);
                       }}
                       placeholder="Enter username"
-                      className={!match.transferAccountId && match.username ? "border-red-500" : ""}
+                      className={!match.transfer_account_id && match.username ? "border-red-500" : ""}
                     />
-                    {!match.transferAccountId && match.username && (
+                    {!match.transfer_account_id && match.username && (
                       <p className="text-xs text-red-500 mt-1">No player found</p>
                     )}
                   </div>
@@ -296,15 +292,6 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false }
                     value={match.transferAccountUsername || ""}
                     disabled
                     placeholder="Auto-selected"
-                    className="bg-gray-100"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Input
-                    value={match.status}
-                    disabled
                     className="bg-gray-100"
                   />
                 </div>

@@ -131,7 +131,7 @@ export async function POST(request: Request) {
           }
       });
 
-      if (existingRequest) {
+      if (existingRequest && existingRequest.action !== 'create' && existingRequest.model_name != "Match") {
           const statusMessage = existingRequest.status === RequestStatus.PENDING 
               ? "You already have a pending request for this action." 
               : "You already have an approved request for this action.";

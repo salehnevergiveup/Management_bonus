@@ -1157,6 +1157,7 @@ const updateMatch = async () => {
         isOpen={createMatchDialogOpen}
         onClose={() => setCreateMatchDialogOpen(false)}
         isRequest={auth?.role != Roles.Admin}
+        processId= {matches[0]?.process_id || ""}
       />
       {/* Permission Request Dialog */}
       <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>

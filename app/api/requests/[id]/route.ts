@@ -42,23 +42,32 @@ export async function PUT(
       );
     }
 
+
+
     const body = await request.json();
-    
-    const updatedRequest = await prisma.request.update({
-      where: { id: requestId },
-      data: {
-        status: body.status,
-        marked_admin_id: auth.id
-      },
-      include: {
-        sender: true,
-        admin: true
-      }
-    });
+    const sender_id = existingRequest.sender_id
+    let updatedRequest = null
+    if(existingRequest.action === 'create' && existingRequest.model_name === "Match" && body.status == RequestStatus.ACCEPTED) {  
+      await prisma.request.delete({where: { id: requestId }});
+    }else {
+      updatedRequest = await prisma.request.update({
+        where: { id: requestId },
+        data: {
+          status: body.status,
+          marked_admin_id: auth.id
+        },
+        include: {
+          sender: true,
+          admin: true
+        }
+      });
+    }
+
+
 
     await prisma.notification.create({
       data: {
-        user_id: updatedRequest.sender_id,
+        user_id: sender_id, 
         message: `Your request has been ${body.status}`,
         type: body.status === RequestStatus.ACCEPTED ? NotificationType.SUCCESS : 
               body.status === RequestStatus.REJECTED ? NotificationType.ERROR : 

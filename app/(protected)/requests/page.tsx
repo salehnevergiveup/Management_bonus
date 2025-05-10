@@ -15,10 +15,10 @@ import { ConfirmationDialog } from "@/components/dialog";
 import { Badge } from "@/components/badge";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AppColor,RequestStatus } from "@/constants/enums";
+import { AppColor, RequestStatus } from "@/constants/enums";
 import toast from "react-hot-toast";
-import {PaginationData} from  "@/types/pagination-data.type"
-import   {GetResponse} from "@/types/get-response.type" 
+import { PaginationData } from "@/types/pagination-data.type";
+import { GetResponse } from "@/types/get-response.type";
 
 interface User {
   id: string;
@@ -33,11 +33,24 @@ interface Request {
   message: string;
   model_name: string;
   model_id: string;
-  action: string; 
+  action: string;
   created_at: string;
   updated_at: string;
   sender: User;
   admin: User | null;
+}
+
+interface MatchData {
+  username: string;
+  amount: number;
+  currency: string;
+  transfer_account_id: string;
+  process_id: string;
+}
+
+interface CreateMatchRequestData {
+  matches: MatchData[];
+  reason: string;
 }
 
 export default function RequestManagementPage() {
@@ -151,8 +164,197 @@ export default function RequestManagementPage() {
     setPagination(calculatedPagination);
   }, [calculatedPagination]);
 
+  // Check if request is a create match request with data
+  const isCreateMatchRequest = (request: Request): boolean => {
+    // Check if it's a Match creation request
+    if (request.model_name === "Match" && request.action === "create") {
+      try {
+        const message = request.message;
+        console.log("Checking if create match request, message:", message);
+        
+        // Check for various patterns that indicate match data
+        if (message.includes('matches') && 
+            (message.includes('username') || message.includes('amount') || message.includes('transfer_account_id'))) {
+          return true;
+        }
+        
+        // Try to parse and check
+        try {
+          let testMsg = message;
+          if (testMsg.startsWith('"') && testMsg.endsWith('"')) {
+            testMsg = testMsg.slice(1, -1).replace(/\\"/g, '"');
+          }
+          const parsed = JSON.parse(testMsg);
+          return !!parsed.matches;
+        } catch {
+          // If parsing fails, still check for patterns
+          return message.includes('matches') && message.includes('[');
+        }
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  };
+
+  // Parse create match request data
+  const parseCreateMatchRequest = (message: string): CreateMatchRequestData | null => {
+    console.log("Raw message:", message);
+    
+    try {
+      // First, try direct parse
+      const data = JSON.parse(message);
+      if (data.matches && Array.isArray(data.matches)) {
+        return data;
+      }
+    } catch (e) {
+      // Parsing failed, continue with other methods
+      console.log("Direct parse failed, trying other methods");
+    }
+
+    // If the message appears to be a stringified JSON
+    if (message.startsWith('"') && message.endsWith('"')) {
+      try {
+        // Remove outer quotes and unescape internal quotes
+        let cleaned = message.slice(1, -1);
+        
+        // Replace escaped characters
+        cleaned = cleaned
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\')
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t');
+        
+        console.log("Cleaned message:", cleaned);
+        
+        const data = JSON.parse(cleaned);
+        if (data.matches && Array.isArray(data.matches)) {
+          return data;
+        }
+      } catch (e) {
+        console.log("Stringified JSON parse failed:", e);
+      }
+    }
+
+    // Try to find JSON within the message
+    try {
+      const jsonStart = message.indexOf('{');
+      const jsonEnd = message.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        const jsonStr = message.substring(jsonStart, jsonEnd + 1);
+        const data = JSON.parse(jsonStr);
+        if (data.matches && Array.isArray(data.matches)) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.log("JSON extraction failed:", e);
+    }
+
+    // Final attempt: Create a test object to see if the message has the right structure
+    try {
+      // Check if the message has the expected structure even if we can't parse it
+      if (message.includes('matches') && message.includes('[')) {
+        // Try to extract matches array manually
+        const matchesStart = message.indexOf('"matches"');
+        if (matchesStart !== -1) {
+          const arrayStart = message.indexOf('[', matchesStart);
+          const arrayEnd = message.lastIndexOf(']');
+          
+          if (arrayStart !== -1 && arrayEnd !== -1) {
+            const matchesArray = message.substring(arrayStart, arrayEnd + 1);
+            
+            // Try to find reason
+            let reason = "No reason provided";
+            const reasonMatch = message.match(/"reason"\s*:\s*"([^"]+)"/);
+            if (reasonMatch) {
+              reason = reasonMatch[1];
+            }
+            
+            // Manually construct the object
+            try {
+              const matches = JSON.parse(matchesArray);
+              return {
+                matches: matches,
+                reason: reason
+              };
+            } catch (e) {
+              console.log("Manual construction failed:", e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.log("Final parsing attempt failed:", e);
+    }
+
+    return null;
+  };
+
+  // Handle create match request acceptance
+  const handleCreateMatchAcceptance = async (request: Request) => {
+    console.log("Handling create match acceptance for request:", request);
+    
+    const matchData = parseCreateMatchRequest(request.message);
+    console.log("Parsed match data:", matchData);
+    
+    if (!matchData || !matchData.matches || matchData.matches.length === 0) {
+      toast.error("Invalid match data in request");
+      return;
+    }
+
+    try {
+      // First, update the request status
+      const statusResponse = await fetch(`/api/requests/${request.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: RequestStatus.ACCEPTED
+        }),
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error("Failed to update request status");
+      }
+
+      // Then, create the matches
+      console.log("Sending matches to create:", matchData.matches);
+      
+      const createResponse = await fetch(`/api/matches/create-matches`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ matches: matchData.matches }),
+      });
+
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json();
+        console.error("Match creation error:", errorData);
+        throw new Error(errorData.error || "Failed to create matches");
+      }
+
+      toast.success(`Request accepted and ${matchData.matches.length} matches created successfully`);
+      fetchRequests(); // Refresh data
+    } catch (error) {
+      console.error("Error handling create match acceptance:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to process request");
+    }
+  };
+
   const updateRequestStatus = async () => {
     if (!requestToUpdate || !newStatus) return;
+    
+    // If it's a create match request being accepted, handle it specially
+    if (isCreateMatchRequest(requestToUpdate) && newStatus === RequestStatus.ACCEPTED) {
+      await handleCreateMatchAcceptance(requestToUpdate);
+      setStatusUpdateDialogOpen(false);
+      return;
+    }
     
     try {
       const response = await fetch(`/api/requests/${requestToUpdate.id}`, {
@@ -184,6 +386,18 @@ export default function RequestManagementPage() {
     if (!bulkAction || selectedRequests.length === 0) return;
 
     try {
+      // If bulk accepting, check for create match requests
+      if (bulkAction.value === RequestStatus.ACCEPTED) {
+        const createMatchRequests = allRequests.filter(req => 
+          selectedRequests.includes(req.id) && isCreateMatchRequest(req)
+        );
+
+        if (createMatchRequests.length > 0) {
+          toast.error("Bulk accepting create match requests is not supported. Please accept them individually.");
+          return;
+        }
+      }
+
       const response = await fetch(`/api/requests`, {
         method: "PUT",
         headers: {
@@ -354,6 +568,14 @@ export default function RequestManagementPage() {
         await bulkDelete();
         break;
     }
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency: currency 
+    }).format(amount);
   };
 
   return (
@@ -710,9 +932,101 @@ export default function RequestManagementPage() {
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Message</Label>
-                  <div className="mt-2 p-3 bg-gray-50 rounded-md border">
-                    <p className="whitespace-pre-wrap">{selectedRequest.message}</p>
-                  </div>
+                  {(() => {
+                    console.log("=== Debug Info ===");
+                    console.log("Request Model Name:", selectedRequest.model_name);
+                    console.log("Request Action:", selectedRequest.action);
+                    console.log("Request Model ID:", selectedRequest.model_id);
+                    console.log("Message type:", typeof selectedRequest.message);
+                    console.log("Message content:", selectedRequest.message);
+                    console.log("Is Create Match Request:", isCreateMatchRequest(selectedRequest));
+                    
+                    // Try different approaches to parse the message
+                    let parsedData = null;
+                    
+                    // Approach 1: Direct parse attempt
+                    if (isCreateMatchRequest(selectedRequest)) {
+                      parsedData = parseCreateMatchRequest(selectedRequest.message);
+                      console.log("Parse result:", parsedData);
+                    }
+                    
+                    // Approach 2: If parsing failed, try manual extraction
+                    if (!parsedData && selectedRequest.message.includes('matches')) {
+                      try {
+                        // Look for the JSON structure within the message
+                        const messageStr = selectedRequest.message;
+                        const matchesMatch = messageStr.match(/\{"matches":\[(.*?)\],"reason":"(.*?)"\}/);
+                        
+                        if (matchesMatch) {
+                          console.log("Found matches via regex");
+                          // Try to create a clean JSON string and parse it
+                          const cleanJson = matchesMatch[0].replace(/\\"/g, '"');
+                          parsedData = JSON.parse(cleanJson);
+                        }
+                      } catch (e) {
+                        console.log("Manual extraction failed:", e);
+                      }
+                    }
+                    
+                    if (parsedData && parsedData.matches) {
+                      // Display formatted match data
+                      return (
+                        <div className="mt-2 space-y-4">
+                          {parsedData.reason && (
+                            <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+                              <p className="text-blue-900"><strong>Reason:</strong> {parsedData.reason}</p>
+                            </div>
+                          )}
+                          
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                              Matches to Create ({parsedData.matches.length})
+                            </h4>
+                            <div className="overflow-x-auto border rounded-lg">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-gray-50">
+                                    <TableHead className="font-semibold">Username</TableHead>
+                                    <TableHead className="font-semibold">Amount</TableHead>
+                                    <TableHead className="font-semibold">Currency</TableHead>
+                                    <TableHead className="font-semibold">Transfer Account</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {parsedData.matches.map((match: any, index: number) => (
+                                    <TableRow key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                                      <TableCell className="font-medium">{match.username}</TableCell>
+                                      <TableCell>{match.amount}</TableCell>
+                                      <TableCell>{match.currency}</TableCell>
+                                      <TableCell className="font-mono text-xs">
+                                        {match.transfer_account_id?.substring(0, 8)}...
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      // Display raw message
+                      return (
+                        <div className="mt-2">
+                          <div className="p-3 bg-gray-100 rounded-md border border-gray-300">
+                            <pre className="whitespace-pre-wrap break-all text-sm font-mono text-gray-800">
+                              {selectedRequest.message}
+                            </pre>
+                          </div>
+                          {isCreateMatchRequest(selectedRequest) && (
+                            <p className="text-sm text-amber-600 mt-2">
+                              ⚠️ This appears to be a match creation request, but the data couldn't be parsed.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
               </>
             )}
@@ -731,11 +1045,55 @@ export default function RequestManagementPage() {
         title={`Update Request Status`}
         children={
           <>
-            <p>Are you sure you want to change the status to <strong>{newStatus}</strong>?</p>
-            <p className="mt-2">This will notify the requestor of the status change.</p>
+            {requestToUpdate && isCreateMatchRequest(requestToUpdate) && newStatus === RequestStatus.ACCEPTED ? (
+              <>
+                <p>Are you sure you want to accept this match creation request?</p>
+                <p className="mt-2 text-green-600 font-semibold">This will create the following matches:</p>
+                {(() => {
+                  const matchData = parseCreateMatchRequest(requestToUpdate.message);
+                  if (matchData && matchData.matches) {
+                    return (
+                      <div className="mt-3 border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead>Username</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Currency</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {matchData.matches.map((match, index) => (
+                              <TableRow key={index}>
+                                <TableCell>{match.username}</TableCell>
+                                <TableCell>{match.amount}</TableCell>
+                                <TableCell>{match.currency}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <p className="text-sm text-yellow-800">
+                          Warning: Unable to parse match data. The request will be accepted but matches may need to be created manually.
+                        </p>
+                      </div>
+                    );
+                  }
+                })()}
+              </>
+            ) : (
+              <>
+                <p>Are you sure you want to change the status to <strong>{newStatus}</strong>?</p>
+                <p className="mt-2">This will notify the requestor of the status change.</p>
+              </>
+            )}
           </>
         }
-        confirmText="Update Status"
+        confirmText={newStatus === RequestStatus.ACCEPTED && requestToUpdate && isCreateMatchRequest(requestToUpdate) ? "Accept & Create Matches" : "Update Status"}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -769,6 +1127,9 @@ export default function RequestManagementPage() {
             ) : (
               <>
                 <p>Are you sure you want to update the status of <strong>{selectedRequests.length}</strong> selected requests to <strong>{bulkAction?.value}</strong>?</p>
+                {bulkAction?.value === RequestStatus.ACCEPTED && (
+                  <p className="mt-2 text-yellow-600">Note: Create match requests cannot be bulk accepted and will be skipped.</p>
+                )}
                 <p className="mt-2">This will notify all affected requestors of the status change.</p>
               </>
             )}
