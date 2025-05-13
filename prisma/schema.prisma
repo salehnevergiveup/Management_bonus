@@ -211,6 +211,8 @@ model Match {
   @@index([process_id])
   @@index([bonus_id])
   @@index([transfer_account_id])
+
+  @@map("userMatch")
 }
 
 model APIKey {
