@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { SessionValidation } from "@/lib/sessionvalidation"
 import { prisma } from "@/lib/prisma"
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request,  { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await SessionValidation()
 
@@ -10,7 +10,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: "Unauthenticated request" }, { status: 401 })
     }
 
-    const processId = params.id
+    const {id:processId} = await params
+    
     const { format, filename } = await request.json()
 
     // Verify the process exists

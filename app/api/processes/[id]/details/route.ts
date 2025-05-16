@@ -7,7 +7,7 @@ interface AgentAccount {
     username: string
   }
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request,  { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await SessionValidation()
 
@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthenticated request" }, { status: 401 })
     }
 
-    const { id: processId } = params
+    const { id: processId } = await params
 
     if (!processId) {
       return NextResponse.json({ error: "Invalid process ID" }, { status: 400 })

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { SessionValidation } from "@/lib/sessionvalidation"
 import { prisma } from "@/lib/prisma"
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request,  { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await SessionValidation()
 
@@ -10,7 +10,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ error: "Unauthenticated request" }, { status: 401 })
     }
 
-    const { id: processId } = params
+    const { id: processId } = await params
 
     if (!processId) {
       return NextResponse.json({ error: "Invalid process ID" }, { status: 400 })
