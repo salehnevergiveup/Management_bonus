@@ -83,9 +83,7 @@ export default function MatchManagementPage() {
 // State for updating match amount and status
 const [editDialogOpen, setEditDialogOpen] = useState(false);
 const [matchToEdit, setMatchToEdit] = useState<Match | null>(null);
-const [newAmount, setNewAmount] = useState("");
 const [newStatus, setNewStatus] = useState("");
-const [amountError, setAmountError] = useState("");
 
   // Added state for real-time updates
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -714,15 +712,11 @@ const handleEdit = (match: Match) => {
   
   if (hasDirectPermission || hasAcceptedRequest) {
     setMatchToEdit(match);
-    setNewAmount("");
     setNewStatus(""); 
-    setAmountError("");
     setEditDialogOpen(true);
   } else {
     setMatchToEdit(match);
-    setNewAmount(""); 
     setNewStatus(""); 
-    setAmountError("");
     setRequestAction("edit");
     setRequestMessage("");
     setEditDialogOpen(true);
@@ -733,32 +727,18 @@ const handleEdit = (match: Match) => {
 const updateMatch = async () => {
   if (!matchToEdit) return;
   
-  // Check if any field is being updated
-  if (!newAmount && !newStatus) {
-    toast.error("Please update either the amount or status");
+  // Check if status is being updated
+  if (!newStatus) {
+    toast.error("Please select a status");
     return;
   }
   
-  // Initialize the update data object
-  const updateData: { amount?: number; status?: string } = {};
-  
-  // Add amount to update data if provided and not empty
-  if (newAmount.trim() !== '') {
-    // Validate the amount
-    const amount = parseFloat(newAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setAmountError("Please enter a valid positive amount");
-      return;
-    }status
-    updateData.amount = amount;
-  }
-  
-  // Add status to update data if provided
-  if (newStatus) {
-    updateData.status = newStatus;
-  }
+  // Initialize the update data object with only status
+  const updateData: { status: string } = {
+    status: newStatus
+  };
 
-  console.log("stats is " +  newStatus.repeat(100))
+  console.log("status is " + newStatus);
   
   try {
     const response = await fetch(`/api/matches/${matchToEdit.id}`, {
@@ -790,11 +770,10 @@ const updateMatch = async () => {
     toast.error(error instanceof Error ? error.message : "Failed to update match");
   }
 };
-
   // Submit permission request for match changes
   const submitMatchChangeRequest = async () => {
-    if (!matchToEdit || (!newAmount.trim() && !newStatus) || !auth || requestMessage.length < 10) {
-      toast.error("Please update either amount or status and provide a reason");
+    if (!matchToEdit || !newStatus || !auth || requestMessage.length < 10) {
+      toast.error("Please select a status and provide a reason");
       return;
     }
     
@@ -802,27 +781,8 @@ const updateMatch = async () => {
       // Build a descriptive message about what's being changed
       let changeDescription = "Request to change match: ";
       
-      // Add amount change details if amount is being changed and not empty
-      if (newAmount.trim() !== '') {
-        const parsedAmount = parseFloat(newAmount);
-        // Validate amount
-        if (isNaN(parsedAmount) || parsedAmount <= 0) {
-          setAmountError("Please enter a valid positive amount");
-          return;
-        }
-        
-        changeDescription += `Amount from ${matchToEdit.amount} to ${newAmount} ${matchToEdit.currency}`;
-        
-        // Add comma if both fields are changing
-        if (newStatus) {
-          changeDescription += ", ";
-        }
-      }
-      
-      // Add status change details if status is being changed
-      if (newStatus) {
-        changeDescription += `Status from ${matchToEdit.status} to ${newStatus}`;
-      }
+      // Add status change details
+      changeDescription += `Status from ${matchToEdit.status} to ${newStatus}`;
       
       // Add the reason
       changeDescription += `. Reason: ${requestMessage}`;
@@ -886,7 +846,6 @@ const updateMatch = async () => {
                 <SelectItem value="all">{t("all_statuses", lang)}</SelectItem>
                 <SelectItem value="success">{t("success", lang)}</SelectItem>
                 <SelectItem value="failed">{t("failed", lang)}</SelectItem>
-                <SelectItem value="onhold ">{t("onhold", lang)}</SelectItem>
                 <SelectItem value="pending">{t("pending", lang)}</SelectItem>
               </SelectContent>
             </Select>
@@ -1230,27 +1189,6 @@ const updateMatch = async () => {
               <p className="font-medium">{matchToEdit?.username}</p>
             </div>
             <div className="space-y-2">
-              <Label>{t("current_amount", lang)}</Label>
-              <p className="font-medium">
-                {matchToEdit ? formatCurrency(matchToEdit.amount, matchToEdit.currency) : ""}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new_amount">{t("new_amount_optional", lang)}</Label>
-              <Input
-                id="new_amount"
-                type="number"
-                step="0.01"
-                placeholder={t("leave_empty_keep_current", lang)}
-                value={newAmount}
-                onChange={(e) => {
-                  setNewAmount(e.target.value)
-                  setAmountError("")
-                }}
-              />
-              {amountError && <p className="text-sm text-red-500">{amountError}</p>}
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="new_status">{t("status", lang)}</Label>
               <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger className="w-full">
@@ -1263,7 +1201,6 @@ const updateMatch = async () => {
                 </SelectContent>
               </Select>
             </div>
-
             {/* If user doesn't have permission and is requesting */}
             {!auth?.can("matches:edit") &&
               auth?.role !== Roles.Admin &&
@@ -1283,7 +1220,7 @@ const updateMatch = async () => {
                 </div>
               )}
           </div>
-          <DialogFooter>
+        <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
               {t("cancel", lang)}
             </Button>
@@ -1292,21 +1229,19 @@ const updateMatch = async () => {
             hasPermission(permissionsMap, matchToEdit?.id || "", "edit") ? (
               <Button
                 onClick={updateMatch}
-                disabled={(!newStatus && !newAmount) || (!!newAmount && amountError !== "")}
+                disabled={!newStatus}
               >
                 {t("update_match", lang)}
               </Button>
             ) : (
               <Button
                 onClick={submitMatchChangeRequest}
-                disabled={
-                  (!newStatus && !newAmount) || requestMessage.length < 10 || (!!newAmount && amountError !== "")
-                }
+                disabled={!newStatus || requestMessage.length < 10}
               >
                 {t("submit_request", lang)}
               </Button>
             )}
-          </DialogFooter>
+        </DialogFooter>
         </DialogContent>
       </Dialog>
 
