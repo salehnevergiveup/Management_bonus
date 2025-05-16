@@ -98,7 +98,7 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
   // Authorization check
   useEffect(() => {
     if (auth) {
-      if (!auth.can("bonus:edit")) {
+      if (!auth.can("bonuses:edit")) {
         router.push("/dashboard");
       }
     }

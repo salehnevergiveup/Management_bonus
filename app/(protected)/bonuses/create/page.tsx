@@ -58,7 +58,7 @@ export default function CreateBonusPage() {
 
   useEffect(() => {
     if (auth) {
-      if (!auth.can("bonus:create")) {
+      if (!auth.can("bonuses:create")) {
         router.push("/dashboard");
       }
     }

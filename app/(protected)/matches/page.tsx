@@ -594,7 +594,7 @@ const updateSingleMatch = (data: any) => {
               .filter(m => 
                 selectedMatches.includes(m.id) && 
                 m.transfer_account_id !== null && 
-                m.status.toLowerCase() !== "success"
+                m.status.toLowerCase() == "pending"
               )
               .map(m => ({
                 id: m.id,
@@ -606,7 +606,7 @@ const updateSingleMatch = (data: any) => {
                 bonus_id: m.bonus_id
               }));
               
-            if (selectedMatchData.length === 0) {
+            if (selectedMatchData.length !== 0) {
               toast.error("No valid matches selected for resume action");
               return;
             }
@@ -813,8 +813,9 @@ const updateMatch = async () => {
     if (processMatches.length === 0) {
       return false;
     }
-    
-    return processMatches.every(match => match.status.toLowerCase() === 'success');
+    const pendingMatch = processMatches.filter(match=> match.status.toLowerCase() == 'pending'); 
+
+    return  pendingMatch.length === 0; 
   };
 
   const canShowProcessAction = (processStatus: string, action: string) => {
@@ -1197,7 +1198,7 @@ const updateMatch = async () => {
                 <SelectContent>
                   <SelectItem value="pending">{t("pending", lang)}</SelectItem>
                   <SelectItem value="success">{t("success", lang)}</SelectItem>
-                  <SelectItem value="onhold ">{t("onhold", lang)}</SelectItem>
+                  <SelectItem value="failed">{t("failed", lang)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
