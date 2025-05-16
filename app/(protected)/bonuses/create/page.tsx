@@ -23,6 +23,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { CheckCircle2, XCircle, AlertCircle, Code } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import CodeEditorDialog from "@/components/ui/code-editor-dialog";
+import { useLanguage } from "@app/contexts/LanguageContext";
+import { t } from "@app/lib/i18n";
 
 export default function CreateBonusPage() {
   const { auth, isLoading } = useUser();
@@ -51,6 +53,8 @@ export default function CreateBonusPage() {
   
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { lang, setLang } = useLanguage()
 
   useEffect(() => {
     if (auth) {
@@ -233,13 +237,13 @@ export default function CreateBonusPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Bonuses", href: "/bonuses" }, { label: "Create" }]} />
+      <Breadcrumb items={[{ label: t("bonuses", lang), href: "/bonuses" }, { label: t("create", lang) }]} />
       
       {/* Validation Errors */}
       {generalErrors.length > 0 && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Validation Failed</AlertTitle>
+          <AlertTitle>{t("validation_failed", lang)}</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-5">
               {generalErrors.map((error, idx) => (
@@ -252,26 +256,26 @@ export default function CreateBonusPage() {
       
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Create New Bonus Rule</CardTitle>
+          <CardTitle>{t("create_new_bonus_rule", lang)}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Bonus Name</Label>
+            <Label htmlFor="name">{t("bonus_name", lang)}</Label>
             <Input 
               id="name" 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter a name for this bonus rule"
+              placeholder={t("enter_bonus_name_placeholder", lang)}
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t("description", lang)}</Label>
             <Textarea 
               id="description" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe how this bonus works"
+              placeholder={t("describe_bonus_placeholder", lang)}
               rows={3}
             />
           </div>
@@ -279,7 +283,7 @@ export default function CreateBonusPage() {
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <Label htmlFor="bonusFunction">
-                Bonus Function
+                {t("bonus_function", lang)}
               </Label>
               <div className="space-x-2">
                 <Button 
@@ -287,7 +291,7 @@ export default function CreateBonusPage() {
                   size="sm" 
                   onClick={() => setShowTestData(true)}
                 >
-                  View Test Data
+                  {t("view_test_data", lang)}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -295,7 +299,7 @@ export default function CreateBonusPage() {
                   onClick={() => setFunctionEditorOpen(true)}
                 >
                   <Code className="h-4 w-4 mr-2" />
-                  {bonusFunction ? 'Edit Function' : 'Create Function'}
+                  {bonusFunction ? t("edit_function", lang) : t("create_function", lang)}
                 </Button>
               </div>
             </div>
@@ -308,14 +312,14 @@ export default function CreateBonusPage() {
                     : bonusFunction}
                 </pre>
               ) : (
-                <span className="text-gray-400">No function defined</span>
+                <span className="text-gray-400">{t("no_function_defined", lang)}</span>
               )}
             </div>
             
             {functionErrors.length > 0 && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertTitle>Function Errors</AlertTitle>
+                <AlertTitle>{t("function_errors", lang)}</AlertTitle>
                 <AlertDescription>
                   <ul className="list-disc pl-5">
                     {functionErrors.map((error, idx) => (
@@ -329,14 +333,14 @@ export default function CreateBonusPage() {
           
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="baseline">Baseline Data (optional, JSON format)</Label>
+              <Label htmlFor="baseline">{t("baseline_data_optional", lang)}</Label>
               <Button 
                 variant="outline"
                 size="sm"
                 onClick={() => setBaselineEditorOpen(true)}
               >
                 <Code className="h-4 w-4 mr-2" />
-                {baseline ? 'Edit JSON' : 'Create JSON'}
+                {baseline ? t("edit_json", lang) : t("create_json", lang)}
               </Button>
             </div>
             
@@ -348,14 +352,14 @@ export default function CreateBonusPage() {
                     : baseline}
                 </pre>
               ) : (
-                <span className="text-gray-400">No baseline data defined</span>
+                <span className="text-gray-400">{t("no_baseline_data", lang)}</span>
               )}
             </div>
             
             {baselineErrors.length > 0 && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertTitle>Baseline Data Errors</AlertTitle>
+                <AlertTitle>{t("baseline_data_errors", lang)}</AlertTitle>
                 <AlertDescription>
                   <ul className="list-disc pl-5">
                     {baselineErrors.map((error, idx) => (
@@ -373,14 +377,14 @@ export default function CreateBonusPage() {
             variant="outline" 
             onClick={() => router.push('/bonuses')}
           >
-            Cancel
+            {t("cancel", lang)}
           </Button>
           <div className="space-x-2">
             <Button 
               onClick={handleValidate}
               disabled={isValidating}
             >
-              {isValidating ? 'checking...' : 'Create Bonus'}
+              {isValidating ? t("checking", lang) : t("create_bonus", lang)}
             </Button>
           </div>
         </CardFooter>
@@ -390,36 +394,36 @@ export default function CreateBonusPage() {
       <CodeEditorDialog
         open={functionEditorOpen}
         onOpenChange={setFunctionEditorOpen}
-        title="Edit Bonus Function"
+        title={t("edit_bonus_function", lang)}
         code={bonusFunction}
         onChange={setBonusFunction}
         language="javascript"
         onValidate={validateFunction}
         onSave={() => {
-          toast.success('Function saved!');
+          toast.success(t("function_saved", lang));
         }}
         testSampleData={{
           turnoverData: turnoverData,
           exchangeRates: exchangeRates,
           baselineData: exampleBaselineData
         }}
-        testSampleLabel="Function Parameters Sample"
+        testSampleLabel={t("function_parameters_sample", lang)}
       />
 
       {/* Baseline Editor Dialog */}
       <CodeEditorDialog
         open={baselineEditorOpen}
         onOpenChange={setBaselineEditorOpen}
-        title="Edit Baseline JSON"
+        title={t("edit_baseline_json", lang)}
         code={baseline}
         onChange={setBaseLine}
         language="json"
         onValidate={validateBaseline}
         onSave={() => {
-          toast.success('Baseline data saved!');
+          toast.success(t("baseline_data_saved", lang));
         }}
         testSampleData={exampleBaselineData}
-        testSampleLabel="Example Baseline Data"
+        testSampleLabel={t("example_baseline_data", lang)}
       />
       
       {/* Preview/Confirmation Dialog */}
@@ -428,7 +432,7 @@ export default function CreateBonusPage() {
           <DialogContent className="max-w-2xl max-h-[80vh]">
             <DialogHeader>
               <DialogTitle>
-                {validationPassed ? 'Confirm Bonus Creation' : 'Validation Results'}
+                {validationPassed ? t("confirm_bonus_creation", lang) : t("validation_results", lang)}
               </DialogTitle>
             </DialogHeader>
             
@@ -436,24 +440,24 @@ export default function CreateBonusPage() {
               <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
                 <Alert className="bg-green-50 border-green-200">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <AlertTitle>Validation Passed</AlertTitle>
+                  <AlertTitle>{t("validation_passed_title", lang)}</AlertTitle>
                   <AlertDescription>
-                    The function has been validated and produces the correct output format.
+                    {t("validation_passed_description", lang)}
                   </AlertDescription>
                 </Alert>
                 
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Function Output Preview:</h3>
+                  <h3 className="font-semibold">{t("function_output_preview", lang)}:</h3>
                   <div className="bg-gray-50 p-4 rounded border font-mono text-sm overflow-x-auto">
                     <pre>{JSON.stringify(previewResults, null, 2)}</pre>
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Bonus Details:</h3>
+                  <h3 className="font-semibold">{t("bonus_details", lang)}:</h3>
                   <div className="space-y-1">
-                    <p><span className="font-semibold">Name:</span> {name}</p>
-                    <p><span className="font-semibold">Description:</span> {description}</p>
+                    <p><span className="font-semibold">{t("name", lang)}:</span> {name}</p>
+                    <p><span className="font-semibold">{t("description", lang)}:</span> {description}</p>
                   </div>
                 </div>
               </div>
@@ -461,15 +465,15 @@ export default function CreateBonusPage() {
               <div className="space-y-4">
                 <Alert variant="destructive">
                   <XCircle className="h-4 w-4" />
-                  <AlertTitle>Validation Failed</AlertTitle>
+                  <AlertTitle>{t("validation_failed", lang)}</AlertTitle>
                   <AlertDescription>
-                    Please fix the errors before continuing.
+                    {t("fix_errors_before_continuing", lang)}
                   </AlertDescription>
                 </Alert>
                 
                 {functionErrors.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Function Errors:</h3>
+                    <h3 className="font-semibold">{t("function_errors", lang)}:</h3>
                     <ul className="list-disc pl-5">
                       {functionErrors.map((error, idx) => (
                         <li key={idx}>{error}</li>
@@ -480,7 +484,7 @@ export default function CreateBonusPage() {
                 
                 {baselineErrors.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Baseline Errors:</h3>
+                    <h3 className="font-semibold">{t("baseline_errors", lang)}:</h3>
                     <ul className="list-disc pl-5">
                       {baselineErrors.map((error, idx) => (
                         <li key={idx}>{error}</li>
@@ -493,14 +497,14 @@ export default function CreateBonusPage() {
             
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowPreview(false)}>
-                {validationPassed ? 'Make Changes' : 'Close'}
+                {validationPassed ? t("make_changes", lang) : t("close", lang)}
               </Button>
               {validationPassed && (
                 <Button 
                   onClick={handleCreate} 
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Creating...' : 'Confirm & Create'}
+                  {isSubmitting ? t("creating", lang) : t("confirm_and_create", lang)}
                 </Button>
               )}
             </DialogFooter>
@@ -513,26 +517,26 @@ export default function CreateBonusPage() {
         <Dialog open={showTestData} onOpenChange={setShowTestData}>
           <DialogContent className="max-w-2xl max-h-[80vh]">
             <DialogHeader>
-              <DialogTitle>Test Data</DialogTitle>
+              <DialogTitle>{t("test_data", lang)}</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
               <div className="space-y-2">
-                <h3 className="font-semibold">Turnover Data:</h3>
+                <h3 className="font-semibold">{t("turnover_data", lang)}:</h3>
                 <div className="bg-gray-50 p-4 rounded border font-mono text-sm overflow-x-auto">
                   <pre>{JSON.stringify(turnoverData, null, 2)}</pre>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <h3 className="font-semibold">Exchange Rates:</h3>
+                <h3 className="font-semibold">{t("exchange_rates", lang)}:</h3>
                 <div className="bg-gray-50 p-4 rounded border font-mono text-sm overflow-x-auto">
                   <pre>{JSON.stringify(exchangeRates, null, 2)}</pre>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <h3 className="font-semibold">Example Baseline Data:</h3>
+                <h3 className="font-semibold">{t("example_baseline_data", lang)}:</h3>
                 <div className="bg-gray-50 p-4 rounded border font-mono text-sm overflow-x-auto">
                   <pre>{JSON.stringify(exampleBaselineData, null, 2)}</pre>
                 </div>
@@ -540,7 +544,7 @@ export default function CreateBonusPage() {
             </div>
             
             <DialogFooter>
-              <Button onClick={() => setShowTestData(false)}>Close</Button>
+              <Button onClick={() => setShowTestData(false)}>{t("close", lang)}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

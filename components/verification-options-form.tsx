@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/badge"
 import DraggableCard from "./ui/draggable-card"
 import Timer from "./ui/timer"
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 // Define payload type for API request
 interface VerificationMethodPayload {
@@ -38,14 +40,15 @@ interface VerificationMethodFormProps {
 
 const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFormProps) => {
   const [verificationMethod, setVerificationMethod] = useState("")
+  const { lang } = useLanguage()
   console.log(data);  
   console.log(data.data)
   // Validate required properties at runtime
   useEffect(() => {
     if (!data.data.options) {
-      console.error("Verification options form is missing required 'options' property", data);
+      console.error(t("verification_options_missing", lang), data)
     }
-  }, [data]);
+  }, [data, lang])
 
   const parseOptions = (optionsData: string[] | string | undefined): string[] => {
     if (!optionsData) return []
@@ -63,12 +66,12 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const thread_id = data.threadId ?? data.data.thread_id;  
-    const id = data.id ?? data.data.id; 
+    const thread_id = data.threadId ?? data.data.thread_id
+    const id = data.id ?? data.data.id
     const payload: VerificationMethodPayload = {
-      id, 
-      verification_method: verificationMethod, 
-      thread_id
+      id,
+      verification_method: verificationMethod,
+      thread_id,
     }
 
     try {
@@ -77,27 +80,25 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      
+
       if (!res.ok) {
-        throw new Error("Failed to submit verification method")
+        throw new Error(t("failed_submit_verification_method", lang))
       }
       const result = await res.json()
-      console.log("Verification method submitted successfully:", result)
+      console.log(t("verification_method_submitted_successfully", lang), result)
       onClose()
     } catch (error) {
-      console.error("Error submitting verification method:", error)
+      console.error(t("error_submitting_verification_method", lang), error)
     }
   }
 
-
   const handleCancel = async () => {
-
-    const thread_id = data.threadId ?? data.data.thread_id;  
-    const id = data.id ?? data.data.id; 
+    const thread_id = data.threadId ?? data.data.thread_id
+    const id = data.id ?? data.data.id
     const payload: VerificationMethodPayload = {
-      id, 
-      verification_method: "None", 
-      thread_id
+      id,
+      verification_method: "None",
+      thread_id,
     }
 
     try {
@@ -106,44 +107,40 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      
+
       if (!res.ok) {
-        throw new Error("Failed to submit verification method")
+        throw new Error(t("failed_submit_verification_method", lang))
       }
       const result = await res.json()
-      console.log("Verification method submitted successfully:", result)
+      console.log(t("verification_method_submitted_successfully", lang), result)
       onClose()
     } catch (error) {
-      console.error("Error submitting verification method:", error)
+      console.error(t("error_submitting_verification_method", lang), error)
     }
   }
 
   const handleTimeout = () => {
-    console.log("Verification method form timed out for thread:", data.threadId ?? data.data.thread_id);
-    onClose();
-  };
+    console.log(t("verification_method_form_timed_out", lang), data.threadId ?? data.data.thread_id)
+    onClose()
+  }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <DraggableCard
-      title="Select Verification Method"
+      title={t("select_verification_method", lang)}
       badge={<Badge color={AppColor.SUCCESS} text={data.threadId ?? data.data.thread_id} />}
       timer={data.data.timeout && <Timer seconds={data.data.timeout} onTimeout={handleTimeout} />}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {data.data.message && (
-          <div className="mb-4 text-sm text-gray-600">
-            {data.data.message}
-          </div>
-        )}
-        
+        {data.data.message && <div className="mb-4 text-sm text-gray-600">{data.data.message}</div>}
+
         <div className="space-y-2">
-          <Label htmlFor="verificationMethod">Verification Method</Label>
+          <Label htmlFor="verificationMethod">{t("verification_method", lang)}</Label>
           <Select value={verificationMethod} onValueChange={setVerificationMethod} required>
             <SelectTrigger id="verificationMethod">
-              <SelectValue placeholder="Select a method" />
+              <SelectValue placeholder={t("select_a_method", lang)} />
             </SelectTrigger>
             <SelectContent>
               {options.map((option, index) => (
@@ -157,13 +154,15 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
 
         <div className="flex justify-end space-x-2 pt-4">
           <Button type="button" variant="outline" onClick={handleCancel}>
-            Cancel
+            {t("cancel", lang)}
           </Button>
-          <Button type="submit" disabled={!verificationMethod}>Submit</Button>
+          <Button type="submit" disabled={!verificationMethod}>
+            {t("submit", lang)}
+          </Button>
         </div>
       </form>
     </DraggableCard>
-  );
+  )
 }
 
 export default VerificationOptionsForm

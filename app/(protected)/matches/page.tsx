@@ -20,6 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AppColor, Roles, ProcessStatus, Events } from "@/constants/enums";  // Added Events
 import { hasPermission, createRequest, fetchRequests } from "@/lib/requstHandling";
 import { RequestData } from "@/types/request-data.type";
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 import {
   Tooltip,
@@ -104,6 +106,7 @@ const [amountError, setAmountError] = useState("");
   const [requestAction, setRequestAction] = useState("");
   const [requestProcessId, setRequestProcessId] = useState("");
   const [completePermission, setCompletePermission] = useState<{modelId: string, action: string} | null>(null);
+  const { lang, setLang } = useLanguage()
 
   const fetchMatches = async () => {
     if (auth) {
@@ -186,6 +189,8 @@ useEffect(() => {
   if (eventSourceRef.current) {
     eventSourceRef.current.close();
   }
+
+  
 
   // Initialize SSE connection
   eventSourceRef.current = new EventSource('/api/events');
@@ -696,7 +701,9 @@ const updateSingleMatch = (data: any) => {
   };
 
   const goToPage = (page: number) => {
-    setCurrentPage(page);
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   // Handle edit action for match amount and status
@@ -865,61 +872,55 @@ const updateMatch = async () => {
   };
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Match Management" }]} />
+      <Breadcrumb items={[{ label: t("match_management", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Match Management</CardTitle>
+          <CardTitle>{t("match_management", lang)}</CardTitle>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={t("filter_by_status", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="success">Success</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="onhold ">onHold</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="all">{t("all_statuses", lang)}</SelectItem>
+                <SelectItem value="success">{t("success", lang)}</SelectItem>
+                <SelectItem value="failed">{t("failed", lang)}</SelectItem>
+                <SelectItem value="onhold ">{t("onhold", lang)}</SelectItem>
+                <SelectItem value="pending">{t("pending", lang)}</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select
-              value={bonusFilter}
-              onValueChange={setBonusFilter}
-            >
+            <Select value={bonusFilter} onValueChange={setBonusFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by bonus" />
+                <SelectValue placeholder={t("filter_by_bonus", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Bonuses</SelectItem>
-                {availableBonuses.map(bonus => (
+                <SelectItem value="all">{t("all_bonuses", lang)}</SelectItem>
+                {availableBonuses.map((bonus) => (
                   <SelectItem key={bonus.id} value={bonus.id}>
                     {bonus.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            
+
             <Select
               value={pageSize.toString()}
               onValueChange={(val) => {
-                setPageSize(Number(val));
-                setCurrentPage(1);
+                setPageSize(Number(val))
+                setCurrentPage(1)
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Rows per page" />
+                <SelectValue placeholder={t("rows_per_page", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="10">10 rows</SelectItem>
-                <SelectItem value="20">20 rows</SelectItem>
-                <SelectItem value="50">50 rows</SelectItem>
-                <SelectItem value="100">100 rows</SelectItem>
-                <SelectItem value="-1">All rows</SelectItem>
+                <SelectItem value="10">10 {t("rows", lang)}</SelectItem>
+                <SelectItem value="20">20 {t("rows", lang)}</SelectItem>
+                <SelectItem value="50">50 {t("rows", lang)}</SelectItem>
+                <SelectItem value="100">100 {t("rows", lang)}</SelectItem>
+                <SelectItem value="-1">{t("all_rows", lang)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -931,7 +932,7 @@ const updateMatch = async () => {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search matches..."
+                placeholder={t("search_matches", lang)}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -940,18 +941,19 @@ const updateMatch = async () => {
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                {selectedMatches.length} match{selectedMatches.length !== 1 ? 'es' : ''} selected
+                {selectedMatches.length} {t("match", lang)}
+                {selectedMatches.length !== 1 ? t("es", lang) : ""} {t("selected", lang)}
               </span>
               {selectedMatches.length > 0 && (
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => {
-                    setSelectedMatches([]);
-                    setSelectAllChecked(false);
+                    setSelectedMatches([])
+                    setSelectAllChecked(false)
                   }}
                 >
-                  Clear selection
+                  {t("clear_selection", lang)}
                 </Button>
               )}
             </div>
@@ -959,9 +961,9 @@ const updateMatch = async () => {
 
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
-              <TabsTrigger value="all">All Players</TabsTrigger>
-              <TabsTrigger value="matched">Matched Players</TabsTrigger>
-              <TabsTrigger value="unmatched">Unmatched Players</TabsTrigger>
+              <TabsTrigger value="all">{t("all_players", lang)}</TabsTrigger>
+              <TabsTrigger value="matched">{t("matched_players", lang)}</TabsTrigger>
+              <TabsTrigger value="unmatched">{t("unmatched_players", lang)}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="mt-0">
@@ -979,53 +981,59 @@ const updateMatch = async () => {
 
           <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
             <div className="text-sm text-muted-foreground">
-              Showing <span className="font-medium">{filteredMatches.length > 0 ? 1 + (currentPage - 1) * pageSize : 0}</span> to{" "}
+              {t("showing", lang)}{" "}
+              <span className="font-medium">{filteredMatches.length > 0 ? 1 + (currentPage - 1) * pageSize : 0}</span>{" "}
+              {t("to", lang)}{" "}
               <span className="font-medium">
                 {pageSize === -1 ? filteredMatches.length : Math.min(currentPage * pageSize, filteredMatches.length)}
               </span>{" "}
-              of <span className="font-medium">{filteredMatches.length}</span> matches
+              {t("of", lang)} <span className="font-medium">{filteredMatches.length}</span> {t("matches", lang)}
             </div>
-            
+
             {totalPages > 1 && pageSize !== -1 && (
               <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
-                <Button 
-                  variant="outline" 
-                  onClick={() => goToPage(1)} 
+                <Button
+                  variant="outline"
+                  onClick={() => goToPage(1)}
                   disabled={!hasPreviousPage}
                   size="sm"
                   className="h-8 px-2"
                 >
-                  First
+                  {t("first", lang)}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => goToPage(currentPage - 1)} 
+                <Button
+                  variant="outline"
+                  onClick={() => goToPage(currentPage - 1)}
                   disabled={!hasPreviousPage}
                   size="sm"
                   className="h-8 px-2"
                 >
-                  Previous
+                  {t("previous", lang)}
                 </Button>
                 <span className="px-2 text-sm">
-                  Page {currentPage} of {totalPages}
+                  {t("page", lang)} {currentPage} {t("of", lang)} {totalPages}
                 </span>
-                <Button 
-                  variant="outline" 
-                  onClick={() => goToPage(currentPage + 1)} 
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (currentPage < totalPages) {
+                      goToPage(currentPage + 1)
+                    }
+                  }}
                   disabled={!hasNextPage}
                   size="sm"
                   className="h-8 px-2"
                 >
-                  Next
+                  {t("next", lang)}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => goToPage(totalPages)} 
+                <Button
+                  variant="outline"
+                  onClick={() => goToPage(totalPages)}
                   disabled={!hasNextPage}
                   size="sm"
                   className="h-8 px-2"
                 >
-                  Last
+                  {t("last", lang)}
                 </Button>
               </div>
             )}
@@ -1033,98 +1041,99 @@ const updateMatch = async () => {
         </CardContent>
       </Card>
 
-    {/* Confirmation Dialog */}
-    <ConfirmationDialog
-      isOpen={confirmDialogOpen}
-      onClose={() => setConfirmDialogOpen(false)}
-      onConfirm={executeAction}
-      title={`Confirm ${selectedAction?.action?.replace('-', ' ') || ''}`}
-      children={
-        <>
-          {selectedAction?.action === 'rematch-process' ? (
-            <div className="space-y-3">
-              <p>All unmatched users will be matched again. Do you want to continue?</p>
-              <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-              <p className="text-sm text-yellow-800">
-                  This will attempt to find transfer accounts for all currently unmatched players in this process.
-                </p>
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        onConfirm={executeAction}
+        title={t("confirm", lang) + " " + (selectedAction?.action?.replace("-", " ") || "")}
+        children={
+          <>
+            {selectedAction?.action === "rematch-process" ? (
+              <div className="space-y-3">
+                <p>{t("all_unmatched_users_matched", lang)}</p>
+                <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                  <p className="text-sm text-yellow-800">{t("rematch_process_description", lang)}</p>
+                </div>
               </div>
-            </div>
-          ) : selectedAction?.action === 'terminate' ? (
-            <div className="space-y-3">
-              <p>Are you sure you want to terminate this process?</p>
-              <div className="bg-red-50 p-3 rounded border border-red-200">
-                <p className="text-sm text-red-800">
-                  This will kill any running automation process and stop all further processing. This action cannot be undone.
-                </p>
+            ) : selectedAction?.action === "terminate" ? (
+              <div className="space-y-3">
+                <p>{t("confirm_terminate_process", lang)}</p>
+                <div className="bg-red-50 p-3 rounded border border-red-200">
+                  <p className="text-sm text-red-800">{t("terminate_process_warning", lang)}</p>
+                </div>
               </div>
-            </div>
-          ) : selectedAction?.action === 'mark-success' ? (
-            <div className="space-y-3">
-              <p>Are you sure you want to mark this process as success?</p>
-              <div className="bg-green-50 p-3 rounded border border-green-200">
-                <p className="text-sm text-green-800">
-                  This will mark the process as completed successfully. All matches in this process already have 'success' status.
-                </p>
+            ) : selectedAction?.action === "mark-success" ? (
+              <div className="space-y-3">
+                <p>{t("confirm_mark_success", lang)}</p>
+                <div className="bg-green-50 p-3 rounded border border-green-200">
+                  <p className="text-sm text-green-800">{t("mark_success_description", lang)}</p>
+                </div>
               </div>
-            </div>
-          ) : selectedAction?.action === 'mark-onhold' ? (
-            <div className="space-y-3">
-              <p>Are you sure you want to put this process on hold?</p>
-              <div className="bg-amber-50 p-3 rounded border border-amber-200">
-                <p className="text-sm text-amber-800">
-                  This will pause the process. You can resume it later with selected matches.
-                </p>
+            ) : selectedAction?.action === "mark-onhold" ? (
+              <div className="space-y-3">
+                <p>{t("confirm_put_on_hold", lang)}</p>
+                <div className="bg-amber-50 p-3 rounded border border-amber-200">
+                  <p className="text-sm text-amber-800">{t("mark_onhold_description", lang)}</p>
+                </div>
               </div>
-            </div>
-          ) : selectedAction?.action === 'refilter-single' ? (
-            <div className="space-y-3">
-              <p>Are you sure you want to refilter this match using its current bonus?</p>
-              <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                <p className="text-sm text-blue-800">
-                  This will attempt to refilter the player using the bonus <strong>{selectedAction?.match.bonus?.name || "Unknown"}</strong>.
-                </p>
+            ) : selectedAction?.action === "refilter-single" ? (
+              <div className="space-y-3">
+                <p>{t("confirm_refilter_match", lang)}</p>
+                <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    {t("refilter_match_description_1", lang) + " "}
+                    <strong>{selectedAction?.match.bonus?.name || t("unknown", lang)}</strong>
+                    {t("refilter_match_description_2", lang)}
+                  </p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <p>Are you sure you want to {selectedAction?.action?.replace('-', ' ')} this {selectedAction?.action?.includes('process') ? 'process' : 'match'}?</p>
-          )}
-        </>
-      }
-      confirmText={selectedAction?.action 
-        ? selectedAction.action.split('-')[0].charAt(0).toUpperCase() + selectedAction.action.split('-')[0].slice(1) 
-        : 'Confirm'}
-    />
+            ) : (
+              <p>
+                {t("confirm_action_1", lang) +
+                  " " +
+                  (selectedAction?.action?.replace("-", " ") || "") +
+                  " " +
+                  t("confirm_action_2", lang) +
+                  " " +
+                  (selectedAction?.action?.includes("process") ? t("process", lang) : t("match", lang)) +
+                  "?"}
+              </p>
+            )}
+          </>
+        }
+        confirmText={selectedAction?.action ? t(selectedAction.action.split("-")[0], lang) : t("confirm", lang)}
+      />
 
       {/* Resume Dialog with Selected Matches */}
       <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Resume Process with Selected Matches</DialogTitle>
+            <DialogTitle>{t("resume_process_with_selected", lang)}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[400px] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Bonus</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>{t("username", lang)}</TableHead>
+                  <TableHead>{t("bonus", lang)}</TableHead>
+                  <TableHead>{t("amount", lang)}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {selectedMatches.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center">
-                      No matches selected
+                      {t("no_matches_selected", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
                   matches
-                    .filter(match => selectedMatches.includes(match.id))
-                    .map(match => (
+                    .filter((match) => selectedMatches.includes(match.id))
+                    .map((match) => (
                       <TableRow key={match.id}>
                         <TableCell>{match.username}</TableCell>
-                        <TableCell>{match.bonus?.name || "N/A"}</TableCell>
+                        <TableCell>{match.bonus?.name || t("not_available", lang)}</TableCell>
                         <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
                       </TableRow>
                     ))
@@ -1134,67 +1143,72 @@ const updateMatch = async () => {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setResumeDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
             <Button
               onClick={() => {
                 // Get a reference process match for the action
-                const firstSelectedMatch = matches.find(match => selectedMatches.includes(match.id));
+                const firstSelectedMatch = matches.find((match) => selectedMatches.includes(match.id))
                 if (firstSelectedMatch) {
-                  setSelectedAction({ match: firstSelectedMatch, action: 'resume' });
-                  executeAction();
+                  setSelectedAction({ match: firstSelectedMatch, action: "resume" })
+                  executeAction()
                 }
               }}
               disabled={selectedMatches.length === 0}
             >
-              Resume with Selected Matches
+              {t("resume_with_selected", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/*create match dialog*/}
       <CreateMatchDialog
         isOpen={createMatchDialogOpen}
         onClose={() => setCreateMatchDialogOpen(false)}
         isRequest={auth?.role != Roles.Admin}
-        processId= {matches[0]?.process_id || ""}
+        processId={matches[0]?.process_id || ""}
+        onSuccess={fetchMatches}
       />
+
       {/* Permission Request Dialog */}
       <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              Request Permission to {requestAction.charAt(0).toUpperCase() + requestAction.slice(1)} Process
+              {t("request_permission_to_1", lang) +
+                " " +
+                requestAction.charAt(0).toUpperCase() +
+                requestAction.slice(1) +
+                " " +
+                t("request_permission_to_2", lang)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Process ID</Label>
+              <Label>{t("process_id", lang)}</Label>
               <p className="font-medium">{requestProcessId}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="request_message">Reason for Request</Label>
+              <Label htmlFor="request_message">{t("reason_for_request", lang)}</Label>
               <Textarea
                 id="request_message"
-                placeholder="Explain why you need this permission..."
+                placeholder={t("explain_permission_need", lang)}
                 value={requestMessage}
                 onChange={(e) => setRequestMessage(e.target.value)}
                 rows={4}
               />
               {requestMessage.length < 10 && requestMessage.length > 0 && (
-                <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
+                <p className="text-sm text-red-500">{t("provide_detailed_explanation", lang)}</p>
               )}
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRequestDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
-            <Button
-              onClick={submitPermissionRequest}
-              disabled={!requestMessage || requestMessage.length < 10}
-            >
-              Submit Request
+            <Button onClick={submitPermissionRequest} disabled={!requestMessage || requestMessage.length < 10}>
+              {t("submit_request", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1205,86 +1219,91 @@ const updateMatch = async () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit") 
-                ? "Edit Match Details" 
-                : "Request to Edit Match Details"}
+              {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit")
+                ? t("edit_match_details", lang)
+                : t("request_to_edit_match", lang)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Username</Label>
+              <Label>{t("username", lang)}</Label>
               <p className="font-medium">{matchToEdit?.username}</p>
             </div>
             <div className="space-y-2">
-              <Label>Current Amount</Label>
-              <p className="font-medium">{matchToEdit ? formatCurrency(matchToEdit.amount, matchToEdit.currency) : ""}</p>
+              <Label>{t("current_amount", lang)}</Label>
+              <p className="font-medium">
+                {matchToEdit ? formatCurrency(matchToEdit.amount, matchToEdit.currency) : ""}
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new_amount">New Amount (Optional)</Label>
+              <Label htmlFor="new_amount">{t("new_amount_optional", lang)}</Label>
               <Input
                 id="new_amount"
                 type="number"
                 step="0.01"
-                placeholder="Leave empty to keep current amount"
+                placeholder={t("leave_empty_keep_current", lang)}
                 value={newAmount}
                 onChange={(e) => {
-                  setNewAmount(e.target.value);
-                  setAmountError("");
+                  setNewAmount(e.target.value)
+                  setAmountError("")
                 }}
               />
               {amountError && <p className="text-sm text-red-500">{amountError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new_status">Status</Label>
-              <Select
-                value={newStatus}
-                onValueChange={setNewStatus}
-              >
+              <Label htmlFor="new_status">{t("status", lang)}</Label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder={t("select_status", lang)} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="success">Success</SelectItem>
-                  <SelectItem value="onhold ">onHold</SelectItem>
+                  <SelectItem value="pending">{t("pending", lang)}</SelectItem>
+                  <SelectItem value="success">{t("success", lang)}</SelectItem>
+                  <SelectItem value="onhold ">{t("onhold", lang)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* If user doesn't have permission and is requesting */}
-            {!auth?.can("matches:edit") && auth?.role !== Roles.Admin && !hasPermission(permissionsMap, matchToEdit?.id || "", "edit") && (
-              <div className="space-y-2">
-                <Label htmlFor="request_message">Reason for Request</Label>
-                <Textarea
-                  id="request_message"
-                  placeholder="Explain why you need to change these details..."
-                  value={requestMessage}
-                  onChange={(e) => setRequestMessage(e.target.value)}
-                  rows={4}
-                />
-                {requestMessage.length < 10 && requestMessage.length > 0 && (
-                  <p className="text-sm text-red-500">Please provide a more detailed explanation (at least 10 characters)</p>
-                )}
-              </div>
-            )}
+            {!auth?.can("matches:edit") &&
+              auth?.role !== Roles.Admin &&
+              !hasPermission(permissionsMap, matchToEdit?.id || "", "edit") && (
+                <div className="space-y-2">
+                  <Label htmlFor="request_message">{t("reason_for_request", lang)}</Label>
+                  <Textarea
+                    id="request_message"
+                    placeholder={t("explain_change_need", lang)}
+                    value={requestMessage}
+                    onChange={(e) => setRequestMessage(e.target.value)}
+                    rows={4}
+                  />
+                  {requestMessage.length < 10 && requestMessage.length > 0 && (
+                    <p className="text-sm text-red-500">{t("provide_detailed_explanation", lang)}</p>
+                  )}
+                </div>
+              )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
-            {(auth?.role === Roles.Admin || auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit")) ? (
-              <Button 
-                onClick={updateMatch} 
+            {auth?.role === Roles.Admin ||
+            auth?.can("matches:edit") ||
+            hasPermission(permissionsMap, matchToEdit?.id || "", "edit") ? (
+              <Button
+                onClick={updateMatch}
                 disabled={(!newStatus && !newAmount) || (!!newAmount && amountError !== "")}
               >
-                Update Match
+                {t("update_match", lang)}
               </Button>
             ) : (
               <Button
                 onClick={submitMatchChangeRequest}
-                disabled={(!newStatus && !newAmount) || requestMessage.length < 10 || (!!newAmount && amountError !== "")}
+                disabled={
+                  (!newStatus && !newAmount) || requestMessage.length < 10 || (!!newAmount && amountError !== "")
+                }
               >
-                Submit Request
+                {t("submit_request", lang)}
               </Button>
             )}
           </DialogFooter>
@@ -1295,22 +1314,17 @@ const updateMatch = async () => {
       <Dialog open={refilterDialogOpen} onOpenChange={setRefilterDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>
-              Refilter Process with Selected Bonus
-            </DialogTitle>
+            <DialogTitle>{t("refilter_process_with_bonus", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="bonus_select">Select Bonus</Label>
-              <Select
-                value={selectedBonusId}
-                onValueChange={setSelectedBonusId}
-              >
+              <Label htmlFor="bonus_select">{t("select_bonus", lang)}</Label>
+              <Select value={selectedBonusId} onValueChange={setSelectedBonusId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a bonus" />
+                  <SelectValue placeholder={t("select_a_bonus", lang)} />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableBonuses.map(bonus => (
+                  {availableBonuses.map((bonus) => (
                     <SelectItem key={bonus.id} value={bonus.id}>
                       {bonus.name}
                     </SelectItem>
@@ -1318,52 +1332,54 @@ const updateMatch = async () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {selectedBonusId && (
               <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
                 <p className="text-sm text-yellow-800">
-                  <strong>Warning:</strong> This will refilter all non-successful matches in this process 
-                  using the bonus <strong>{availableBonuses.find(b => b.id === selectedBonusId)?.name || "selected"}</strong>.
+                  <strong>{t("warning", lang)}:</strong> {t("refilter_warning_1", lang) + " "}
+                  <strong>{availableBonuses.find((b) => b.id === selectedBonusId)?.name || t("selected", lang)}</strong>
+                  {t("refilter_warning_2", lang)}
                 </p>
               </div>
             )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRefilterDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
             <Button
               onClick={() => {
                 if (selectedAction && selectedBonusId) {
-                  executeAction();
+                  executeAction()
                 }
               }}
               disabled={!selectedBonusId}
             >
-              Refilter Process
+              {t("refilter_process", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
+
   // Helper function to render the table with process grouping
   function renderTable() {
     return (
       <div className="space-y-8">
-        {groupedByProcess.map(process => (
+        {groupedByProcess.map((process) => (
           <div key={process.id} className="rounded-md border overflow-hidden">
             <div className="bg-gray-50 p-4 border-b">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-medium">Process ID: {process.id}</h3>
+                  <h3 className="text-sm font-medium">
+                    {t("process_id", lang)}: {process.id}
+                  </h3>
                   <div className="flex items-center mt-1 space-x-2">
-                    <Badge
-                      color={getProcessStatusColor(process.status)}
-                      text={process.status}
-                    />
+                    <Badge color={getProcessStatusColor(process.status)} text={process.status} />
                     <span className="text-xs text-gray-500">
-                      {process.matches.length} match{process.matches.length !== 1 ? 'es' : ''}
+                      {process.matches.length} {t("match", lang)}
+                      {process.matches.length !== 1 ? t("es", lang) : ""}
                     </span>
                   </div>
                 </div>
@@ -1373,148 +1389,151 @@ const updateMatch = async () => {
                     {process.status !== ProcessStatus.PROCESSING && (
                       <>
                         {/* Resume button - only for PENDING */}
-                        {canShowProcessAction(process.status, 'resume') && (
+                        {canShowProcessAction(process.status, "resume") && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleProcessAction(process, 'resume')}
-                                disabled={!selectedMatches.some(id => {
-                                  const match = matches.find(m => m.id === id);
-                                  return match && match.status.toLowerCase() !== "success" && match.transfer_account_id !== null;
-                                })}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleProcessAction(process, "resume")}
+                                disabled={
+                                  !selectedMatches.some((id) => {
+                                    const match = matches.find((m) => m.id === id)
+                                    return (
+                                      match &&
+                                      match.status.toLowerCase() !== "success" &&
+                                      match.transfer_account_id !== null
+                                    )
+                                  })
+                                }
                               >
                                 <PlayCircle className="h-4 w-4 mr-1" />
-                                Resume
+                                {t("resume", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Complete the pending process with selected matches</p>
+                              <p>{t("complete_pending_process", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        {/*create match request button*/}
-                        <Tooltip>  
-                          <TooltipTrigger asChild>
-                            <Button
-                            size="sm"
-                            variant= "outline"
-                            onClick={()=>setCreateMatchDialogOpen(true)}
-                            >  
-                              <PlayCircle className="h-4 w-4 mr-1" /> 
-                              Create Match
-                            </Button>
 
+                        {/*create match request button*/}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="outline" onClick={() => setCreateMatchDialogOpen(true)}>
+                              <PlayCircle className="h-4 w-4 mr-1" />
+                              {t("create_match", lang)}
+                            </Button>
                           </TooltipTrigger>
-                          <TooltipContent>  
-                           <p>
-                            {auth?.role == Roles.Admin ?  "This will allowed you to make create match request" :  
-                             "This will allowed you to create a match"
-                            }
-                           </p>
+                          <TooltipContent>
+                            <p>
+                              {auth?.role == Roles.Admin
+                                ? t("admin_create_match_tooltip", lang)
+                                : t("user_create_match_tooltip", lang)}
+                            </p>
                           </TooltipContent>
                         </Tooltip>
+
                         {/* Rematch button - for PENDING, SEM_COMPLETED, COMPLETED */}
-                        {canShowProcessAction(process.status, 'rematch') && (
+                        {canShowProcessAction(process.status, "rematch") && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleProcessAction(process, 'rematch-process')}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleProcessAction(process, "rematch-process")}
                               >
                                 <RefreshCw className="h-4 w-4 mr-1" />
-                                Rematch All
+                                {t("rematch_all", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Update the matched players for this process</p>
+                              <p>{t("update_matched_players", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
 
                         {/* Add Refilter All button */}
-                        {canShowProcessAction(process.status, 'rematch') && (
+                        {canShowProcessAction(process.status, "rematch") && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleProcessAction(process, 'refilter-process')}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleProcessAction(process, "refilter-process")}
                               >
                                 <Filter className="h-4 w-4 mr-1" />
-                                Refilter All
+                                {t("refilter_all", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Refilter all non-successful players in this process</p>
+                              <p>{t("refilter_all_players", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
 
-                    {/* Mark as Success button */}
-                    {canShowProcessAction(process.status, 'mark-success') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-green-500 hover:text-green-700" 
-                            onClick={() => handleProcessAction(process, 'mark-success')}
-                            disabled={!isAllMatchesSuccess(process.id)}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Mark Success
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Mark this process as success. All matches must have success status.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
+                        {/* Mark as Success button */}
+                        {canShowProcessAction(process.status, "mark-success") && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-green-500 hover:text-green-700"
+                                onClick={() => handleProcessAction(process, "mark-success")}
+                                disabled={!isAllMatchesSuccess(process.id)}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                {t("mark_success", lang)}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("mark_success_tooltip", lang)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
 
-                    {/* Mark as On Hold button */}
-                    {canShowProcessAction(process.status, 'mark-onhold') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-amber-500 hover:text-amber-700" 
-                            onClick={() => handleProcessAction(process, 'mark-onhold')}
-                          >
-                            <PauseCircle className="h-4 w-4 mr-1" />
-                            On Hold
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Put this process on hold. Processing will be paused.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
+                        {/* Mark as On Hold button */}
+                        {canShowProcessAction(process.status, "mark-onhold") && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-amber-500 hover:text-amber-700"
+                                onClick={() => handleProcessAction(process, "mark-onhold")}
+                              >
+                                <PauseCircle className="h-4 w-4 mr-1" />
+                                {t("on_hold", lang)}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("on_hold_tooltip", lang)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
 
-                    {/* Updated Terminate button with improved tooltip */}
-                    {canShowProcessAction(process.status, 'terminate') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-red-500 hover:text-red-700" 
-                            onClick={() => handleProcessAction(process, 'terminate')}
-                          >
-                            <Square className="h-4 w-4 mr-1" />
-                            Terminate
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>End the process entirely. This will kill any running automation process.</p>
-                        </TooltipContent>
-                      </Tooltip>
+                        {/* Updated Terminate button with improved tooltip */}
+                        {canShowProcessAction(process.status, "terminate") && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-500 hover:text-red-700"
+                                onClick={() => handleProcessAction(process, "terminate")}
+                              >
+                                <Square className="h-4 w-4 mr-1" />
+                                {t("terminate", lang)}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("terminate_tooltip", lang)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </>
                     )}
-                          </>
-                )}
                   </TooltipProvider>
                 </div>
               </div>
@@ -1528,27 +1547,30 @@ const updateMatch = async () => {
                         <Checkbox
                           checked={selectAllChecked}
                           onCheckedChange={toggleSelectAll}
-                          aria-label="Select all"
+                          aria-label={t("select_all", lang)}
                         />
                       </TableHead>
                     )}
-                    <TableHead>Username</TableHead>
-                    <TableHead>Bonus</TableHead>
-                    <TableHead>Game</TableHead>
-                    <TableHead>Transfer Account</TableHead>
-                    <TableHead>Match Status</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created At</TableHead>
-                    <TableHead>Updated At</TableHead>
-                    {process.status !== ProcessStatus.PROCESSING && (<TableHead className="text-right">Actions</TableHead>)}
+                    <TableHead>{t("username", lang)}</TableHead>
+                    <TableHead>{t("bonus", lang)}</TableHead>
+                    <TableHead>{t("game", lang)}</TableHead>
+                    <TableHead>{t("transfer_account", lang)}</TableHead>
+                    <TableHead>{t("match_status", lang)}</TableHead>
+                    <TableHead>{t("amount", lang)}</TableHead>
+                    <TableHead>{t("status", lang)}</TableHead>
+                    {process.status !== ProcessStatus.PROCESSING && (
+                      <TableHead className="text-right">{t("actions", lang)}</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {process.matches.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={process.status !== ProcessStatus.PROCESSING ? 10 : 9} className="h-24 text-center">
-                        No matches found
+                      <TableCell
+                        colSpan={process.status !== ProcessStatus.PROCESSING ? 10 : 9}
+                        className="h-24 text-center"
+                      >
+                        {t("no_matches_found", lang)}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1556,109 +1578,104 @@ const updateMatch = async () => {
                       <TableRow key={match.id}>
                         {process.status !== ProcessStatus.PROCESSING && (
                           <TableCell className="w-[50px]">
-                          <Checkbox
-                            checked={selectedMatches.includes(match.id)}
-                            onCheckedChange={() => toggleMatchSelection(match.id)}
-                            aria-label={`Select match ${match.id}`}
-                            disabled={match.transfer_account_id === null || match.status.toLowerCase() === "success"}
-                          />
-                        </TableCell>
+                            <Checkbox
+                              checked={selectedMatches.includes(match.id)}
+                              onCheckedChange={() => toggleMatchSelection(match.id)}
+                              aria-label={t("select_match_id", lang) + " " + match.id}
+                              disabled={match.transfer_account_id === null || match.status.toLowerCase() === "success"}
+                            />
+                          </TableCell>
                         )}
                         <TableCell className="font-medium">{match.username}</TableCell>
-                        <TableCell>{match.bonus?.name || "N/A"}</TableCell>
-                        <TableCell>
-                          {match?.game}
-                        </TableCell> 
+                        <TableCell>{match.bonus?.name || t("not_available", lang)}</TableCell>
+                        <TableCell>{match?.game}</TableCell>
                         <TableCell>
                           {match.transfer_account_id ? (
-                            <span className="font-medium">{match.transfer_account?.username || "Transfer Account"}</span>
+                            <span className="font-medium">
+                              {match.transfer_account?.username || t("transfer_account", lang)}
+                            </span>
                           ) : (
-                            <span className="text-gray-400">Not assigned</span>
+                            <span className="text-gray-400">{t("not_assigned", lang)}</span>
                           )}
                         </TableCell>
                         <TableCell>
                           <Badge
                             color={match.transfer_account_id ? AppColor.SUCCESS : AppColor.WARNING}
-                            text={match.transfer_account_id ? "Matched" : "Unmatched"}
+                            text={match.transfer_account_id ? t("matched", lang) : t("unmatched", lang)}
                           />
                         </TableCell>
                         <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
                         <TableCell>
-                          <Badge
-                            color={getMatchStatusColor(match.status)}
-                            text={match.status}
-                          />
+                          <Badge color={getMatchStatusColor(match.status)} text={match.status} />
                         </TableCell>
-                        <TableCell>{formatDate(match.created_at)}</TableCell>
-                        <TableCell>{formatDate(match.updated_at)}</TableCell>
                         {process.status !== ProcessStatus.PROCESSING && (
-                        <TableCell className="text-right">
-                          <TooltipProvider>
-                            {match.transfer_account_id === null && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => handleSingleMatchAction(match, 'rematch-single')}
-                                  >
-                                    <RefreshCw className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Rematch this individual player</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
+                          <TableCell className="text-right">
+                            <TooltipProvider>
+                              {match.transfer_account_id === null && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleSingleMatchAction(match, "rematch-single")}
+                                    >
+                                      <RefreshCw className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("rematch_individual_player", lang)}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
 
-                            {match.status.toLowerCase() !== "success" && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => handleEdit(match)}
-                                    className="mr-1"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                    {/* Add text to button if user has permission but isn't admin */}
-                                    {(!auth?.can("matches:edit") || auth?.role !== "admin") && hasPermission(permissionsMap, match.id, "edit") && (
-                                      <span className="ml-1 text-xs">Execute</span>
-                                    )}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>
-                                  {auth?.role === "admin" || auth?.can("matches:edit")
-                                    ? "Edit match details"
-                                    : hasPermission(permissionsMap, match.id, "edit")
-                                      ? "Execute permitted edit action"
-                                      : "Request to edit match details"
-                                  }
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
+                              {match.status.toLowerCase() !== "success" && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleEdit(match)}
+                                      className="mr-1"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                      {/* Add text to button if user has permission but isn't admin */}
+                                      {(!auth?.can("matches:edit") || auth?.role !== "admin") &&
+                                        hasPermission(permissionsMap, match.id, "edit") && (
+                                          <span className="ml-1 text-xs">{t("execute", lang)}</span>
+                                        )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      {auth?.role === "admin" || auth?.can("matches:edit")
+                                        ? t("edit_match_details", lang)
+                                        : hasPermission(permissionsMap, match.id, "edit")
+                                          ? t("execute_permitted_edit", lang)
+                                          : t("request_to_edit_match", lang)}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
 
-                            {/* Add Refilter button (for all non-success matches) */}
-                            {match.status.toLowerCase() !== "success" && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => handleSingleMatchAction(match, 'refilter-single')}
-                                  >
-                                    <Filter className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Refilter this player</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </TooltipProvider>
-                        </TableCell>
+                              {/* Add Refilter button (for all non-success matches) */}
+                              {match.status.toLowerCase() !== "success" && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleSingleMatchAction(match, "refilter-single")}
+                                    >
+                                      <Filter className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t("refilter_player", lang)}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </TooltipProvider>
+                          </TableCell>
                         )}
                       </TableRow>
                     ))
@@ -1668,10 +1685,10 @@ const updateMatch = async () => {
             </div>
           </div>
         ))}
-        
+
         {groupedByProcess.length === 0 && (
           <div className="text-center py-8">
-            <p>No matches found.</p>
+            <p>{t("no_matches_found", lang)}</p>
           </div>
         )}
       </div>

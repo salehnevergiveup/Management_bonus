@@ -70,6 +70,7 @@ model UserProcess {
   to_date          DateTime?
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
+  process_name     String?
 
   matches          Match[]
   agent_account    agentAccount[]
@@ -78,6 +79,7 @@ model UserProcess {
   progressLogs      ProcessProgress[]  
   @@index([user_id])
   @@index([status])
+  
 }
 
 model ProcessProgress {
@@ -211,6 +213,8 @@ model Match {
   @@index([process_id])
   @@index([bonus_id])
   @@index([transfer_account_id])
+
+  @@map("userMatch")
 }
 
 model APIKey {

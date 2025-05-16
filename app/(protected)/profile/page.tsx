@@ -8,6 +8,8 @@ import { UserProfileEdit, type ProfileUser } from "@/components/user-profile-edi
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CheckCircle2, XCircle } from "lucide-react"
 import { useUser } from "@/contexts/usercontext"
+import { useLanguage } from "@app/contexts/LanguageContext";
+import { t } from "@app/lib/i18n";
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -40,10 +42,14 @@ export default function ProfilePage() {
     }
   }, [auth?.id, isLoading])
 
+  const { lang, setLang } = useLanguage()
+
+
   const handleSubmit = async (formData: any) => {
     setLoading(true)
     setError(null)
     setSuccess(null)
+
     
     try {
       const res = await fetch(`/api/profile`, {
@@ -90,33 +96,28 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "My Profile" },
-        ]}
-      />
-      
+      <Breadcrumb items={[{ label: t("dashboard", lang), href: "/dashboard" }, { label: t("my_profile", lang) }]} />
+
       {error && (
         <Alert variant="destructive" className="mb-4">
           <XCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t("error", lang)}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
+
       {success && (
         <Alert className="mb-4 bg-green-50 border-green-200">
           <CheckCircle2 className="h-4 w-4 text-green-500" />
-          <AlertTitle>Success</AlertTitle>
+          <AlertTitle>{t("success", lang)}</AlertTitle>
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
-      
+
       <div className="flex justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center">My Profile</CardTitle>
+            <CardTitle className="text-center">{t("my_profile", lang)}</CardTitle>
           </CardHeader>
           {user ? (
             <UserProfileEdit
@@ -128,9 +129,9 @@ export default function ProfilePage() {
           ) : (
             <div className="p-6 text-center">
               {error ? (
-                <p className="text-destructive">Error loading profile</p>
+                <p className="text-destructive">{t("error_loading_profile", lang)}</p>
               ) : (
-                <p>Loading profile data...</p>
+                <p>{t("loading_profile_data", lang)}</p>
               )}
             </div>
           )}

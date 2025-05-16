@@ -1,0 +1,3507 @@
+{
+    "account_turnover_management": {
+      "eng": "Account Turnover Management",
+      "ch": "账户流水管理"
+    },
+    "view_exchange_rates": {
+      "eng": "View Exchange Rates",
+      "ch": "查看汇率"
+    },
+    "create_match": {
+      "eng": "Create Match",
+      "ch": "创建匹配"
+    },
+    "refresh": {
+      "eng": "Refresh",
+      "ch": "刷新"
+    },
+    "search_turnovers": {
+      "eng": "Search turnovers...",
+      "ch": "搜索流水..."
+    },
+    "username": {
+      "eng": "Username",
+      "ch": "用户名"
+    },
+    "game": {
+      "eng": "Game",
+      "ch": "游戏"
+    },
+    "currency": {
+      "eng": "Currency",
+      "ch": "货币"
+    },
+    "turnover": {
+      "eng": "Turnover",
+      "ch": "流水"
+    },
+    "created_at": {
+      "eng": "Created At",
+      "ch": "创建时间"
+    },
+    "actions": {
+      "eng": "Actions",
+      "ch": "操作"
+    },
+    "loading_turnovers": {
+      "eng": "Loading account turnovers...",
+      "ch": "正在加载账户流水..."
+    },
+    "no_turnovers": {
+      "eng": "No account turnovers found",
+      "ch": "未找到账户流水"
+    },
+    "exchange_rates": {
+      "eng": "Exchange Rates",
+      "ch": "汇率"
+    },
+    "close": {
+      "eng": "Close",
+      "ch": "关闭"
+    },
+    "select_bonus_method": {
+      "eng": "Select Bonus Method",
+      "ch": "选择奖励方式"
+    },
+    "available_bonus_methods": {
+      "eng": "Available Bonus Methods",
+      "ch": "可用奖励方式"
+    },
+    "name": {
+      "eng": "Name",
+      "ch": "名称"
+    },
+    "description": {
+      "eng": "Description",
+      "ch": "描述"
+    },
+    "action": {
+      "eng": "Action",
+      "ch": "操作"
+    },
+    "details": {
+      "eng": "Details",
+      "ch": "详情"
+    },
+    "bonus_details": {
+      "eng": "Bonus Details",
+      "ch": "奖励详情"
+    },
+    "no_description": {
+      "eng": "No description available.",
+      "ch": "无描述信息。"
+    },
+    "edit_account_turnover": {
+      "eng": "Edit Account Turnover",
+      "ch": "编辑账户流水"
+    },
+    "enter_username": {
+      "eng": "Enter username",
+      "ch": "输入用户名"
+    },
+    "enter_game": {
+      "eng": "Enter game",
+      "ch": "输入游戏"
+    },
+    "enter_currency": {
+      "eng": "Enter currency",
+      "ch": "输入货币"
+    },
+    "enter_turnover": {
+      "eng": "Enter turnover",
+      "ch": "输入流水"
+    },
+    "cancel": {
+      "eng": "Cancel",
+      "ch": "取消"
+    },
+    "update": {
+      "eng": "Update",
+      "ch": "更新"
+    
+    },
+    "delete": {
+      "eng": "Delete",
+      "ch": "删除"
+    },
+    "delete_warning": {
+      "eng": "Are you sure you want to delete this account turnover?",
+      "ch": "你确定要删除这个账户流水吗？"
+    },
+    "delete_irreversible": {
+      "eng": "This action cannot be undone.",
+      "ch": "此操作无法撤销。"
+    },
+    "from_currency": {
+    "eng": "From Currency",
+    "ch": "原始货币"
+    },
+    "to_currency": {
+        "eng": "To Currency",
+        "ch": "目标货币"
+    },
+    "rate": {
+        "eng": "Rate",
+        "ch": "汇率"
+    },
+    "no_exchange_rates": {
+        "eng": "No exchange rates found",
+        "ch": "未找到汇率数据"
+    },
+    "no_bonus_methods": {
+        "eng": "No bonus methods found",
+        "ch": "未找到奖励方式"
+    },
+    "confirm": {
+        "eng": "Confirm",
+        "ch": "确认"
+    },
+    "confirm_delete": {
+        "eng": "Confirm Delete",
+        "ch": "确认删除"
+    },
+    "page": {
+        "eng": "Page",
+        "ch": "页"
+      },
+      "of": {
+        "eng": "of",
+        "ch": "共"
+      },
+      "first": {
+        "eng": "First",
+        "ch": "第一页"
+      },
+      "previous": {
+        "eng": "Previous",
+        "ch": "上一页"
+      },
+      "next": {
+        "eng": "Next",
+        "ch": "下一页"
+      },
+      "last": {
+        "eng": "Last",
+        "ch": "最后一页"
+      },
+      "showing_all": {
+        "eng": "Showing all",
+        "ch": "显示全部"
+      },
+      "showing": {
+        "eng": "Showing",
+        "ch": "显示"
+      },
+      "to": {
+        "eng": "to",
+        "ch": "到"
+      },
+      "account_turnovers": {
+        "eng": "account turnovers",
+        "ch": "账户流水"
+      },
+      "edit": {
+        "eng": "Edit",
+        "ch": "修改"
+    },
+    "row": {
+        "eng": "rows",
+        "ch": "行"
+    },"agent_account_management": {
+    "eng": "Agent Account Management",
+    "ch": "代理账户管理"
+  },
+  "create_agent_account": {
+    "eng": "Create Agent Account",
+    "ch": "创建代理账户"
+  },
+  "edit_agent_account": {
+    "eng": "Edit Agent Account",
+    "ch": "编辑代理账户"
+  },
+  "rows_per_page": {
+    "eng": "Rows per page",
+    "ch": "每页行数"
+  },
+  "rows": {
+    "eng": "rows",
+    "ch": "行"
+  },
+  "search_agent_accounts": {
+    "eng": "Search agent accounts...",
+    "ch": "搜索代理账户..."
+  },
+  "password": {
+    "eng": "Password",
+    "ch": "密码"
+  },
+  "status": {
+    "eng": "Status",
+    "ch": "状态"
+  },
+  "progress": {
+    "eng": "Progress",
+    "ch": "进度"
+  },
+  "process_id": {
+    "eng": "Process ID",
+    "ch": "流程ID"
+  },
+  "updated_at": {
+    "eng": "Updated At",
+    "ch": "更新时间"
+  },
+  "loading_agent_accounts": {
+    "eng": "Loading agent accounts...",
+    "ch": "正在加载代理账户..."
+  },
+  "no_agent_accounts": {
+    "eng": "No agent accounts found",
+    "ch": "未找到代理账户"
+  },
+  "agent_accounts": {
+    "eng": "agent accounts",
+    "ch": "代理账户"
+  },
+
+  "enter_password": {
+    "eng": "Enter password",
+    "ch": "输入密码"
+  },
+  "username_validation": {
+    "eng": "Username must be at least 3 characters",
+    "ch": "用户名至少需要3个字符"
+  },
+  "password_validation": {
+    "eng": "Password must be at least 6 characters",
+    "ch": "密码至少需要6个字符"
+  },
+  "create": {
+    "eng": "Create",
+    "ch": "创建"
+  },
+  "api_key_management": {
+    "eng": "API Key Management",
+    "ch": "API密钥管理"
+  },
+  "create_api_key": {
+    "eng": "Create API Key",
+    "ch": "创建API密钥"
+  },
+  "search_applications": {
+    "eng": "Search applications...",
+    "ch": "搜索应用..."
+  },
+  "application": {
+    "eng": "Application",
+    "ch": "应用"
+  },
+  "permissions": {
+    "eng": "Permissions",
+    "ch": "权限"
+  },
+  "expires": {
+    "eng": "Expires",
+    "ch": "过期时间"
+  },
+  "created": {
+    "eng": "Created",
+    "ch": "创建时间"
+  },
+  "loading_api_keys": {
+    "eng": "Loading API keys...",
+    "ch": "正在加载API密钥..."
+  },
+  "no_api_keys": {
+    "eng": "No API keys found",
+    "ch": "未找到API密钥"
+  },
+  "system": {
+    "eng": "System",
+    "ch": "系统"
+  },
+  "disabled": {
+    "eng": "Disabled",
+    "ch": "已禁用"
+  },
+  "expired": {
+    "eng": "Expired",
+    "ch": "已过期"
+  },
+  "active": {
+    "eng": "Active",
+    "ch": "活跃"
+  },
+  "no_permissions": {
+    "eng": "No permissions",
+    "ch": "无权限"
+  },
+  "view": {
+    "eng": "View",
+    "ch": "查看"
+  },
+  "manage": {
+    "eng": "Manage",
+    "ch": "管理"
+  },
+  "add": {
+    "eng": "Add",
+    "ch": "添加"
+  },
+  "open_menu": {
+    "eng": "Open menu",
+    "ch": "打开菜单"
+  },
+  "view_permissions": {
+    "eng": "View Permissions",
+    "ch": "查看权限"
+  },
+  "regenerate_token": {
+    "eng": "Regenerate Token",
+    "ch": "重新生成令牌"
+  },
+  "extend_expiration": {
+    "eng": "Extend Expiration",
+    "ch": "延长过期时间"
+  },
+  "edit_name": {
+    "eng": "Edit Name",
+    "ch": "编辑名称"
+  },
+  "manage_permissions": {
+    "eng": "Manage Permissions",
+    "ch": "管理权限"
+  },
+  "enable": {
+    "eng": "Enable",
+    "ch": "启用"
+  },
+  "disable": {
+    "eng": "Disable",
+    "ch": "禁用"
+  },
+  "api_keys": {
+    "eng": "API keys",
+    "ch": "API密钥"
+  },
+  "application_name": {
+    "eng": "Application Name",
+    "ch": "应用名称"
+  },
+  "enter_application_name": {
+    "eng": "Enter application name",
+    "ch": "输入应用名称"
+  },
+  "important": {
+    "eng": "Important",
+    "ch": "重要"
+  },
+  "api_key_shown_once": {
+    "eng": "After creation, the API key will be shown only once. Make sure to copy it immediately.",
+    "ch": "创建后，API密钥将只显示一次。请确保立即复制它。"
+  },
+  "edit_api_key": {
+    "eng": "Edit API Key",
+    "ch": "编辑API密钥"
+  },
+  "viewing_permissions_for": {
+    "eng": "Viewing permissions for",
+    "ch": "查看权限："
+  },
+  "managing_permissions_for": {
+    "eng": "Managing permissions for",
+    "ch": "管理权限："
+  },
+  "system_api_key": {
+    "eng": "System API Key",
+    "ch": "系统API密钥"
+  },
+  "system_api_key_description": {
+    "eng": "This is a system API key used for automation. Its permissions cannot be modified.",
+    "ch": "这是用于自动化的系统API密钥。其权限无法修改。"
+  },
+  "no_permissions_found": {
+    "eng": "No permissions found",
+    "ch": "未找到权限"
+  },
+  "save_changes": {
+    "eng": "Save Changes",
+    "ch": "保存更改"
+  },
+  "regenerate_api_key": {
+    "eng": "Regenerate API Key",
+    "ch": "重新生成API密钥"
+  },
+  "warning": {
+    "eng": "Warning",
+    "ch": "警告"
+  },
+  "regenerate_warning": {
+    "eng": "Regenerating this API key will invalidate the existing one. Any application using the current key will stop working until updated with the new key.",
+    "ch": "重新生成此API密钥将使现有密钥失效。使用当前密钥的任何应用程序将停止工作，直到使用新密钥更新。"
+  },
+"regenerate_confirmation": {
+    "eng": "Are you sure you want to regenerate the API key for",
+    "ch": "您确定要重新生成以下应用的API密钥吗："
+  },
+  "regenerate": {
+    "eng": "Regenerate",
+    "ch": "重新生成"
+  },
+  "new_api_key_generated": {
+    "eng": "New API Key Generated",
+    "ch": "新API密钥已生成"
+  },
+  "important_copy_key": {
+    "eng": "Important - Copy this key now!",
+    "ch": "重要 - 立即复制此密钥！"
+  },
+  "key_shown_once_warning": {
+    "eng": "This API key will only be shown once. Make sure to copy it now as you won't be able to retrieve it later.",
+    "ch": "此API密钥将只显示一次。请确保立即复制它，因为以后将无法检索它。"
+  },
+  "copy_to_clipboard": {
+    "eng": "Copy to Clipboard",
+    "ch": "复制到剪贴板"
+  },
+  "ive_copied_it": {
+    "eng": "I've Copied It",
+    "ch": "我已复制"
+  },
+  "delete_api_confirmation": {
+    "eng": "Are you sure you want to delete the API key for",
+    "ch": "您确定要删除以下应用的API密钥吗："
+  },
+  "application_validation": {
+    "eng": "Application name must be at least 3 characters",
+    "ch": "应用名称至少需要3个字符"
+  },
+  "failed_fetch_api_keys": {
+    "eng": "Failed to fetch API keys",
+    "ch": "获取API密钥失败"
+  },
+  "failed_fetch_permissions": {
+    "eng": "Failed to fetch permissions",
+    "ch": "获取权限失败"
+  },
+  "failed_create_api_key": {
+    "eng": "Failed to create API key",
+    "ch": "创建API密钥失败"
+  },
+  "api_key_created": {
+    "eng": "API key created successfully",
+    "ch": "API密钥创建成功"
+  },
+  "failed_update_api_key": {
+    "eng": "Failed to update API key",
+    "ch": "更新API密钥失败"
+  },
+  "api_key_updated": {
+    "eng": "API key updated successfully",
+    "ch": "API密钥更新成功"
+  },
+  "failed_update_permissions": {
+    "eng": "Failed to update permissions",
+    "ch": "更新权限失败"
+  },
+  "permissions_updated": {
+    "eng": "Permissions updated successfully",
+    "ch": "权限更新成功"
+  },
+  "failed_regenerate_api_key": {
+    "eng": "Failed to regenerate API key",
+    "ch": "重新生成API密钥失败"
+  },
+  "api_key_regenerated": {
+    "eng": "API key regenerated successfully",
+    "ch": "API密钥重新生成成功"
+  },
+  "failed_delete_api_key": {
+    "eng": "Failed to delete API key",
+    "ch": "删除API密钥失败"
+  },
+  "api_key_deleted": {
+    "eng": "API key deleted successfully",
+    "ch": "API密钥删除成功"
+  },
+  "failed_update_api_key_status": {
+    "eng": "Failed to update API key status",
+    "ch": "更新API密钥状态失败"
+  },
+  "api_key_enabled": {
+    "eng": "API key enabled successfully",
+    "ch": "API密钥启用成功"
+  },
+  "api_key_disabled": {
+    "eng": "API key disabled successfully",
+    "ch": "API密钥禁用成功"
+  },
+  "failed_extend_expiration": {
+    "eng": "Failed to extend expiration",
+    "ch": "延长过期时间失败"
+  },
+  "api_key_expiration_extended": {
+    "eng": "API key expiration extended successfully",
+    "ch": "API密钥过期时间延长成功"
+  },
+  "automation_key_name_error": {
+    "eng": "The Automation API key name cannot be modified",
+    "ch": "自动化API密钥名称无法修改"
+  },
+  "automation_key_delete_error": {
+    "eng": "The Automation API key cannot be deleted",
+    "ch": "自动化API密钥无法删除"
+  },
+  "copied_to_clipboard": {
+    "eng": "Copied to clipboard",
+    "ch": "已复制到剪贴板"
+  },
+  "loading": {
+    "eng": "Loading...",
+    "ch": "加载中..."
+  },
+  "bonuses": {
+    "eng": "Bonuses",
+    "ch": "奖金"
+  },
+  "validation_failed": {
+    "eng": "Validation Failed",
+    "ch": "验证失败"
+  },
+  "create_new_bonus_rule": {
+    "eng": "Create New Bonus Rule",
+    "ch": "创建新奖金规则"
+  },
+  "edit_bonus_rule": {
+    "eng": "Edit Bonus Rule",
+    "ch": "编辑奖金规则"
+  },
+  "bonus_name": {
+    "eng": "Bonus Name",
+    "ch": "奖金名称"
+  },
+  "bonus_function": {
+    "eng": "Bonus Function",
+    "ch": "奖金函数"
+  },
+  "enter_bonus_name_placeholder": {
+    "eng": "Enter a name for this bonus rule",
+    "ch": "输入此奖金规则的名称"
+  },
+  "describe_bonus_placeholder": {
+    "eng": "Describe how this bonus works",
+    "ch": "描述此奖金如何运作"
+  },
+  "view_test_data": {
+    "eng": "View Test Data",
+    "ch": "查看测试数据"
+  },
+  "edit_function": {
+    "eng": "Edit Function",
+    "ch": "编辑函数"
+  },
+  "create_function": {
+    "eng": "Create Function",
+    "ch": "创建函数"
+  },
+  "no_function_defined": {
+    "eng": "No function defined",
+    "ch": "未定义函数"
+  },
+  "function_errors": {
+    "eng": "Function Errors",
+    "ch": "函数错误"
+  },
+  "baseline_data_optional": {
+    "eng": "Baseline Data (optional, JSON format)",
+    "ch": "基准数据（可选，JSON格式）"
+  },
+  "edit_json": {
+    "eng": "Edit JSON",
+    "ch": "编辑JSON"
+  },
+  "create_json": {
+    "eng": "Create JSON",
+    "ch": "创建JSON"
+  },
+  "no_baseline_data": {
+    "eng": "No baseline data defined",
+    "ch": "未定义基准数据"
+  },
+  "baseline_data_errors": {
+    "eng": "Baseline Data Errors",
+    "ch": "基准数据错误"
+  },
+  "checking": {
+    "eng": "checking...",
+    "ch": "检查中..."
+  },
+  "create_bonus": {
+    "eng": "Create Bonus",
+    "ch": "创建奖金"
+  },
+  "update_bonus": {
+    "eng": "Update Bonus",
+    "ch": "更新奖金"
+  },
+  "edit_bonus_function": {
+    "eng": "Edit Bonus Function",
+    "ch": "编辑奖金函数"
+  },
+  "function_saved": {
+    "eng": "Function saved!",
+    "ch": "函数已保存！"
+  },
+  "function_parameters_sample": {
+    "eng": "Function Parameters Sample",
+    "ch": "函数参数示例"
+  },
+  "edit_baseline_json": {
+    "eng": "Edit Baseline JSON",
+    "ch": "编辑基准JSON"
+  },
+  "baseline_data_saved": {
+    "eng": "Baseline data saved!",
+    "ch": "基准数据已保存！"
+  },
+  "example_baseline_data": {
+    "eng": "Example Baseline Data",
+    "ch": "基准数据示例"
+  },
+  "confirm_bonus_creation": {
+    "eng": "Confirm Bonus Creation",
+    "ch": "确认创建奖金"
+  },
+  "confirm_bonus_update": {
+    "eng": "Confirm Bonus Update",
+    "ch": "确认更新奖金"
+  },
+  "validation_results": {
+    "eng": "Validation Results",
+    "ch": "验证结果"
+  },
+  "validation_passed_title": {
+    "eng": "Validation Passed",
+    "ch": "验证通过"
+  },
+  "validation_passed_description": {
+    "eng": "The function has been validated and produces the correct output format.",
+    "ch": "函数已验证并产生正确的输出格式。"
+  },
+  "function_output_preview": {
+    "eng": "Function Output Preview",
+    "ch": "函数输出预览"
+  },
+  "updated_bonus_details": {
+    "eng": "Updated Bonus Details",
+    "ch": "更新的奖金详情"
+  },
+  "fix_errors_before_continuing": {
+    "eng": "Please fix the errors before continuing.",
+    "ch": "请在继续之前修复错误。"
+  },
+  "baseline_errors": {
+    "eng": "Baseline Errors",
+    "ch": "基准错误"
+  },
+  "make_changes": {
+    "eng": "Make Changes",
+    "ch": "进行更改"
+  },
+  "creating": {
+    "eng": "Creating...",
+    "ch": "创建中..."
+  },
+  "updating": {
+    "eng": "Updating...",
+    "ch": "更新中..."
+  },
+  "confirm_and_create": {
+    "eng": "Confirm & Create",
+    "ch": "确认并创建"
+  },
+  "confirm_and_update": {
+    "eng": "Confirm & Update",
+    "ch": "确认并更新"
+  },
+  "test_data": {
+    "eng": "Test Data",
+    "ch": "测试数据"
+  },
+  "turnover_data": {
+    "eng": "Turnover Data",
+    "ch": "流水数据"
+  },
+  "error": {
+    "eng": "Error",
+    "ch": "错误"
+  },
+  "back_to_bonuses": {
+    "eng": "Back to Bonuses",
+    "ch": "返回奖金列表"
+  },
+  "failed_to_fetch_bonus": {
+    "eng": "Failed to fetch bonus",
+    "ch": "获取奖金失败"
+  },
+  "failed_to_load_bonus_data": {
+    "eng": "Failed to load bonus data. Please try again.",
+    "ch": "加载奖金数据失败。请重试。"
+  },
+  "function_required": {
+    "eng": "Function is required",
+    "ch": "函数是必需的"
+  },
+  "invalid_json_format": {
+    "eng": "Invalid JSON format in baseline data",
+    "ch": "基准数据中的JSON格式无效"
+  },
+  "function_execution_error": {
+    "eng": "Function execution error",
+    "ch": "函数执行错误"
+  },
+  "missing_required_fields": {
+    "eng": "Missing required fields",
+    "ch": "缺少必填字段"
+  },
+  "validation_passed": {
+    "eng": "Validation passed! Please review results before submitting.",
+    "ch": "验证通过！请在提交前查看结果。"
+  },
+  "unable_to_create_bonus": {
+    "eng": "Unable to create a bonus",
+    "ch": "无法创建奖金"
+  },
+  "bonus_created_successfully": {
+    "eng": "Bonus created successfully!",
+    "ch": "奖金创建成功！"
+  },
+  "unable_to_update_bonus": {
+    "eng": "Unable to update bonus",
+    "ch": "无法更新奖金"
+  },
+  "bonus_updated_successfully": {
+    "eng": "Bonus updated successfully!",
+    "ch": "奖金更新成功！"
+  },
+  "bonus_management": {
+    "eng": "Bonus Management",
+    "ch": "奖金管理"
+  },
+  "loading_bonuses": {
+    "eng": "Loading bonuses...",
+    "ch": "正在加载奖金..."
+  },
+  "search_bonuses": {
+    "eng": "Search bonuses...",
+    "ch": "搜索奖金..."
+  },
+  "no_bonuses_found": {
+    "eng": "No bonuses found",
+    "ch": "未找到奖金"
+  },
+  "not_available": {
+    "eng": "N/A",
+    "ch": "不可用"
+  },
+  "show_details": {
+    "eng": "Show Details",
+    "ch": "显示详情"
+  },
+  "function": {
+    "eng": "Function",
+    "ch": "函数"
+  },
+  "baseline": {
+    "eng": "Baseline",
+    "ch": "基准"
+  },
+  "failed_to_copy_to_clipboard": {
+    "eng": "Failed to copy to clipboard",
+    "ch": "复制到剪贴板失败"
+  },
+  "delete_bonus_confirmation": {
+    "eng": "Are you sure you want to delete this bonus?",
+    "ch": "您确定要删除此奖金吗？"
+  },
+  "failed_to_fetch_bonuses": {
+    "eng": "Failed to fetch bonuses",
+    "ch": "获取奖金失败"
+  },
+  "no_permission_to_delete_bonuses": {
+    "eng": "You do not have permission to delete bonuses",
+    "ch": "您没有删除奖金的权限"
+  },
+  "failed_to_delete_bonus": {
+    "eng": "Failed to delete bonus",
+    "ch": "删除奖金失败"
+  },
+  "bonus_deleted_successfully": {
+    "eng": "Bonus deleted successfully",
+    "ch": "奖金删除成功"
+  },
+  "dashboard": {
+    "eng": "Dashboard",
+    "ch": "仪表板"
+  },
+  "profile": {
+    "eng": "Profile",
+    "ch": "个人资料"
+  },
+  "dashboard_overview": {
+    "eng": "Dashboard Overview",
+    "ch": "仪表板概览"
+  },
+  "select_time_range": {
+    "eng": "Select time range",
+    "ch": "选择时间范围"
+  },
+  "view_system_metrics": {
+    "eng": "View system metrics for the selected time period",
+    "ch": "查看所选时间段的系统指标"
+  },
+  "last_week": {
+    "eng": "Last Week",
+    "ch": "上周"
+  },
+  "last_month": {
+    "eng": "Last Month",
+    "ch": "上个月"
+  },
+  "last_year": {
+    "eng": "Last Year",
+    "ch": "去年"
+  },
+  "last_5_years": {
+    "eng": "Last 5 Years",
+    "ch": "过去5年"
+  },
+  "users": {
+    "eng": "Users",
+    "ch": "用户"
+  },
+  "transfer_accounts": {
+    "eng": "Transfer Accounts",
+    "ch": "转账账户"
+  },
+  "players": {
+    "eng": "Players",
+    "ch": "玩家"
+  },
+  "processes": {
+    "eng": "Processes",
+    "ch": "流程"
+  },
+  "user_account_growth": {
+    "eng": "User & Account Growth",
+    "ch": "用户和账户增长"
+  },
+  "tracking_metrics": {
+    "eng": "Tracking user and account metrics over time",
+    "ch": "跟踪用户和账户指标随时间变化"
+  },
+  "process_status": {
+    "eng": "Process Status",
+    "ch": "流程状态"
+  },
+  "distribution_processes": {
+    "eng": "Distribution of completed vs failed processes",
+    "ch": "已完成与失败流程的分布"
+  },
+  "notification_status": {
+    "eng": "Notification Status",
+    "ch": "通知状态"
+  },
+  "breakdown_notifications": {
+    "eng": "Breakdown of read vs unread notifications",
+    "ch": "已读与未读通知的细分"
+  },
+  "active_processes": {
+    "eng": "Active Processes",
+    "ch": "活动流程"
+  },
+  "current_processes": {
+    "eng": "Current running processes and their progress",
+    "ch": "当前运行的流程及其进度"
+  },
+  "total_users": {
+    "eng": "Total Users",
+    "ch": "总用户数"
+  },
+  "user_accounts_system": {
+    "eng": "User accounts in the system",
+    "ch": "系统中的用户账户"
+  },
+  "total_transfer_accounts": {
+    "eng": "Total transfer accounts registered",
+    "ch": "已注册的总转账账户数"
+  },
+  "total_players_system": {
+    "eng": "Total players in the system",
+    "ch": "系统中的总玩家数"
+  },
+  "notifications": {
+    "eng": "Notifications",
+    "ch": "通知"
+  },
+  "read": {
+    "eng": "Read",
+    "ch": "已读"
+  },
+  "unread": {
+    "eng": "Unread",
+    "ch": "未读"
+  },
+  "completed": {
+    "eng": "Completed",
+    "ch": "已完成"
+  },
+  "failed": {
+    "eng": "Failed",
+    "ch": "失败"
+  },
+  "point": {
+    "eng": "Point",
+    "ch": "点"
+  },
+  "started": {
+    "eng": "Started",
+    "ch": "开始时间"
+  },
+  "type": {
+    "eng": "Type",
+    "ch": "类型"
+  },
+  "updated": {
+    "eng": "Updated",
+    "ch": "更新时间"
+  },
+  "no_transfer_accounts": {
+    "eng": "No transfer accounts",
+    "ch": "没有转账账户"
+  },
+  "agent_account": {
+    "eng": "Agent Account",
+    "ch": "代理账户"
+  },
+  "no_active_processes": {
+    "eng": "No active processes",
+    "ch": "没有活动流程"
+  },
+  "loading_session": {
+    "eng": "Loading session...",
+    "ch": "加载会话中..."
+  },
+  "failed_to_fetch_dashboard_data": {
+    "eng": "Failed to fetch dashboard data",
+    "ch": "获取仪表板数据失败"
+  },
+  "no_data_received": {
+    "eng": "No data received from dashboard API",
+    "ch": "从仪表板API没有收到数据"
+  },
+  "error_fetching_dashboard_data": {
+    "eng": "Error fetching dashboard data:",
+    "ch": "获取仪表板数据时出错："
+  },
+  "no_data_provided": {
+    "eng": "No data provided to calculateStats",
+    "ch": "没有提供数据给calculateStats"
+  },
+  "sample_data": {
+    "eng": "Sample data",
+    "ch": "示例数据"
+  },
+  "validate": {
+    "eng": "Validate",
+    "ch": "验证"
+  },
+  "match_management": {
+    "eng": "Match Management",
+    "ch": "匹配管理"
+  },
+  "filter_by_status": {
+    "eng": "Filter by status",
+    "ch": "按状态筛选"
+  },
+  "all_statuses": {
+    "eng": "All Statuses",
+    "ch": "所有状态"
+  },
+  "success": {
+    "eng": "Success",
+    "ch": "成功"
+  },
+  "onhold": {
+    "eng": "On Hold",
+    "ch": "暂停"
+  },
+  "pending": {
+    "eng": "Pending",
+    "ch": "待处理"
+  },
+  "filter_by_bonus": {
+    "eng": "Filter by bonus",
+    "ch": "按奖金筛选"
+  },
+  "all_bonuses": {
+    "eng": "All Bonuses",
+    "ch": "所有奖金"
+  },
+  "all_rows": {
+    "eng": "All rows",
+    "ch": "所有行"
+  },
+  "search_matches": {
+    "eng": "Search matches...",
+    "ch": "搜索匹配..."
+  },
+  "match": {
+    "eng": "match",
+    "ch": "匹配"
+  },
+  "es": {
+    "eng": "es",
+    "ch": ""
+  },
+  "selected": {
+    "eng": "selected",
+    "ch": "已选择"
+  },
+  "clear_selection": {
+    "eng": "Clear selection",
+    "ch": "清除选择"
+  },
+  "all_players": {
+    "eng": "All Players",
+    "ch": "所有玩家"
+  },
+  "matched_players": {
+    "eng": "Matched Players",
+    "ch": "已匹配玩家"
+  },
+  "unmatched_players": {
+    "eng": "Unmatched Players",
+    "ch": "未匹配玩家"
+  },
+  "matches": {
+    "eng": "matches",
+    "ch": "匹配"
+  },
+  "all_unmatched_users_matched": {
+    "eng": "All unmatched users will be matched again. Do you want to continue?",
+    "ch": "所有未匹配的用户将被重新匹配。您要继续吗？"
+  },
+  "rematch_process_description": {
+    "eng": "This will attempt to find transfer accounts for all currently unmatched players in this process.",
+    "ch": "这将尝试为此过程中所有当前未匹配的玩家找到转账账户。"
+  },
+  "confirm_terminate_process": {
+    "eng": "Are you sure you want to terminate this process?",
+    "ch": "您确定要终止此过程吗？"
+  },
+  "terminate_process_warning": {
+    "eng": "This will kill any running automation process and stop all further processing. This action cannot be undone.",
+    "ch": "这将终止任何正在运行的自动化过程并停止所有进一步处理。此操作无法撤消。"
+  },
+  "confirm_mark_success": {
+    "eng": "Are you sure you want to mark this process as success?",
+    "ch": "您确定要将此过程标记为成功吗？"
+  },
+  "mark_success_description": {
+    "eng": "This will mark the process as completed successfully. All matches in this process already have 'success' status.",
+    "ch": "这将把过程标记为成功完成。此过程中的所有匹配已经具有(成功)状态。"
+  },
+  "confirm_put_on_hold": {
+    "eng": "Are you sure you want to put this process on hold?",
+    "ch": "您确定要暂停此过程吗？"
+  },
+  "mark_onhold_description": {
+    "eng": "This will pause the process. You can resume it later with selected matches.",
+    "ch": "这将暂停该过程。您可以稍后使用选定的匹配恢复它。"
+  },
+  "confirm_refilter_match": {
+    "eng": "Are you sure you want to refilter this match using its current bonus?",
+    "ch": "您确定要使用当前奖金重新筛选此匹配吗？"
+  },
+  "refilter_match_description_1": {
+    "eng": "This will attempt to refilter the player using the bonus",
+    "ch": "这将尝试使用奖金"
+  },
+  "refilter_match_description_2": {
+    "eng": ".",
+    "ch": "重新筛选玩家"
+  },
+  "confirm_action_1": {
+    "eng": "Are you sure you want to",
+    "ch": "您确定要"
+  },
+  "confirm_action_2": {
+    "eng": "this",
+    "ch": "这个"
+  },
+  "process": {
+    "eng": "process",
+    "ch": "过程"
+  },
+  "resume_process_with_selected": {
+    "eng": "Resume Process with Selected Matches",
+    "ch": "使用选定匹配恢复过程"
+  },
+  "bonus": {
+    "eng": "Bonus",
+    "ch": "奖金"
+  },
+  "amount": {
+    "eng": "Amount",
+    "ch": "金额"
+  },
+  "no_matches_selected": {
+    "eng": "No matches selected",
+    "ch": "未选择匹配"
+  },
+  "resume_with_selected": {
+    "eng": "Resume with Selected Matches",
+    "ch": "使用选定匹配恢复"
+  },
+  "request_permission_to_1": {
+    "eng": "Request Permission to",
+    "ch": "请求权限"
+  },
+  "request_permission_to_2": {
+    "eng": "Process",
+    "ch": "过程"
+  },
+  "reason_for_request": {
+    "eng": "Reason for Request",
+    "ch": "请求原因"
+  },
+  "explain_permission_need": {
+    "eng": "Explain why you need this permission...",
+    "ch": "解释为什么您需要此权限..."
+  },
+  "provide_detailed_explanation": {
+    "eng": "Please provide a more detailed explanation (at least 10 characters)",
+    "ch": "请提供更详细的解释（至少10个字符）"
+  },
+  "submit_request": {
+    "eng": "Submit Request",
+    "ch": "提交请求"
+  },
+  "edit_match_details": {
+    "eng": "Edit Match Details",
+    "ch": "编辑匹配详情"
+  },
+  "request_to_edit_match": {
+    "eng": "Request to Edit Match Details",
+    "ch": "请求编辑匹配详情"
+  },
+  "current_amount": {
+    "eng": "Current Amount",
+    "ch": "当前金额"
+  },
+  "new_amount_optional": {
+    "eng": "New Amount (Optional)",
+    "ch": "新金额（可选）"
+  },
+  "leave_empty_keep_current": {
+    "eng": "Leave empty to keep current amount",
+    "ch": "留空以保持当前金额"
+  },
+  "select_status": {
+    "eng": "Select status",
+    "ch": "选择状态"
+  },
+  "explain_change_need": {
+    "eng": "Explain why you need to change these details...",
+    "ch": "解释为什么您需要更改这些详情..."
+  },
+  "update_match": {
+    "eng": "Update Match",
+    "ch": "更新匹配"
+  },
+  "refilter_process_with_bonus": {
+    "eng": "Refilter Process with Selected Bonus",
+    "ch": "使用选定奖金重新筛选过程"
+  },
+  "select_bonus": {
+    "eng": "Select Bonus",
+    "ch": "选择奖金"
+  },
+  "select_a_bonus": {
+    "eng": "Select a bonus",
+    "ch": "选择奖金"
+  },
+  "refilter_warning_1": {
+    "eng": "This will refilter all non-successful matches in this process using the bonus",
+    "ch": "这将使用奖金"
+  },
+  "refilter_warning_2": {
+    "eng": ".",
+    "ch": "重新筛选此过程中所有非成功的匹配"
+  },
+  "refilter_process": {
+    "eng": "Refilter Process",
+    "ch": "重新筛选过程"
+  },
+  "transfer_account": {
+    "eng": "Transfer Account",
+    "ch": "转账账户"
+  },
+  "match_status": {
+    "eng": "Match Status",
+    "ch": "匹配状态"
+  },
+  "no_matches_found": {
+    "eng": "No matches found",
+    "ch": "未找到匹配"
+  },
+  "not_assigned": {
+    "eng": "Not assigned",
+    "ch": "未分配"
+  },
+  "matched": {
+    "eng": "Matched",
+    "ch": "已匹配"
+  },
+  "unmatched": {
+    "eng": "Unmatched",
+    "ch": "未匹配"
+  },
+  "rematch_individual_player": {
+    "eng": "Rematch this individual player",
+    "ch": "重新匹配此单个玩家"
+  },
+  "execute": {
+    "eng": "Execute",
+    "ch": "执行"
+  },
+  "execute_permitted_edit": {
+    "eng": "Execute permitted edit action",
+    "ch": "执行已许可的编辑操作"
+  },
+  "refilter_player": {
+    "eng": "Refilter this player",
+    "ch": "重新筛选此玩家"
+  },
+  "select_all": {
+    "eng": "Select all",
+    "ch": "全选"
+  },
+  "select_match_id": {
+    "eng": "Select match",
+    "ch": "选择匹配"
+  },
+  "resume": {
+    "eng": "Resume",
+    "ch": "恢复"
+  },
+  "complete_pending_process": {
+    "eng": "Complete the pending process with selected matches",
+    "ch": "使用选定的匹配完成待处理的过程"
+  },
+  "admin_create_match_tooltip": {
+    "eng": "This will allowed you to make create match request",
+    "ch": "这将允许您创建匹配请求"
+  },
+  "user_create_match_tooltip": {
+    "eng": "This will allowed you to create a match",
+    "ch": "这将允许您创建匹配"
+  },
+  "rematch_all": {
+    "eng": "Rematch All",
+    "ch": "全部重新匹配"
+  },
+  "update_matched_players": {
+    "eng": "Update the matched players for this process",
+    "ch": "更新此过程的已匹配玩家"
+  },
+  "refilter_all": {
+    "eng": "Refilter All",
+    "ch": "全部重新筛选"
+  },
+  "refilter_all_players": {
+    "eng": "Refilter all non-successful players in this process",
+    "ch": "重新筛选此过程中所有非成功的玩家"
+  },
+  "mark_success": {
+    "eng": "Mark Success",
+    "ch": "标记成功"
+  },
+  "mark_success_tooltip": {
+    "eng": "Mark this process as success. All matches must have success status.",
+    "ch": "将此过程标记为成功。所有匹配必须具有成功状态。"
+  },
+  "on_hold": {
+    "eng": "On Hold",
+    "ch": "暂停"
+  },
+  "on_hold_tooltip": {
+    "eng": "Put this process on hold. Processing will be paused.",
+    "ch": "暂停此过程。处理将被暂停。"
+  },
+  "terminate": {
+    "eng": "Terminate",
+    "ch": "终止"
+  },
+  "terminate_tooltip": {
+    "eng": "End the process entirely. This will kill any running automation process.",
+    "ch": "完全结束该过程。这将终止任何正在运行的自动化过程。"
+  },
+  "failed_to_fetch_matches": {
+    "eng": "Failed to fetch matches",
+    "ch": "获取匹配失败"
+  },
+  "error_fetching_matches": {
+    "eng": "Error fetching matches:",
+    "ch": "获取匹配时出错："
+  },
+  "error_loading_permissions": {
+    "eng": "Error loading permissions:",
+    "ch": "加载权限时出错："
+  },
+  "error_completing_permission": {
+    "eng": "Error completing permission:",
+    "ch": "完成权限时出错："
+  },
+  "event_received": {
+    "eng": "Event received from SSE",
+    "ch": "从SSE接收到事件"
+  },
+  "status_update_data": {
+    "eng": "Status update data:",
+    "ch": "状态更新数据："
+  },
+  "error_handling_status_update": {
+    "eng": "Error handling status update:",
+    "ch": "处理状态更新时出错："
+  },
+  "invalid_update_data": {
+    "eng": "Invalid update data received:",
+    "ch": "收到无效的更新数据："
+  },
+  "attempting_to_update_match_id": {
+    "eng": "Attempting to update match ID",
+    "ch": "尝试更新匹配ID"
+  },
+  "no_match_found_id": {
+    "eng": "No match found with ID",
+    "ch": "未找到ID为"
+  },
+  "updating_match_id": {
+    "eng": "Updating match",
+    "ch": "更新匹配"
+  },
+  "status_from": {
+    "eng": "from",
+    "ch": "从"
+  },
+  "status_to": {
+    "eng": "to",
+    "ch": "到"
+  },
+  "permission_used_successfully": {
+    "eng": "Permission used successfully",
+    "ch": "权限使用成功"
+  },
+  "all_matches_must_be_success": {
+    "eng": "All matches must have 'success' status to mark the process as success",
+    "ch": "所有匹配必须具有(成功）状态才能将过程标记为成功"
+  },
+  "no_eligible_matches_for_refiltering": {
+    "eng": "No eligible matches found for refiltering",
+    "ch": "没有找到符合重新筛选条件的匹配"
+  },
+  "select_at_least_one_match": {
+    "eng": "Please select at least one match to resume",
+    "ch": "请至少选择一个匹配来恢复"
+  },
+  "no_unmatched_players": {
+    "eng": "No unmatched players found for this process",
+    "ch": "此过程中没有未匹配的玩家"
+  },
+  "permission_request_submitted": {
+    "eng": "Permission request submitted successfully",
+    "ch": "权限请求已成功提交"
+  },
+  "failed_to_submit_request": {
+    "eng": "Failed to submit request",
+    "ch": "提交请求失败"
+  },
+  "error_submitting_permission_request": {
+    "eng": "Error submitting permission request:",
+    "ch": "提交权限请求时出错："
+  },
+  "failed_to_submit_permission_request": {
+    "eng": "Failed to submit permission request",
+    "ch": "提交权限请求失败"
+  },
+  "no_valid_matches_selected": {
+    "eng": "No valid matches selected for resume action",
+    "ch": "没有为恢复操作选择有效的匹配"
+  },
+  "failed_to_execute_action": {
+    "eng": "Failed to",
+    "ch": "执行失败"
+  },
+  "action_performed_successfully": {
+    "eng": "Successfully performed",
+    "ch": "成功执行"
+  },
+  "error_during_action": {
+    "eng": "Error during",
+    "ch": "执行期间出错"
+  },
+  "failed_to_perform_action": {
+    "eng": "Failed to perform",
+    "ch": "执行失败"
+  },
+  "update_amount_or_status": {
+    "eng": "Please update either the amount or status",
+    "ch": "请更新金额或状态"
+  },
+  "enter_valid_amount": {
+    "eng": "Please enter a valid positive amount",
+    "ch": "请输入有效的正数金额"
+  },
+  "failed_to_update_match": {
+    "eng": "Failed to update match",
+    "ch": "更新匹配失败"
+  },
+  "match_updated_successfully": {
+    "eng": "Match updated successfully",
+    "ch": "匹配已成功更新"
+  },
+  "error_updating_match": {
+    "eng": "Error updating match:",
+    "ch": "更新匹配时出错："
+  },
+  "provide_update_and_reason": {
+    "eng": "Please update either amount or status and provide a reason",
+    "ch": "请更新金额或状态并提供原因"
+  },
+  "request_to_change_match": {
+    "eng": "Request to change match: ",
+    "ch": "请求更改匹配："
+  },
+  "amount_from": {
+    "eng": "Amount from",
+    "ch": "金额从"
+  },
+  "amount_to": {
+    "eng": "to",
+    "ch": "到"
+  },
+  "reason_prefix": {
+    "eng": ". Reason: ",
+    "ch": "。原因："
+  },
+  "unknown": {
+    "eng": "Unknown",
+    "ch": "未知"
+  },
+  "notification_management": {
+    "eng": "Notification Management",
+    "ch": "通知管理"
+  },
+  "five_rows": {
+    "eng": "5 rows",
+    "ch": "5 行"
+  },
+  "ten_rows": {
+    "eng": "10 rows",
+    "ch": "10 行"
+  },
+  "twenty_rows": {
+    "eng": "20 rows",
+    "ch": "20 行"
+  },
+  "fifty_rows": {
+    "eng": "50 rows",
+    "ch": "50 行"
+  },
+  "hundred_rows": {
+    "eng": "100 rows",
+    "ch": "100 行"
+  },
+  "search_notifications": {
+    "eng": "Search notifications...",
+    "ch": "搜索通知..."
+  },
+  "filter_by_type": {
+    "eng": "Filter by type",
+    "ch": "按类型筛选"
+  },
+  "all_types": {
+    "eng": "All Types",
+    "ch": "所有类型"
+  },
+  "info": {
+    "eng": "Info",
+    "ch": "信息"
+  },
+  "user": {
+    "eng": "User",
+    "ch": "用户"
+  },
+  "message": {
+    "eng": "Message",
+    "ch": "消息"
+  },
+  "loading_notifications": {
+    "eng": "Loading notifications...",
+    "ch": "加载通知中..."
+  },
+  "no_notifications_found": {
+    "eng": "No notifications found",
+    "ch": "未找到通知"
+  },
+  "confirm_delete_notification_message": {
+    "eng": "Are you sure you want to delete this notification? This action cannot be undone.",
+    "ch": "您确定要删除此通知吗？此操作无法撤消。"
+  },
+  "notification_details": {
+    "eng": "Notification Details",
+    "ch": "通知详情"
+  },
+  "sent_to": {
+    "eng": "Sent to",
+    "ch": "发送给"
+  },
+  "sent_at": {
+    "eng": "Sent at",
+    "ch": "发送时间"
+  },
+  "user_role": {
+    "eng": "User role",
+    "ch": "用户角色"
+  },
+  "user_status": {
+    "eng": "User status",
+    "ch": "用户状态"
+  },
+  "no_email": {
+    "eng": "No email",
+    "ch": "无邮箱"
+  },
+  "failed_to_fetch_notifications": {
+    "eng": "Failed to fetch notifications",
+    "ch": "获取通知失败"
+  },
+  "error_fetching_notifications": {
+    "eng": "Error fetching notifications",
+    "ch": "获取通知时出错"
+  },
+  "failed_to_delete_notification": {
+    "eng": "Failed to delete notification",
+    "ch": "删除通知失败"
+  },
+  "notification_deleted_successfully": {
+    "eng": "Notification deleted successfully",
+    "ch": "通知删除成功"
+  },
+  "error_deleting_notification": {
+    "eng": "Error deleting notification",
+    "ch": "删除通知时出错"
+  },
+  "history_data": {
+    "eng": "History Data",
+    "ch": "历史数据"
+  },
+  "there_are": {
+    "eng": "There are",
+    "ch": "有"
+  },
+  "processes_in_database": {
+    "eng": "processes in the database",
+    "ch": "个流程在数据库中"
+  },
+  "but_none_match": {
+    "eng": "but none match the current status filter.",
+    "ch": "但没有一个匹配当前状态筛选条件。"
+  },
+  "hide_debug_info": {
+    "eng": "Hide debug info",
+    "ch": "隐藏调试信息"
+  },
+  "show_debug_info": {
+    "eng": "Show debug info",
+    "ch": "显示调试信息"
+  },
+  "debug_information": {
+    "eng": "Debug Information",
+    "ch": "调试信息"
+  },
+  "available_status_values": {
+    "eng": "Available status values",
+    "ch": "可用状态值"
+  },
+  "available_match_status_values": {
+    "eng": "Available match status values",
+    "ch": "可用匹配状态值"
+  },
+  "none": {
+    "eng": "None",
+    "ch": "无"
+  },
+  "total_processes_no_filter": {
+    "eng": "Total processes (no filter)",
+    "ch": "总流程数（无筛选）"
+  },
+  "total_processes_with_filter": {
+    "eng": "Total processes (with filter)",
+    "ch": "总流程数（有筛选）"
+  },
+  "history_data_exploration": {
+    "eng": "History Data Exploration",
+    "ch": "历史数据导出"
+  },
+  "export_all_processes": {
+    "eng": "Export All Processes",
+    "ch": "导出所有流程"
+  },
+  "search_processes": {
+    "eng": "Search processes...",
+    "ch": "搜索流程..."
+  },
+  "search": {
+    "eng": "Search",
+    "ch": "搜索"
+  },
+  "process_name": {
+    "eng": "Process Name",
+    "ch": "流程名称"
+  },
+  "date_range": {
+    "eng": "Date Range",
+    "ch": "日期范围"
+  },
+  "last_updated": {
+    "eng": "Last Updated",
+    "ch": "最后更新"
+  },
+  "loading_historical_processes": {
+    "eng": "Loading historical processes...",
+    "ch": "加载历史流程中..."
+  },
+  "no_historical_processes_found": {
+    "eng": "No historical processes found",
+    "ch": "未找到历史流程"
+  },
+  "not_specified": {
+    "eng": "Not specified",
+    "ch": "未指定"
+  },
+  "total": {
+    "eng": "Total",
+    "ch": "总计"
+  },
+  "preview_and_export_data": {
+    "eng": "Preview and export data",
+    "ch": "预览并导出数据"
+  },
+  "preview": {
+    "eng": "Preview",
+    "ch": "预览"
+  },
+  "fetching_with_params": {
+    "eng": "Fetching with params",
+    "ch": "使用参数获取"
+  },
+  "failed_to_fetch_historical_processes": {
+    "eng": "Failed to fetch historical processes",
+    "ch": "获取历史流程失败"
+  },
+  "fetched_data": {
+    "eng": "Fetched data",
+    "ch": "获取的数据"
+  },
+  "api_returned_error": {
+    "eng": "API returned error",
+    "ch": "API返回错误"
+  },
+  "error_fetching_historical_processes": {
+    "eng": "Error fetching historical processes",
+    "ch": "获取历史流程时出错"
+  },
+  "player_management": {
+    "eng": "Player Management",
+    "ch": "玩家管理"
+  },
+  "create_player": {
+    "eng": "Create Player",
+    "ch": "创建玩家"
+  },
+  "rows_count": {
+    "eng": "5 rows",
+    "ch": "5 行"
+  },
+  "search_players": {
+    "eng": "Search players...",
+    "ch": "搜索玩家..."
+  },
+  "loading_players": {
+    "eng": "Loading players...",
+    "ch": "加载玩家中..."
+  },
+  "no_players_found": {
+    "eng": "No players found",
+    "ch": "未找到玩家"
+  },
+  "showing_items": {
+    "eng": "Showing {start} to {end} of {total} players",
+    "ch": "显示 {total} 个玩家中的第 {start} 到第 {end} 个"
+  },
+  "page_of_total": {
+    "eng": "Page {page} of {total}",
+    "ch": "第 {page} 页，共 {total} 页"
+  },
+  "select_transfer_account": {
+    "eng": "Select a transfer account",
+    "ch": "选择转账账户"
+  },
+  "edit_player": {
+    "eng": "Edit Player",
+    "ch": "编辑玩家"
+  },
+  "delete_player_confirmation": {
+    "eng": "Are you sure you want to delete this player?",
+    "ch": "您确定要删除这个玩家吗？"
+  },
+  "action_cannot_be_undone": {
+    "eng": "This action cannot be undone.",
+    "ch": "此操作无法撤销。"
+  },
+  "failed_to_fetch_players": {
+    "eng": "Failed to fetch players",
+    "ch": "获取玩家失败"
+  },
+  "failed_to_fetch_transfer_accounts": {
+    "eng": "Failed to fetch transfer accounts",
+    "ch": "获取转账账户失败"
+  },
+  "username_validation_error": {
+    "eng": "Username must be at least 3 characters",
+    "ch": "用户名必须至少3个字符"
+  },
+  "transfer_account_required": {
+    "eng": "Transfer account is required",
+    "ch": "转账账户是必需的"
+  },
+  "failed_to_create_player": {
+    "eng": "Failed to create player",
+    "ch": "创建玩家失败"
+  },
+  "player_created_successfully": {
+    "eng": "Player created successfully",
+    "ch": "玩家创建成功"
+  },
+  "failed_to_update_player": {
+    "eng": "Failed to update player",
+    "ch": "更新玩家失败"
+  },
+  "player_updated_successfully": {
+    "eng": "Player updated successfully",
+    "ch": "玩家更新成功"
+  },
+  "failed_to_delete_player": {
+    "eng": "Failed to delete player",
+    "ch": "删除玩家失败"
+  },
+  "player_deleted_successfully": {
+    "eng": "Player deleted successfully",
+    "ch": "玩家删除成功"
+  },
+  "process_management": {
+    "eng": "Process Management",
+    "ch": "流程管理"
+  },
+  "start_process": {
+    "eng": "Start Process",
+    "ch": "启动流程"
+  },
+  "date_from": {
+    "eng": "Date From",
+    "ch": "开始日期"
+  },
+  "date_to": {
+    "eng": "Date To",
+    "ch": "结束日期"
+  },
+  "started_at": {
+    "eng": "Started At",
+    "ch": "开始时间"
+  },
+  "loading_processes": {
+    "eng": "Loading processes...",
+    "ch": "加载流程中..."
+  },
+  "no_processes_found": {
+    "eng": "No processes found",
+    "ch": "未找到流程"
+  },
+  "view_details": {
+    "eng": "View Details",
+    "ch": "查看详情"
+  },
+  "terminate_process": {
+    "eng": "Terminate Process",
+    "ch": "终止流程"
+  },
+  "make_on_hold": {
+    "eng": "Make On Hold",
+    "ch": "设为暂停"
+  },
+  "make_pending": {
+    "eng": "Make Pending",
+    "ch": "设为待处理"
+  },
+  "mark_as_failed": {
+    "eng": "Mark as Failed",
+    "ch": "标记为失败"
+  },
+  "delete_process": {
+    "eng": "Delete Process",
+    "ch": "删除流程"
+  },
+
+  "start_new_process": {
+    "eng": "Start New Process",
+    "ch": "启动新流程"
+  },
+  "enter_process_name": {
+    "eng": "Enter a name for this process",
+    "ch": "输入此流程的名称"
+  },
+  "from_date": {
+    "eng": "From Date",
+    "ch": "开始日期"
+  },
+  "to_date": {
+    "eng": "To Date",
+    "ch": "结束日期"
+  },
+  "date_range_note": {
+    "eng": "Note: Date range cannot exceed 3 months, must be after 2020, and cannot be in the future.",
+    "ch": "注意：日期范围不能超过3个月，必须在2020年之后，且不能是未来日期。"
+  },
+  "select_agent_accounts": {
+    "eng": "Select Agent Accounts",
+    "ch": "选择代理账户"
+  },
+  "terminate_process_confirmation": {
+    "eng": "Are you sure you want to terminate this process? This action cannot be undone.",
+    "ch": "您确定要终止此流程吗？此操作无法撤销。"
+  },
+  "terminating": {
+    "eng": "Terminating...",
+    "ch": "正在终止..."
+  },
+  "mark_process_as_failed": {
+    "eng": "Mark Process as Failed",
+    "ch": "将流程标记为失败"
+  },
+  "mark_failed_confirmation": {
+    "eng": "Are you sure you want to mark this process as failed? This action cannot be undone.",
+    "ch": "您确定要将此流程标记为失败吗？此操作无法撤销。"
+  },
+  "created_by": {
+    "eng": "Created by",
+    "ch": "创建者"
+  },
+  "current_status": {
+    "eng": "Current Status",
+    "ch": "当前状态"
+  },
+  "mark_failed_warning": {
+    "eng": "This will permanently mark the process as failed and it cannot be resumed.",
+    "ch": "这将永久将流程标记为失败，且无法恢复。"
+  },
+  "processing": {
+    "eng": "Processing...",
+    "ch": "处理中..."
+  },
+  "delete_process_confirmation": {
+    "eng": "Are you sure you want to delete this process? This action cannot be undone and will permanently remove all data associated with this process.",
+    "ch": "您确定要删除此流程吗？此操作无法撤销，并将永久删除与此流程相关的所有数据。"
+  },
+  "delete_process_warning": {
+    "eng": "Warning: This will permanently delete all data associated with this process.",
+    "ch": "警告：这将永久删除与此流程相关的所有数据。"
+  },
+  "deleting": {
+    "eng": "Deleting...",
+    "ch": "删除中..."
+  },
+  "failed_to_fetch_processes": {
+    "eng": "Failed to fetch processes",
+    "ch": "获取流程失败"
+  },
+  "failed_to_terminate_process": {
+    "eng": "Failed to terminate process",
+    "ch": "终止流程失败"
+  },
+  "process_terminated_successfully": {
+    "eng": "Process terminated successfully",
+    "ch": "流程已成功终止"
+  },
+  "failed_to_fetch_agent_accounts": {
+    "eng": "Failed to fetch agent accounts",
+    "ch": "获取代理账户失败"
+  },
+  "error_loading_agent_accounts": {
+    "eng": "Error loading agent accounts",
+    "ch": "加载代理账户出错"
+  },
+  "start_date_required": {
+    "eng": "Start date is required",
+    "ch": "需要开始日期"
+  },
+  "start_date_before_2020": {
+    "eng": "Start date cannot be before 2020",
+    "ch": "开始日期不能早于2020年"
+  },
+  "start_date_future": {
+    "eng": "Start date cannot be in the future",
+    "ch": "开始日期不能是未来日期"
+  },
+  "end_date_required": {
+    "eng": "End date is required",
+    "ch": "需要结束日期"
+  },
+  "end_date_future": {
+    "eng": "End date cannot be in the future",
+    "ch": "结束日期不能是未来日期"
+  },
+  "end_date_before_start": {
+    "eng": "End date must be after the start date",
+    "ch": "结束日期必须晚于开始日期"
+  },
+  "date_range_exceed": {
+    "eng": "Date range cannot exceed 3 months",
+    "ch": "日期范围不能超过3个月"
+  },
+  "failed_to_start_process": {
+    "eng": "Failed to start process",
+    "ch": "启动流程失败"
+  },
+  "only_pending_on_hold": {
+    "eng": "Only pending processes can be put on hold",
+    "ch": "只有待处理的流程可以设为暂停"
+  },
+  "failed_to_update_process_status": {
+    "eng": "Failed to update process status",
+    "ch": "更新流程状态失败"
+  },
+  "process_status_on_hold": {
+    "eng": "Process status updated to On Hold",
+    "ch": "流程状态已更新为暂停"
+  },
+  "only_on_hold_pending": {
+    "eng": "Only on-hold processes can be made pending",
+    "ch": "只有暂停的流程可以设为待处理"
+  },
+  "cannot_make_pending": {
+    "eng": "Cannot make process pending while another pending process exists",
+    "ch": "当存在另一个待处理的流程时，无法将流程设为待处理"
+  },
+  "process_status_pending": {
+    "eng": "Process status updated to Pending",
+    "ch": "流程状态已更新为待处理"
+  },
+  "process_name_required": {
+    "eng": "Process name is required",
+    "ch": "流程名称是必需的"
+  },
+  "process_status_failed": {
+    "eng": "Process status updated to Failed",
+    "ch": "流程状态已更新为失败"
+  },
+  "failed_to_delete_process": {
+    "eng": "Failed to delete process",
+    "ch": "删除流程失败"
+  },
+  "process_deleted_successfully": {
+    "eng": "Process deleted successfully",
+    "ch": "流程已成功删除"
+  },
+  "must_be_logged_in": {
+    "eng": "You must be logged in to view this page",
+    "ch": "您必须登录才能查看此页面"
+  },
+  "my_profile": {
+    "eng": "My Profile",
+    "ch": "我的个人资料"
+  },
+  "error_loading_profile": {
+    "eng": "Error loading profile",
+    "ch": "加载个人资料时出错"
+  },
+  "loading_profile_data": {
+    "eng": "Loading profile data...",
+    "ch": "正在加载个人资料数据..."
+  },
+  "profile_updated_success": {
+    "eng": "Profile updated successfully!",
+    "ch": "个人资料更新成功！"
+  },
+  "failed_fetch_profile": {
+    "eng": "Failed to fetch profile",
+    "ch": "获取个人资料失败"
+  },
+  "failed_update_profile": {
+    "eng": "Failed to update profile",
+    "ch": "更新个人资料失败"
+  },
+  "mark_all_as_read": {
+    "eng": "Mark all as read",
+    "ch": "全标记已读"
+  },
+  "mark_as_read": {
+    "eng": "Mark as read",
+    "ch": "标记已读"
+  },
+  "received": {
+    "eng": "Received",
+    "ch": "已收到"
+  },
+  "delete_notification": {
+    "eng": "Delete Notification",
+    "ch": "删除通知"
+  },
+  "request_management": {
+    "eng": "Request Management",
+    "ch": "请求管理"
+  },
+  "accepted": {
+    "eng": "Accepted",
+    "ch": "已接受"
+  },
+  "rejected": {
+    "eng": "Rejected",
+    "ch": "已拒绝"
+  },
+  "search_requests": {
+    "eng": "Search requests...",
+    "ch": "搜索请求..."
+  },
+  "requests_selected": {
+    "eng": "requests selected",
+    "ch": "请求已选择"
+  },
+  "request_selected": {
+    "eng": "request selected",
+    "ch": "请求已选择"
+  },
+  "accept_all": {
+    "eng": "Accept All",
+    "ch": "全部接受"
+  },
+  "reject_all": {
+    "eng": "Reject All",
+    "ch": "全部拒绝"
+  },
+  "pending_all": {
+    "eng": "Pending All",
+    "ch": "全部待处理"
+  },
+  "delete_all": {
+    "eng": "Delete All",
+    "ch": "全部删除"
+  },
+  "requestor": {
+    "eng": "Requestor",
+    "ch": "请求者"
+  },
+  "model": {
+    "eng": "Model",
+    "ch": "模型"
+  },
+  "admin": {
+    "eng": "Admin",
+    "ch": "管理员"
+  },
+  "loading_requests": {
+    "eng": "Loading requests...",
+    "ch": "加载请求中..."
+  },
+  "no_requests_found": {
+    "eng": "No requests found",
+    "ch": "未找到请求"
+  },
+  "select_request": {
+    "eng": "Select request",
+    "ch": "选择请求"
+  },
+  "accept_request": {
+    "eng": "Accept request",
+    "ch": "接受请求"
+  },
+  "reject_request": {
+    "eng": "Reject request",
+    "ch": "拒绝请求"
+  },
+  "mark_as_pending": {
+    "eng": "Mark as pending",
+    "ch": "标记为待处理"
+  },
+  "delete_request": {
+    "eng": "Delete request",
+    "ch": "删除请求"
+  },
+  "requests": {
+    "eng": "requests",
+    "ch": "请求"
+  },
+  "request_details": {
+    "eng": "Request Details",
+    "ch": "请求详情"
+  },
+  "model_id": {
+    "eng": "Model ID",
+    "ch": "模型 ID"
+  },
+  "handled_by": {
+    "eng": "Handled By",
+    "ch": "处理人"
+  },
+  "reason": {
+    "eng": "Reason",
+    "ch": "原因"
+  },
+  "matches_to_create": {
+    "eng": "Matches to Create",
+    "ch": "要创建的比赛"
+  },
+  "match_creation_parse_error": {
+    "eng": "This appears to be a match creation request, but the data couldn't be parsed.",
+    "ch": "这似乎是一个创建比赛的请求，但无法解析数据。"
+  },
+  "update_request_status": {
+    "eng": "Update Request Status",
+    "ch": "更新请求状态"
+  },
+  "confirm_accept_match_creation": {
+    "eng": "Are you sure you want to accept this match creation request?",
+    "ch": "您确定要接受这个创建比赛的请求吗？"
+  },
+  "will_create_following_matches": {
+    "eng": "This will create the following matches:",
+    "ch": "这将创建以下比赛："
+  },
+  "warning_unable_to_parse": {
+    "eng": "Warning: Unable to parse match data. The request will be accepted but matches may need to be created manually.",
+    "ch": "警告：无法解析比赛数据。请求将被接受，但可能需要手动创建比赛。"
+  },
+  "confirm_status_change": {
+    "eng": "Are you sure you want to change the status to",
+    "ch": "您确定要将状态更改为"
+  },
+  "will_notify_requestor": {
+    "eng": "This will notify the requestor of the status change.",
+    "ch": "这将通知请求者状态变更。"
+  },
+  "accept_and_create_matches": {
+    "eng": "Accept & Create Matches",
+    "ch": "接受并创建比赛"
+  },
+  "update_status": {
+    "eng": "Update Status",
+    "ch": "更新状态"
+  },
+  "confirm_delete_request": {
+    "eng": "Are you sure you want to delete this request?",
+    "ch": "您确定要删除这请求吗？"
+
+  },
+  "confirm_bulk_delete": {
+    "eng": "Confirm Bulk Delete",
+    "ch": "确认批量删除"
+  },
+  "confirm_bulk_status_update": {
+    "eng": "Confirm Bulk Status Update",
+    "ch": "确认批量状态更新"
+  },
+  "confirm_delete_selected_requests": {
+    "eng": "Are you sure you want to delete the selected requests?",
+    "ch": "您确定要删除选定的请求吗？"
+  },
+  "confirm_update_selected_requests": {
+    "eng": "Are you sure you want to update the status of the selected requests?",
+    "ch": "您确定要更新选定请求的状态吗？"
+  },
+  "note_create_match_requests": {
+    "eng": "Note: Create match requests cannot be bulk accepted and will be skipped.",
+    "ch": "注意：创建比赛的请求不能批量接受，将被跳过。"
+  },
+  "will_notify_all_requestors": {
+    "eng": "This will notify all affected requestors of the status change.",
+    "ch": "这将通知所有受影响的请求者状态变更。"
+  },
+  "update_all": {
+    "eng": "Update All",
+    "ch": "全部更新"
+  },
+  "failed_to_fetch_requests": {
+    "eng": "Failed to fetch requests",
+    "ch": "获取请求失败"
+  },
+  "no_reason_provided": {
+    "eng": "No reason provided",
+    "ch": "未提供原因"
+  },
+  "invalid_match_data": {
+    "eng": "Invalid match data in request",
+    "ch": "请求中的比赛数据无效"
+  },
+  "failed_to_update_request_status": {
+    "eng": "Failed to update request status",
+    "ch": "更新请求状态失败"
+  },
+  "failed_to_create_matches": {
+    "eng": "Failed to create matches",
+    "ch": "创建比赛失败"
+  },
+  "request_accepted": {
+    "eng": "Request accepted",
+    "ch": "请求已接受"
+  },
+  "and": {
+    "eng": "and",
+    "ch": "和"
+  },
+  "matches_created_successfully": {
+    "eng": "matches created successfully",
+    "ch": "个比赛创建成功"
+  },
+  "failed_to_process_request": {
+    "eng": "Failed to process request",
+    "ch": "处理请求失败"
+  },
+  "request_status_updated_to": {
+    "eng": "Request status updated to",
+    "ch": "请求状态已更新为"
+  },
+  "bulk_accept_not_supported": {
+    "eng": "Bulk accepting create match requests is not supported. Please accept them individually.",
+    "ch": "不支持批量接受创建比赛的请求。请单独接受它们。"
+  },
+  "failed_to_update_requests": {
+    "eng": "Failed to update requests",
+    "ch": "更新请求失败"
+  },
+  "successfully_updated": {
+    "eng": "Successfully updated",
+    "ch": "成功更新了"
+  },
+  "failed_to_delete_requests": {
+    "eng": "Failed to delete requests",
+    "ch": "删除请求失败"
+  },
+  "successfully_deleted": {
+    "eng": "Successfully deleted",
+    "ch": "成功删除了"
+  },
+  "failed_to_delete_request": {
+    "eng": "Failed to delete request",
+    "ch": "删除请求失败"
+  },
+  "request_deleted_successfully": {
+    "eng": "Request deleted successfully",
+    "ch": "请求已成功删除"
+  },
+  "please_select_at_least_one_request": {
+    "eng": "Please select at least one request",
+    "ch": "请至少选择一请求"
+  },
+  "confirm_delete_selected_requests_prefix": {
+    "eng": "Are you sure you want to delete",
+    "ch": "您确定要删除"
+  },
+  "confirm_delete_selected_requests_suffix": {
+    "eng": "selected requests?",
+    "ch": "个选定的请求吗？"
+  },
+  "confirm_update_selected_requests_prefix": {
+    "eng": "Are you sure you want to update the status of",
+    "ch": "您确定要更新"
+  },
+  "confirm_update_selected_requests_middle": {
+    "eng": "selected requests to",
+    "ch": "个选定请求的状态为"
+  },
+  "confirm_update_selected_requests_suffix": {
+    "eng": "?",
+    "ch": "吗？"
+  },"transfer_account_management": {
+    "eng": "Transfer Account Management",
+    "ch": "转账账户管理"
+  },
+  "create_account": {
+    "eng": "Create Account",
+    "ch": "创建账户"
+  },
+  "request_to_create_account": {
+    "eng": "Request to Create Account",
+    "ch": "请求创建账户"
+  },
+  "search_accounts": {
+    "eng": "Search accounts...",
+    "ch": "搜索账户..."
+  },
+  "pin_code": {
+    "eng": "PIN Code",
+    "ch": "PIN码"
+  },
+  "parent_account": {
+    "eng": "Parent Account",
+    "ch": "对应主账号"
+  },
+  "player_count": {
+    "eng": "Player Count",
+    "ch": "玩家数量"
+  },
+  "loading_accounts": {
+    "eng": "Loading accounts...",
+    "ch": "加载账户中..."
+  },
+  "no_transfer_accounts_found": {
+    "eng": "No transfer accounts found",
+    "ch": "未找到转账账户"
+  },
+  "main_account": {
+    "eng": "Main Account",
+    "ch": "主账户"
+  },
+  "sub_account": {
+    "eng": "Sub Account",
+    "ch": "子账户"
+  },
+  "execute_edit_permission": {
+    "eng": "Execute Edit Permission",
+    "ch": "执行编辑权限"
+  },
+  "request_to_edit": {
+    "eng": "Request to Edit",
+    "ch": "请求编辑"
+  },
+  "execute_delete_permission": {
+    "eng": "Execute Delete Permission",
+    "ch": "执行删除权限"
+  },
+  "request_to_delete": {
+    "eng": "Request to Delete",
+    "ch": "请求删除"
+  },
+  "accounts": {
+    "eng": "accounts",
+    "ch": "个账户"
+  },
+  "create_transfer_account": {
+    "eng": "Create Transfer Account",
+    "ch": "创建转账账户"
+  },
+  "account_type": {
+    "eng": "Account Type",
+    "ch": "账户类型"
+  },
+  "select_account_type": {
+    "eng": "Select account type",
+    "ch": "选择账户类型"
+  },
+  "enter_pin_code": {
+    "eng": "Enter 6-digit PIN code",
+    "ch": "输入6位数PIN码"
+  },
+  "select_parent_account": {
+    "eng": "Select parent account",
+    "ch": "选择对应主账号"
+  },
+  "edit_transfer_account": {
+    "eng": "Edit Transfer Account",
+    "ch": "编辑转账账户"
+  },
+  "confirm_delete_account_prefix": {
+    "eng": "Are you sure you want to delete the account",
+    "ch": "您确定要删除账户"
+  },
+  "confirm_delete_account_suffix": {
+    "eng": "?",
+    "ch": "吗？"
+  },
+  "warning_delete_main_account": {
+    "eng": "Warning: Deleting a main account will also delete all its sub-accounts!",
+    "ch": "警告：删除主账户也将删除其所有子账户！"
+  },
+  "request_permission_prefix": {
+    "eng": "Request Permission to",
+    "ch": "请求权限以"
+  },
+  "request_permission_new_account": {
+    "eng": " New Account",
+    "ch": " 新账户"
+  },
+  "request_message": {
+    "eng": "Request Message",
+    "ch": "请求消息"
+  },
+  "message_min_length_error": {
+    "eng": "Message must be at least 10 characters",
+    "ch": "消息必须至少10个字符"
+  },
+  "username_min_length_error": {
+    "eng": "Username must be at least 3 characters",
+    "ch": "用户名必须至少3个字符"
+  },
+  "password_min_length_error": {
+    "eng": "Password must be at least 6 characters",
+    "ch": "密码必须至少6个字符"
+  },
+  "pin_code_format_error": {
+    "eng": "PIN code must be exactly 6 digits (0-9)",
+    "ch": "PIN码必须是6位数字(0-9)"
+  },
+  "parent_account_required_error": {
+    "eng": "Parent account is required for sub accounts",
+    "ch": "子账户需要指定对应的主账号"
+  },
+  "failed_to_fetch_parent_accounts": {
+    "eng": "Failed to fetch parent accounts",
+    "ch": "获取对应主账号失败"
+  },
+  "error_fetching_parent_accounts": {
+    "eng": "Error fetching parent accounts:",
+    "ch": "获取对应主账号时出错："
+  },
+  "error_fetching_transfer_accounts": {
+    "eng": "Error fetching transfer accounts:",
+    "ch": "获取转账账户时出错："
+  },
+  "failed_to_create_transfer_account": {
+    "eng": "Failed to create transfer account",
+    "ch": "创建转账账户失败"
+  },
+  "transfer_account_created_successfully": {
+    "eng": "Transfer account created successfully",
+    "ch": "转账账户创建成功"
+  },
+  "error_creating_transfer_account": {
+    "eng": "Error creating transfer account:",
+    "ch": "创建转账账户时出错："
+  },
+  "failed_to_update_transfer_account": {
+    "eng": "Failed to update transfer account",
+    "ch": "更新转账账户失败"
+  },
+  "transfer_account_updated_successfully": {
+    "eng": "Transfer account updated successfully",
+    "ch": "转账账户更新成功"
+  },
+  "error_updating_transfer_account": {
+    "eng": "Error updating transfer account:",
+    "ch": "更新转账账户时出错："
+  },
+  "failed_to_delete_transfer_account": {
+    "eng": "Failed to delete transfer account",
+    "ch": "删除转账账户失败"
+  },
+  "transfer_account_deleted_successfully": {
+    "eng": "Transfer account deleted successfully",
+    "ch": "转账账户删除成功"
+  },
+  "error_deleting_transfer_account": {
+    "eng": "Error deleting transfer account:",
+    "ch": "删除转账账户时出错："
+  },
+  "permission_request_submitted_successfully": {
+    "eng": "Permission request submitted successfully",
+    "ch": "权限请求提交成功"
+  },
+  "user_management": {
+    "eng": "User Management",
+    "ch": "用户管理"
+  },
+  "add_user": {
+    "eng": "Add User",
+    "ch": "添加用户"
+  },
+  "search_users_placeholder": {
+    "eng": "Search users...",
+    "ch": "搜索用户..."
+  },
+  "filter_by_role": {
+    "eng": "Filter by role",
+    "ch": "按角色筛选"
+  },
+  "all_roles": {
+    "eng": "All Roles",
+    "ch": "所有角色"
+  },
+  "management": {
+    "eng": "Management",
+    "ch": "管理层"
+  },
+  "email": {
+    "eng": "Email",
+    "ch": "电子邮件"
+  },
+  "role": {
+    "eng": "Role",
+    "ch": "角色"
+  },
+  "page_prefix": {
+    "eng": "Page",
+    "ch": "页"
+  },
+  "page_of": {
+    "eng": "of",
+    "ch": "共"
+  },
+  "delete_confirmation_prefix": {
+    "eng": "Are you sure you want to delete",
+    "ch": "您确定要删除"
+  },
+  "delete_confirmation_suffix": {
+    "eng": "This action cannot be undone.",
+    "ch": "此操作无法撤消。"
+  },
+  "fetch_users_error": {
+    "eng": "Failed to fetch users:",
+    "ch": "获取用户失败："
+  },
+  "delete_failed": {
+    "eng": "Delete failed",
+    "ch": "删除失败"
+  },
+  "failed_to_delete_user": {
+    "eng": "Failed to delete user.",
+    "ch": "删除用户失败。"
+  },
+  "invite": {
+    "eng": "Invite",
+    "ch": "邀请"
+  },
+  "send_invitation": {
+    "eng": "Send Invitation",
+    "ch": "发送邀请"
+  },
+  "error_fetching_roles_log": {
+    "eng": "Error fetching roles:",
+    "ch": "获取角色错误:"
+  },
+  "failed_to_send_invitation": {
+    "eng": "Failed to send invitation",
+    "ch": "无法发送邀请"
+  },
+  "invitation_sent_to": {
+    "eng": "Invitation sent to",
+    "ch": "邀请已发送至"
+  },
+  "user_not_found": {
+    "eng": "User Not Found",
+    "ch": "无法找到该玩家"
+  },
+  "role_not_found": {
+    "eng": "Role Not Found",
+    "ch": "角色无法找到"
+  },
+  "loading_user_data": {
+    "eng": "Loading User Data...",
+    "ch": "正在加载用户数据"
+  },
+  "verifying_invitation": {
+    "eng": "Verifying invitation...",
+    "ch": "验证邀请中..."
+  },
+  "invalid_invitation": {
+    "eng": "Invalid Invitation",
+    "ch": "无效邀请"
+  },
+  "go_to_login": {
+    "eng": "Go to Login",
+    "ch": "前往登录"
+  },
+  "account_setup_complete": {
+    "eng": "Account Setup Complete",
+    "ch": "账户设置完成"
+  },
+  "account_created_success": {
+    "eng": "Your account has been successfully created. You will be redirected to the login page shortly.",
+    "ch": "您的账户已成功创建。您将很快被重定向到登录页面。"
+  },
+  "complete_account_setup": {
+    "eng": "Complete Your Account Setup",
+    "ch": "完成您的账户设置"
+  },
+  "invited_to_join": {
+    "eng": "You've been invited to join the system. Please set up your account to continue.",
+    "ch": "您已被邀请加入系统。请设置您的账户以继续。"
+  },
+  "email_cannot_change": {
+    "eng": "This email cannot be changed",
+    "ch": "此电子邮件无法更改"
+  },
+  "choose_username": {
+    "eng": "Choose a username",
+    "ch": "选择用户名"
+  },
+  "create_password": {
+    "eng": "Create a password",
+    "ch": "创建密码"
+  },
+  "confirm_password": {
+    "eng": "Confirm Password",
+    "ch": "确认密码"
+  },
+  "confirm_your_password": {
+    "eng": "Confirm your password",
+    "ch": "确认您的密码"
+  },
+  "setting_up_account": {
+    "eng": "Setting up account...",
+    "ch": "设置账户中..."
+  },
+  "complete_setup": {
+    "eng": "Complete Setup",
+    "ch": "完成设置"
+  },
+  "invalid_invitation_link": {
+    "eng": "Invalid invitation link",
+    "ch": "无效的邀请链接"
+  },
+  "failed_verify_invitation": {
+    "eng": "Failed to verify invitation. Please try again.",
+    "ch": "验证邀请失败。请重试。"
+  },
+  "passwords_not_match": {
+    "eng": "Passwords do not match",
+    "ch": "密码不匹配"
+  },
+  "password_min_length": {
+    "eng": "Password must be at least 8 characters long",
+    "ch": "密码长度必须至少为8个字符"
+  },
+  "username_required": {
+    "eng": "Username is required",
+    "ch": "用户名为必填项"
+  },
+  "something_went_wrong": {
+    "eng": "Something went wrong",
+    "ch": "出现错误"
+  },
+  "failed_complete_setup": {
+    "eng": "Failed to complete account setup. Please try again.",
+    "ch": "完成账户设置失败。请重试。"
+  },
+  "toggle_sidebar": {
+    "eng": "Toggle Sidebar",
+    "ch": "切换侧栏"
+  },
+  "select_at_least_one_process": {
+    "eng": "Please select at least one process to export",
+    "ch": "请至少选择一个要导出的流程"
+  },
+  "failed_to_export_data": {
+    "eng": "Failed to export data",
+    "ch": "导出数据失败"
+  },
+  "data_exported_successfully": {
+    "eng": "Data exported successfully as",
+    "ch": "数据已成功导出为"
+  },
+  "processes_and_related_data": {
+    "eng": "processes and their related data",
+    "ch": "个流程及其相关数据"
+  },
+  "deleted": {
+    "eng": "Deleted",
+    "ch": "已删除"
+  },
+  "processes_successfully": {
+    "eng": "processes successfully",
+    "ch": "个流程成功"
+  },
+  "but_failed_to_delete": {
+    "eng": "but failed to delete",
+    "ch": "但未能删除"
+  },
+  "failed_to_delete_processes": {
+    "eng": "Failed to delete processes",
+    "ch": "删除流程失败"
+  },
+  "batch_export_successful": {
+    "eng": "Batch Export Successful",
+    "ch": "批量导出成功"
+  },
+  "export_completed_successfully": {
+    "eng": "Export Completed Successfully",
+    "ch": "导出成功完成"
+  },
+  "your_data_exported_to": {
+    "eng": "Your data has been exported to",
+    "ch": "您的数据已导出至"
+  },
+  "total_processes": {
+    "eng": "Total processes",
+    "ch": "总流程数"
+  },
+  "total_success_matches": {
+    "eng": "Total success matches",
+    "ch": "总成功匹配数"
+  },
+  "delete_processes_question": {
+    "eng": "Would you like to delete these processes?",
+    "ch": "您想删除这些流程吗？"
+  },
+  "delete_processes_explanation": {
+    "eng": "Now that you've exported the data, you can delete these processes and all their related data (matches, account turnovers) from the system. This action cannot be undone.",
+    "ch": "既然您已经导出了数据，您可以从系统中删除这些流程及其所有相关数据（匹配项、账户流水）。此操作无法撤消。"
+  },
+  "delete_all_selected_processes": {
+    "eng": "Delete All Selected Processes",
+    "ch": "删除所有选定的流程"
+  },
+  "keep_processes": {
+    "eng": "Keep Processes",
+    "ch": "保留流程"
+  },
+  "deleting_processes": {
+    "eng": "Deleting processes",
+    "ch": "正在删除流程"
+  },
+  "export_details": {
+    "eng": "Export Details",
+    "ch": "导出详情"
+  },
+  "total_processes_available": {
+    "eng": "Total processes available",
+    "ch": "可用流程总数"
+  },
+  "selected_processes": {
+    "eng": "Selected processes",
+    "ch": "已选择的流程"
+  },
+  "total_success_matches_to_export": {
+    "eng": "Total success matches to export",
+    "ch": "要导出的成功匹配总数"
+  },
+  "export_format": {
+    "eng": "Export Format",
+    "ch": "导出格式"
+  },
+  "exporting": {
+    "eng": "Exporting",
+    "ch": "正在导出"
+  },
+  "export_selected_processes": {
+    "eng": "Export Selected Processes",
+    "ch": "导出选定的流程"
+  },
+  "exporting_data": {
+    "eng": "Exporting data",
+    "ch": "正在导出数据"
+  },
+  "important_note": {
+    "eng": "Important Note",
+    "ch": "重要提示"
+  },
+  "after_exporting_note": {
+    "eng": "After exporting, you will have the option to delete all selected processes and their related data (matches, account turnovers) from the system. This action cannot be undone.",
+    "ch": "导出后，您将可以选择从系统中删除所有选定的流程及其相关数据（匹配项、账户流水）。此操作无法撤消。"
+  },
+  "select_all_processes": {
+    "eng": "Select All Processes",
+    "ch": "选择所有流程"
+  },
+  "select": {
+    "eng": "Select",
+    "ch": "选择"
+  },
+  "success_matches": {
+    "eng": "Success Matches",
+    "ch": "成功匹配"
+  },
+  "data_exported_successfully_delete_confirmation": {
+    "eng": "The data has been successfully exported. Do you want to delete all",
+    "ch": "数据已成功导出。您想删除所有"
+  },
+  "selected_processes_and_related_data": {
+    "eng": "selected processes and their related data from the system?",
+    "ch": "选定的流程及其相关数据从系统中？"
+  },
+  "delete_warning_message": {
+    "eng": "This action cannot be undone. All matches and account turnovers associated with these processes will be permanently deleted.",
+    "ch": "此操作无法撤消。与这些流程相关的所有匹配项和账户流水将被永久删除。"
+  },
+  "home": {
+    "eng": "Home",
+    "ch": "主页"
+  },
+  "time_remaining": {
+    "eng": "Time remaining",
+    "ch": "剩余时间"
+  },
+  "message_details": {
+    "eng": "Message Details",
+    "ch": "消息详情"
+  },
+  "confirm_action": {
+    "eng": "Confirm Action",
+    "ch": "确认操作"
+  },
+  "failed_submit_confirmation": {
+    "eng": "Failed to submit confirmation",
+    "ch": "提交确认失败"
+  },
+  "error_submitting_confirmation": {
+    "eng": "Error submitting confirmation:",
+    "ch": "提交确认时出错："
+  },
+  "failed_submit_rejection": {
+    "eng": "Failed to submit rejection",
+    "ch": "提交拒绝失败"
+  },
+  "error_submitting_rejection": {
+    "eng": "Error submitting rejection:",
+    "ch": "提交拒绝时出错："
+  },
+  "confirmation_dialog_timed_out": {
+    "eng": "Confirmation dialog timed out for thread:",
+    "ch": "确认对话框超时，线程："
+  },
+  "dialog_not_open": {
+    "eng": "Dialog not open, returning null",
+    "ch": "对话框未打开，返回空值"
+  },
+  "rendering_dialog": {
+    "eng": "Rendering dialog with title:",
+    "ch": "渲染对话框，标题："
+  },
+  "message_preview": {
+    "eng": "message preview:",
+    "ch": "消息预览："
+  },
+  "timeout": {
+    "eng": "timeout:",
+    "ch": "超时："
+  },
+  "view_full_message": {
+    "eng": "View full message",
+    "ch": "查看完整消息"
+  },
+  "no": {
+    "eng": "No",
+    "ch": "否"
+  },
+  "yes": {
+    "eng": "Yes",
+    "ch": "是"
+  },"request_to_create_matches": {
+    "eng": "Request to Create Matches",
+    "ch": "请求创建比赛"
+  },
+  "create_multiple_matches": {
+    "eng": "Create Multiple Matches",
+    "ch": "创建多个比赛"
+  },
+  "no_player_found": {
+    "eng": "No player found",
+    "ch": "未找到玩家"
+  },
+  "enter_amount": {
+    "eng": "Enter amount",
+    "ch": "输入金额"
+  },
+  "auto_selected": {
+    "eng": "Auto-selected",
+    "ch": "自动选择"
+  },
+  "add_another_match": {
+    "eng": "Add Another Match",
+    "ch": "添加另一场比赛"
+  },
+  "create_matches": {
+    "eng": "Create Matches",
+    "ch": "创建比赛"
+  },
+  "failed_fetch_players": {
+    "eng": "Failed to fetch players",
+    "ch": "获取玩家失败"
+  },
+  "fill_required_fields": {
+    "eng": "Please fill in all required fields correctly",
+    "ch": "请正确填写所有必填字段"
+  },
+  "provide_reason": {
+    "eng": "Please provide a reason for the request",
+    "ch": "请提供请求的原因"
+  },
+  "unable_create_matches": {
+    "eng": "Unable to create matches",
+    "ch": "无法创建比赛"
+  },
+  "request_submitted_successfully": {
+    "eng": "Match creation request submitted successfully",
+    "ch": "比赛创建请求已成功提交"
+  },
+  "failed_submit_verification_method": {
+    "eng": "Failed to submit verification method",
+    "ch": "提交验证方法失败"
+  },
+  "verification_method_submitted": {
+    "eng": "Verification method submitted successfully:",
+    "ch": "验证方法提交成功："
+  },
+  "error_submitting_verification_method": {
+    "eng": "Error submitting verification method:",
+    "ch": "提交验证方法时出错："
+  },
+  "verification_method": {
+    "eng": "Verification Method",
+    "ch": "验证方法"
+  },
+  "select_method": {
+    "eng": "Select a method",
+    "ch": "选择一种方法"
+  },
+  "submit": {
+    "eng": "Submit",
+    "ch": "提交"
+  },
+  "form_data_received": {
+    "eng": "Form data received:",
+    "ch": "收到表单数据："
+  },
+  "failed_submit_verification_code": {
+    "eng": "Failed to submit verification code",
+    "ch": "提交验证码失败"
+  },
+  "verification_code_submitted": {
+    "eng": "Verification code submitted successfully:",
+    "ch": "验证码提交成功："
+  },
+  "error_submitting_verification_code": {
+    "eng": "Error submitting verification code:",
+    "ch": "提交验证码时出错："
+  },
+  "verification_code": {
+    "eng": "Verification Code",
+    "ch": "验证码"
+  },
+  "submit_code": {
+    "eng": "Submit Code",
+    "ch": "提交验证码"
+  },
+  "form_timed_out": {
+    "eng": "Form timed out for thread:",
+    "ch": "表单超时，线程："
+  },
+  "select_verification_method": {
+    "eng": "Select Verification Method",
+    "ch": "选择验证方法"
+  },
+  "enter_verification_code": {
+    "eng": "Enter Verification Code",
+    "ch": "输入验证码"
+  },
+  "form": {
+    "eng": "Form",
+    "ch": "表单"
+  },
+  "invalid_form_type": {
+    "eng": "Invalid form type",
+    "ch": "无效的表单类型"
+  },
+  "active_process_tracker": {
+    "eng": "Active Process Tracker",
+    "ch": "目前活跃的流程"
+  },
+  "failed_fetch_process_matches": {
+    "eng": "Failed to fetch process matches",
+    "ch": "获取流程匹配失败"
+  },
+  "error_fetching_process_matches": {
+    "eng": "Error fetching process matches:",
+    "ch": "获取流程匹配时出错："
+  },
+  "failed_load_process_matches": {
+    "eng": "Failed to load process matches",
+    "ch": "加载流程匹配失败"
+  },
+  "export": {
+    "eng": "export",
+    "ch": "导出"
+  },
+  "failed_export_data": {
+    "eng": "Failed to export data",
+    "ch": "导出数据失败"
+  },
+  "error_exporting_data": {
+    "eng": "Error exporting data:",
+    "ch": "导出数据时出错："
+  },
+  "failed_delete_process": {
+    "eng": "Failed to delete process",
+    "ch": "删除流程失败"
+  },
+  "error_deleting_process": {
+    "eng": "Error deleting process:",
+    "ch": "删除流程时出错："
+  },
+  "export_successful": {
+    "eng": "Export Successful",
+    "ch": "导出成功"
+  },
+  "export_preview": {
+    "eng": "Export Preview",
+    "ch": "导出预览"
+  },
+  "data_exported_to": {
+    "eng": "Your data has been exported to",
+    "ch": "您的数据已导出至"
+  },
+  "delete_process_question": {
+    "eng": "Would you like to delete this process?",
+    "ch": "您想删除此流程吗？"
+  },
+  "delete_process_explanation": {
+    "eng": "Now that you've exported the data, you can delete this process and all its related data (matches, account turnovers) from the system. This action cannot be undone.",
+    "ch": "既然您已经导出了数据，您可以从系统中删除此流程及其所有相关数据（匹配、账户流水）。此操作无法撤消。"
+  },
+  "keep_process": {
+    "eng": "Keep Process",
+    "ch": "保留流程"
+  },
+  "process_details": {
+    "eng": "Process Details",
+    "ch": "流程详情"
+  },
+  "excel": {
+    "eng": "Excel",
+    "ch": "Excel"
+  },
+  "export_as": {
+    "eng": "Export as",
+    "ch": "导出为"
+  },
+  "successful_matches_preview": {
+    "eng": "Successful Matches Preview",
+    "ch": "成功匹配预览"
+  },
+  "loading_matches": {
+    "eng": "Loading matches...",
+    "ch": "正在加载匹配..."
+  },
+  "no_successful_matches": {
+    "eng": "No successful matches found for this process",
+    "ch": "未找到此流程的成功匹配"
+  },
+  "delete_process_data": {
+    "eng": "Delete Process Data",
+    "ch": "删除流程数据"
+  },
+  "data_exported_delete_confirmation": {
+    "eng": "The data has been successfully exported. Do you want to delete this process and all its related data from the system?",
+    "ch": "数据已成功导出。您想从系统中删除此流程及其所有相关数据吗？"
+  },
+  "email_required": {
+    "eng": "Email is required",
+    "ch": "邮箱是必填项"
+  },
+  "select_role": {
+    "eng": "Please select a role",
+    "ch": "请选择一个角色"
+  }, "invitation_description": {
+    "eng": "Send an invitation email to allow a user to join your system",
+    "ch": "发送邀请邮件以允许用户加入您的系统"
+  },
+  "email_address": {
+    "eng": "Email Address",
+    "ch": "邮箱地址"
+  },
+  "enter_email_address": {
+    "eng": "Enter email address",
+    "ch": "输入邮箱地址"
+  },
+  "select_a_role": {
+    "eng": "Select a role",
+    "ch": "选择一个角色"
+  },
+  "sending": {
+    "eng": "Sending...",
+    "ch": "发送中..."
+  },
+  "failed_fetch_notifications": {
+    "eng": "Failed to fetch notifications",
+    "ch": "获取通知失败"
+  },
+  "failed_fetch_count": {
+    "eng": "Failed to fetch the count",
+    "ch": "获取计数失败"
+  },
+  "management_dashboard": {
+    "eng": "Management Dashboard",
+    "ch": "管理仪表板"
+  },
+  "guest": {
+    "eng": "Guest",
+    "ch": "访客"
+  },
+  "logout": {
+    "eng": "Logout",
+    "ch": "退出登录"
+  },
+  "failed_fetch_process_details": {
+    "eng": "Failed to fetch process details",
+    "ch": "获取流程详情失败"
+  },
+  "error_fetching_process_details": {
+    "eng": "Error fetching process details",
+    "ch": "获取流程详情时出错"
+  },
+  "failed_load_process_details": {
+    "eng": "Failed to load process details",
+    "ch": "加载流程详情失败"
+  },
+  "failed_fetch_bonuses": {
+    "eng": "Failed to fetch bonuses",
+    "ch": "获取奖金失败"
+  },
+  "unexpected_bonus_data_format": {
+    "eng": "Unexpected bonus data format",
+    "ch": "意外的奖金数据格式"
+  },
+  "failed_load_bonuses_format": {
+    "eng": "Failed to load bonuses: Unexpected data format",
+    "ch": "加载奖金失败：意外的数据格式"
+  },
+  "error_fetching_bonuses": {
+    "eng": "Error fetching bonuses",
+    "ch": "获取奖金时出错"
+  },
+  "failed_load_bonuses": {
+    "eng": "Failed to load bonuses",
+    "ch": "加载奖金失败"
+  },
+  "loading_process_details": {
+    "eng": "Loading process details",
+    "ch": "正在加载流程详情"
+  },
+  "account_turnover": {
+    "eng": "Account Turnover",
+    "ch": "账户流水"
+  },
+  "from": {
+    "eng": "From",
+    "ch": "从"
+  },
+  "connected_users": {
+    "eng": "Connected Users",
+    "ch": "关联用户"
+  },
+  "ended": {
+    "eng": "Ended",
+    "ch": "结束时间"
+  },
+  "process_summary": {
+    "eng": "Process Summary",
+    "ch": "流程摘要"
+  },
+  "total_account_turnover": {
+    "eng": "Total Account Turnover",
+    "ch": "总账户流水"
+  },
+  "total_matches": {
+    "eng": "Total Matches",
+    "ch": "总匹配数"
+  },
+  "search_and_filter": {
+    "eng": "Search & Filter",
+    "ch": "搜索和筛选"
+  },
+  "clear_filters": {
+    "eng": "Clear Filters",
+    "ch": "清除筛选"
+  },
+  "search_username": {
+    "eng": "Search username",
+    "ch": "搜索用户名"
+  },
+  "search_game": {
+    "eng": "Search game",
+    "ch": "搜索游戏"
+  },
+  "select_currency": {
+    "eng": "Select currency",
+    "ch": "选择货币"
+  },
+  "all_currencies": {
+    "eng": "All Currencies",
+    "ch": "所有货币"
+  },
+  "entries": {
+    "eng": "entries",
+    "ch": "条"
+  },
+  "no_account_turnover_data": {
+    "eng": "No account turnover data found",
+    "ch": "未找到账户流水数据"
+  },
+  "no_results_match_criteria": {
+    "eng": "No results match your search criteria",
+    "ch": "没有符合您搜索条件的结果"
+  },
+  "no_bonuses_available": {
+    "eng": "No bonuses available",
+    "ch": "没有可用的奖金"
+  },
+  "no_matches_data": {
+    "eng": "No matches data found",
+    "ch": "未找到匹配数据"
+  },
+
+  "no_process_details": {
+    "eng": "No process details available",
+    "ch": "没有可用的流程详情"
+  },
+  "error_fetching_progress_data": {
+    "eng": "Error fetching progress data",
+    "ch": "获取进度数据时出错"
+  },
+  "failed_fetch_progress_data": {
+    "eng": "Failed to fetch progress data",
+    "ch": "获取进度数据失败"
+  },
+  "view_progress": {
+    "eng": "View Progress",
+    "ch": "查看进度"
+  },
+  "process_progress_tracker": {
+    "eng": "Process Progress Tracker",
+    "ch": "流程进度跟踪器"
+  },
+  "no_progress_data_found": {
+    "eng": "No progress data found",
+    "ch": "未找到进度数据"
+  },
+  "event": {
+    "eng": "Event",
+    "ch": "事件"
+  },
+  "account_name": {
+    "eng": "Account Name",
+    "ch": "账户名称"
+  },
+  "account_management": {
+    "eng": "Account Management",
+    "ch": "账户管理"
+  },
+  "general": {
+    "eng": "General",
+    "ch": "通用"
+  },
+  "api_key": {
+    "eng": "API Key",
+    "ch": "API密钥"
+  },
+  "notification": {
+    "eng": "Notification",
+    "ch": "通知"
+  },
+  "player_and_bonus": {
+    "eng": "Player and Bonus",
+    "ch": "玩家和奖金"
+  },
+  "data_exploration": {
+    "eng": "Data Exploration",
+    "ch": "数据导出"
+  },
+  "english": {
+    "eng": "English",
+    "ch": "英语"
+  },
+  "chinese": {
+    "eng": "Chinese",
+    "ch": "中文"
+  },
+  "initialized_with_role_id": {
+    "eng": "Initialized with role_id:",
+    "ch": "已初始化角色ID："
+  },
+  "role_changed_to": {
+    "eng": "Role changed to:",
+    "ch": "角色已更改为："
+  },
+  "file_size_exceed": {
+    "eng": "File size should not exceed 1MB",
+    "ch": "文件大小不应超过1MB"
+  },
+  "error_reading_file": {
+    "eng": "Error reading file",
+    "ch": "读取文件时出错"
+  },
+  "error_reading_file_try_again": {
+    "eng": "There was an error reading the file. Please try again.",
+    "ch": "读取文件时出错。请重试。"
+  },
+  "current_role_id": {
+    "eng": "Current role_id:",
+    "ch": "当前角色ID："
+  },
+  "role_exists_in_options": {
+    "eng": "Role exists in options:",
+    "ch": "角色存在于选项中："
+  },
+  "upload_photo": {
+    "eng": "Upload Photo",
+    "ch": "上传照片"
+  },
+  "phone": {
+    "eng": "Phone",
+    "ch": "电话"
+  },
+  "select_a_status": {
+    "eng": "Select a status",
+    "ch": "选择一个状态"
+  },
+  "inactive": {
+    "eng": "Inactive",
+    "ch": "不活跃"
+  },
+  "banned": {
+    "eng": "Banned",
+    "ch": "已禁止"
+  },
+  "saving": {
+    "eng": "Saving...",
+    "ch": "保存中..."
+  },
+  "create_user": {
+    "eng": "Create User",
+    "ch": "创建用户"
+  },
+  "current_password_required": {
+    "eng": "Current password is required to change your password",
+    "ch": "更改密码需要输入当前密码"
+  },
+  "passwords_dont_match": {
+    "eng": "New passwords don't match",
+    "ch": "新密码不匹配"
+  },
+  "password_length": {
+    "eng": "New password must be at least 8 characters long",
+    "ch": "新密码必须至少8个字符长"
+  },
+  "change_photo": {
+    "eng": "Change Photo",
+    "ch": "更改照片"
+  },
+  "account_information": {
+    "eng": "Account Information",
+    "ch": "账户信息"
+  },
+  "full_name": {
+    "eng": "Full Name",
+    "ch": "全名"
+  },
+  "change_password": {
+    "eng": "Change Password",
+    "ch": "更改密码"
+  },
+  "leave_blank": {
+    "eng": "Leave these fields blank if you don't want to change your password",
+    "ch": "如果不想更改密码，请将这些字段留空"
+  },
+  "current_password": {
+    "eng": "Current Password",
+    "ch": "当前密码"
+  },
+  "new_password": {
+    "eng": "New Password",
+    "ch": "新密码"
+  },
+  "confirm_new_password": {
+    "eng": "Confirm New Password",
+    "ch": "确认新密码"
+  },
+  "save_profile": {
+    "eng": "Save Profile",
+    "ch": "保存个人资料"
+  },
+  "failed_resend_invitation": {
+    "eng": "Failed to resend invitation",
+    "ch": "重新发送邀请失败"
+  },
+  "invitation_resent_to": {
+    "eng": "Invitation resent to",
+    "ch": "邀请已重新发送至"
+  },
+  "user_profile": {
+    "eng": "User Profile",
+    "ch": "用户资料"
+  },
+  "not_provided": {
+    "eng": "Not provided",
+    "ch": "未提供"
+  },
+  "invitation_link_dev_only": {
+    "eng": "Invitation Link (Dev Only)",
+    "ch": "邀请链接（仅开发环境）"
+  },
+  "sending_invitation": {
+    "eng": "Sending Invitation...",
+    "ch": "发送邀请中..."
+  },
+  "resend_invitation": {
+    "eng": "Resend Invitation",
+    "ch": "重新发送邀请"
+  },
+  "user_not_activated": {
+    "eng": "This user hasn't activated their account yet. Send another invitation email.",
+    "ch": "该用户尚未激活其账户。发送另一封邀请邮件。"
+  },
+  "back": {
+    "eng": "Back",
+    "ch": "返回"
+  },
+  "delete_user_with_id": {
+    "eng": "Delete user with ID",
+    "ch": "删除用户，ID为"
+  },
+  "search_users": {
+    "eng": "Search users...",
+    "ch": "搜索用户..."
+  },
+  "editor": {
+    "eng": "Editor",
+    "ch": "编辑"
+  },
+  "verification_code_form_warning": {
+    "eng": "Verification code form should have a 'message' property",
+    "ch": "验证码表单应该有一个'message'属性"
+  },
+  "verification_code_submitted_successfully": {
+    "eng": "Verification code submitted successfully:",
+    "ch": "验证码提交成功："
+  },
+  "verification_form_timed_out": {
+    "eng": "Verification form timed out for thread:",
+    "ch": "验证表单超时，线程："
+  },
+  "verification_options_missing": {
+    "eng": "Verification options form is missing required 'options' property",
+    "ch": "验证选项表单缺少必需的'options'属性"
+  },
+  "verification_method_submitted_successfully": {
+    "eng": "Verification method submitted successfully:",
+    "ch": "验证方法提交成功："
+  },
+  "verification_method_form_timed_out": {
+    "eng": "Verification method form timed out for thread:",
+    "ch": "验证方法表单超时，线程："
+  }
+  
+}
+    
+  
+  

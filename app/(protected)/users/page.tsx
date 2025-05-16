@@ -11,6 +11,8 @@ import { useUser } from "@/contexts/usercontext";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/badge";
 import { AppColor,UserStatus, Roles } from "@/constants/enums";
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 import {
   Table,
@@ -45,6 +47,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("");
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const { lang, setLang } = useLanguage()
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -75,7 +78,7 @@ export default function UsersPage() {
   }, [isLoading, auth, router]);
 
   if (isLoading) {
-    return <p>Loading session...</p>;
+    return <p>{t("loading_session", lang)}</p>;
   }
   
   const confirmDelete = async () => {
@@ -122,15 +125,15 @@ export default function UsersPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Users" }]} />
+      <Breadcrumb items={[{ label: t("users", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>User Management</CardTitle>
+          <CardTitle>{t("user_management", lang)}</CardTitle>
           <Link href="/users/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Add User
+              {t("add_user", lang)}
             </Button>
           </Link>
         </CardHeader>
@@ -142,26 +145,29 @@ export default function UsersPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search users..."
+                placeholder={t("search_users_placeholder", lang)}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1); // Reset page on search
+                  setSearchTerm(e.target.value)
+                  setCurrentPage(1) // Reset page on search
                 }}
               />
             </div>
-            <Select value={roleFilter} onValueChange={(val) => {
-              setRoleFilter(val);
-              setCurrentPage(1); // Reset page on filter change
-            }}>
+            <Select
+              value={roleFilter}
+              onValueChange={(val) => {
+                setRoleFilter(val)
+                setCurrentPage(1) // Reset page on filter change
+              }}
+            >
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by role" />
+                <SelectValue placeholder={t("filter_by_role", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="management">Management</SelectItem>
+                <SelectItem value="all">{t("all_roles", lang)}</SelectItem>
+                <SelectItem value="admin">{t("admin", lang)}</SelectItem>
+                <SelectItem value="management">{t("management", lang)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -171,12 +177,12 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("user", lang)}</TableHead>
+                  <TableHead>{t("username", lang)}</TableHead>
+                  <TableHead>{t("email", lang)}</TableHead>
+                  <TableHead>{t("role", lang)}</TableHead>
+                  <TableHead>{t("status", lang)}</TableHead>
+                  <TableHead className="text-right">{t("actions", lang)}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -186,9 +192,7 @@ export default function UsersPage() {
                       <div className="flex items-center gap-3">
                         <Avatar>
                           <AvatarImage src={u.profile_img || undefined} alt={u.name} />
-                          <AvatarFallback>
-                            {u.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
+                          <AvatarFallback>{u.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <span>{u.name}</span>
                       </div>
@@ -201,8 +205,8 @@ export default function UsersPage() {
                           u.role.name === Roles.Admin
                             ? AppColor.INFO
                             : u.role.name === Roles.Management
-                            ? AppColor.WARNING
-                            : AppColor.SUCCESS
+                              ? AppColor.WARNING
+                              : AppColor.SUCCESS
                         }
                         text={u.role.name}
                       />
@@ -213,10 +217,10 @@ export default function UsersPage() {
                           u.status === UserStatus.ACTIVE
                             ? AppColor.SUCCESS
                             : u.status === UserStatus.INACTIVE
-                            ? AppColor.WARNING
-                            : u.status === UserStatus.BANNED
-                            ? AppColor.ERROR
-                            : AppColor.INFO
+                              ? AppColor.WARNING
+                              : u.status === UserStatus.BANNED
+                                ? AppColor.ERROR
+                                : AppColor.INFO
                         }
                         text={u.status}
                       />
@@ -225,34 +229,36 @@ export default function UsersPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
+                            <span className="sr-only">{t("open_menu", lang)}</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {auth?.can("users:view") &&
-                          (<Link href={`/users/${u.id}`}>
-                            <DropdownMenuItem>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </DropdownMenuItem>
-                          </Link>)}
+                          {auth?.can("users:view") && (
+                            <Link href={`/users/${u.id}`}>
+                              <DropdownMenuItem>
+                                <Eye className="mr-2 h-4 w-4" />
+                                {t("view", lang)}
+                              </DropdownMenuItem>
+                            </Link>
+                          )}
                           {auth?.can("users:edit") && (
-                          <Link href={`/users/${u.id}/edit`}>
-                            <DropdownMenuItem>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                          </Link>)}
+                            <Link href={`/users/${u.id}/edit`}>
+                              <DropdownMenuItem>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {t("edit", lang)}
+                              </DropdownMenuItem>
+                            </Link>
+                          )}
                           {u.role.name.toLowerCase() !== "admin" && auth?.can("users:delete") && (
                             <DropdownMenuItem
                               onClick={() => {
-                                setUserToDelete(u);
-                                setDeleteDialogOpen(true);
+                                setUserToDelete(u)
+                                setDeleteDialogOpen(true)
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {t("delete", lang)}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -267,22 +273,14 @@ export default function UsersPage() {
           {/* Pagination controls */}
           {totalPages > 1 && (
             <div className="flex items-center justify-end mt-4 space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                Previous
+              <Button variant="outline" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+                {t("previous", lang)}
               </Button>
               <span className="px-2">
-                Page {currentPage} of {totalPages}
+                {t("page_prefix", lang)} {currentPage} {t("page_of")} {totalPages}
               </span>
-              <Button
-                variant="outline"
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                Next
+              <Button variant="outline" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                {t("next", lang)}
               </Button>
             </div>
           )}
@@ -293,12 +291,12 @@ export default function UsersPage() {
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
-        title="Confirm Delete"
-        confirmText="Delete"
+        title={t("confirm_delete", lang)}
+        confirmText={t("delete", lang)}
         confirmButtonColor="destructive"
       >
-        Are you sure you want to delete{" "}
-        <span className="font-medium">{userToDelete?.name}</span>? This action cannot be undone.
+        {t("delete_confirmation_prefix", lang)} <span className="font-medium">{userToDelete?.name}</span>?{" "}
+        {t("delete_confirmation_suffix", lang)}
       </ConfirmationDialog>
     </div>
   );

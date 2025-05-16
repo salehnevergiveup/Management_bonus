@@ -22,6 +22,8 @@ import toast from "react-hot-toast";
 import { PaginationData } from "@/types/pagination-data.type";
 import { GetResponse } from "@/types/get-response.type";
 import { Roles } from "@/constants/enums";
+import { useLanguage } from "@app/contexts/LanguageContext";
+import { t } from "@app/lib/i18n";
 
 interface Permission {
   id: string;
@@ -63,6 +65,7 @@ export default function ApiKeyManagementPage() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [permissionsReadOnly, setPermissionsReadOnly] = useState(false);
+  const { lang, setLang } = useLanguage()
 
   const router = useRouter();
 
@@ -414,34 +417,31 @@ export default function ApiKeyManagementPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "API Key Management" }]} />
+      <Breadcrumb items={[{ label: t("api_key_management", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>API Key Management</CardTitle>
+          <CardTitle>{t("api_key_management", lang)}</CardTitle>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-            <Button 
-              onClick={handleCreate} 
-              className="w-full sm:w-auto"
-            >
+            <Button onClick={handleCreate} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
-              Create API Key
+              {t("create_api_key", lang)}
             </Button>
             <Select
               value={pageSize.toString()}
               onValueChange={(val) => {
-                setPageSize(Number(val));
-                setCurrentPage(1);
+                setPageSize(Number(val))
+                setCurrentPage(1)
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Rows per page" />
+                <SelectValue placeholder={t("rows_per_page", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5 rows</SelectItem>
-                <SelectItem value="10">10 rows</SelectItem>
-                <SelectItem value="20">20 rows</SelectItem>
-                <SelectItem value="50">50 rows</SelectItem>
+                <SelectItem value="5">5 {t("rows", lang)}</SelectItem>
+                <SelectItem value="10">10 {t("rows", lang)}</SelectItem>
+                <SelectItem value="20">20 {t("rows", lang)}</SelectItem>
+                <SelectItem value="50">50 {t("rows", lang)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -453,20 +453,20 @@ export default function ApiKeyManagementPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search applications..."
+                placeholder={t("search_applications", lang)}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setSearchTerm(e.target.value)
                   if (e.target.value === "") {
-                    setCurrentPage(1);
-                    fetchApiKeys();
+                    setCurrentPage(1)
+                    fetchApiKeys()
                   }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    setCurrentPage(1);
-                    fetchApiKeys();
+                    setCurrentPage(1)
+                    fetchApiKeys()
                   }
                 }}
               />
@@ -477,158 +477,170 @@ export default function ApiKeyManagementPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Application</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Permissions</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("application", lang)}</TableHead>
+                  <TableHead>{t("status", lang)}</TableHead>
+                  <TableHead>{t("permissions", lang)}</TableHead>
+                  <TableHead>{t("expires", lang)}</TableHead>
+                  <TableHead>{t("created", lang)}</TableHead>
+                  <TableHead className="text-right">{t("actions", lang)}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-              {isLoading ? (
-  <TableRow>
-    <TableCell colSpan={6} className="h-24 text-center">
-      Loading API keys...
-    </TableCell>
-  </TableRow>
-) : apiKeys.length === 0 ? (
-  <TableRow>
-    <TableCell colSpan={6} className="h-24 text-center">
-      No API keys found
-    </TableCell>
-  </TableRow>
-) : (
-  apiKeys.map((key) => {
-    const isAutomationKey = key.application === "automation";
-    return (
-      <TableRow 
-        key={key.id} 
-        className={`${key.is_revoked ? "opacity-60" : ""} ${isAutomationKey ? "bg-blue-50" : ""}`}
-      >
-        <TableCell className="font-medium">
-          {key.application}
-          {isAutomationKey && (
-            <Badge 
-              color="bg-blue-100 text-blue-800 ml-2"
-              text="System"
-            />
-          )}
-        </TableCell>
-        <TableCell>
-          <Badge 
-            color={key.is_revoked ? "bg-red-100 text-red-800" : isExpired(key.expires_at) ? "bg-gray-100 text-gray-800" : "bg-green-100 text-green-800"}
-            text={key.is_revoked ? "Disabled" : isExpired(key.expires_at) ? "Expired" : "Active"}
-          />
-        </TableCell>
-        <TableCell>
-          {key.APIKeyPermission && key.APIKeyPermission.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              <Badge 
-                color="bg-blue-100 text-blue-800"
-                text={`${key.APIKeyPermission.length} permissions`}
-              />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 px-2 text-xs"
-                onClick={() => handleManagePermissions(key)}
-              >
-                {isAutomationKey ? "View" : "Manage"}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center">
-              <Badge 
-                color="bg-gray-100 text-gray-800"
-                text="No permissions"
-              />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 px-2 text-xs ml-1"
-                onClick={() => handleManagePermissions(key)}
-                disabled={isAutomationKey}
-              >
-                Add
-              </Button>
-            </div>
-          )}
-        </TableCell>
-        <TableCell className={isExpired(key.expires_at) ? "text-red-500" : ""}>
-          {formatDate(key.expires_at)}
-        </TableCell>
-        <TableCell>{formatDate(key.created_at)}</TableCell>
-        <TableCell className="text-right">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {isAutomationKey ? (
-                // Special menu for automation key
-                <>
-                  <DropdownMenuItem onClick={() => handleManagePermissions(key)}>
-                    <Shield className="mr-2 h-4 w-4" />
-                    View Permissions
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRegenerateKey(key)}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Regenerate Token
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => extendExpiration(key)}>
-                    <span className="mr-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-gray-100 text-gray-800">+</span>
-                    Extend Expiration
-                  </DropdownMenuItem>
-                </>
-              ) : (
-                // Regular menu for normal keys
-                <>
-                  <DropdownMenuItem onClick={() => handleEdit(key)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Name
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleManagePermissions(key)}>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Manage Permissions
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRegenerateKey(key)}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Regenerate Token
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toggleKeyStatus(key)}>
-                    {key.is_revoked ? (
-                      <>
-                        <span className="mr-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-gray-100 text-gray-800">✓</span>
-                        Enable
-                      </>
-                    ) : (
-                      <>
-                        <span className="mr-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-100 text-red-800">✕</span>
-                        Disable
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => extendExpiration(key)}>
-                    <span className="mr-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-gray-100 text-gray-800">+</span>
-                    Extend Expiration
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDelete(key)}>
-                    <Trash className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TableCell>
-      </TableRow>
-    );
-  })
-)}
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      {t("loading_api_keys", lang)}
+                    </TableCell>
+                  </TableRow>
+                ) : apiKeys.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      {t("no_api_keys", lang)}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  apiKeys.map((key) => {
+                    const isAutomationKey = key.application === "automation"
+                    return (
+                      <TableRow
+                        key={key.id}
+                        className={`${key.is_revoked ? "opacity-60" : ""} ${isAutomationKey ? "bg-blue-50" : ""}`}
+                      >
+                        <TableCell className="font-medium">
+                          {key.application}
+                          {isAutomationKey && <Badge color="bg-blue-100 text-blue-800 ml-2" text={t("system", lang)} />}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            color={
+                              key.is_revoked
+                                ? "bg-red-100 text-red-800"
+                                : isExpired(key.expires_at)
+                                  ? "bg-gray-100 text-gray-800"
+                                  : "bg-green-100 text-green-800"
+                            }
+                            text={
+                              key.is_revoked
+                                ? t("disabled", lang)
+                                : isExpired(key.expires_at)
+                                  ? t("expired", lang)
+                                  : t("active", lang)
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {key.APIKeyPermission && key.APIKeyPermission.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              <Badge
+                                color="bg-blue-100 text-blue-800"
+                                text={`${key.APIKeyPermission.length} ${t("permissions", lang)}`}
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-xs"
+                                onClick={() => handleManagePermissions(key)}
+                              >
+                                {isAutomationKey ? t("view", lang) : t("manage", lang)}
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center">
+                              <Badge color="bg-gray-100 text-gray-800" text={t("no_permissions", lang)} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-xs ml-1"
+                                onClick={() => handleManagePermissions(key)}
+                                disabled={isAutomationKey}
+                              >
+                                {t("add", lang)}
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className={isExpired(key.expires_at) ? "text-red-500" : ""}>
+                          {formatDate(key.expires_at)}
+                        </TableCell>
+                        <TableCell>{formatDate(key.created_at)}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">{t("open_menu", lang)}</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {isAutomationKey ? (
+                                // Special menu for automation key
+                                <>
+                                  <DropdownMenuItem onClick={() => handleManagePermissions(key)}>
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    {t("view_permissions", lang)}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleRegenerateKey(key)}>
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    {t("regenerate_token", lang)}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => extendExpiration(key)}>
+                                    <span className="mr-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-gray-100 text-gray-800">
+                                      +
+                                    </span>
+                                    {t("extend_expiration", lang)}
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                // Regular menu for normal keys
+                                <>
+                                  <DropdownMenuItem onClick={() => handleEdit(key)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    {t("edit_name", lang)}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleManagePermissions(key)}>
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    {t("manage_permissions", lang)}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleRegenerateKey(key)}>
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    {t("regenerate_token", lang)}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => toggleKeyStatus(key)}>
+                                    {key.is_revoked ? (
+                                      <>
+                                        <span className="mr-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-gray-100 text-gray-800">
+                                          ✓
+                                        </span>
+                                        {t("enable", lang)}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="mr-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-100 text-red-800">
+                                          ✕
+                                        </span>
+                                        {t("disable", lang)}
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => extendExpiration(key)}>
+                                    <span className="mr-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-gray-100 text-gray-800">
+                                      +
+                                    </span>
+                                    {t("extend_expiration", lang)}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDelete(key)}>
+                                    <Trash className="mr-2 h-4 w-4" />
+                                    {t("delete", lang)}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
@@ -636,53 +648,52 @@ export default function ApiKeyManagementPage() {
           {pagination && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-                <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{" "}
-                of <span className="font-medium">{pagination.total}</span> API keys
+                {t("showing", lang)} <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span>{" "}
+                {t("to", lang)}{" "}
+                <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span>{" "}
+                {t("of", lang)} <span className="font-medium">{pagination.total}</span> {t("api_keys", lang)}
               </div>
-              
+
               {pagination.totalPages > 1 && (
                 <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(1)}
                     disabled={isLoading || !pagination.hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    First
+                    {t("first", lang)}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(currentPage - 1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(currentPage - 1)}
                     disabled={isLoading || !pagination.hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Previous
+                    {t("previous", lang)}
                   </Button>
                   <span className="px-2 text-sm">
-                    Page {pagination.page} of {pagination.totalPages}
+                    {t("page", lang)} {pagination.page} {t("of", lang)} {pagination.totalPages}
                   </span>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(currentPage + 1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(currentPage + 1)}
                     disabled={isLoading || !pagination.hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Next
+                    {t("next", lang)}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(pagination.totalPages)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(pagination.totalPages)}
                     disabled={isLoading || !pagination.hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Last
+                    {t("last", lang)}
                   </Button>
                 </div>
               )}
@@ -695,46 +706,41 @@ export default function ApiKeyManagementPage() {
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Create API Key</DialogTitle>
+            <DialogTitle>{t("create_api_key", lang)}</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-grow pr-4">
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="application">Application Name</Label>
-                <Input 
-                  id="application" 
-                  placeholder="Enter application name" 
+                <Label htmlFor="application">{t("application_name", lang)}</Label>
+                <Input
+                  id="application"
+                  placeholder={t("enter_application_name", lang)}
                   value={formApplication}
                   onChange={(e) => setFormApplication(e.target.value)}
                 />
-                {formErrors.application && (
-                  <p className="text-sm text-red-500">{formErrors.application}</p>
-                )}
+                {formErrors.application && <p className="text-sm text-red-500">{formErrors.application}</p>}
               </div>
-              
+
               <div className="space-y-2">
-                <Label>Permissions</Label>
+                <Label>{t("permissions", lang)}</Label>
                 <div className="border rounded-md p-3 space-y-2 max-h-[200px] overflow-y-auto">
                   {permissions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No permissions found</p>
+                    <p className="text-sm text-muted-foreground">{t("no_permissions_found", lang)}</p>
                   ) : (
                     permissions.map((permission) => (
                       <div key={permission.id} className="flex items-center space-x-2">
-                        <Checkbox 
+                        <Checkbox
                           id={`permission-${permission.id}`}
                           checked={selectedPermissions.includes(permission.id)}
                           onCheckedChange={(checked: any) => {
                             if (checked) {
-                              setSelectedPermissions([...selectedPermissions, permission.id]);
+                              setSelectedPermissions([...selectedPermissions, permission.id])
                             } else {
-                              setSelectedPermissions(selectedPermissions.filter(id => id !== permission.id));
+                              setSelectedPermissions(selectedPermissions.filter((id) => id !== permission.id))
                             }
                           }}
                         />
-                        <Label 
-                          htmlFor={`permission-${permission.id}`}
-                          className="text-sm font-normal cursor-pointer"
-                        >
+                        <Label htmlFor={`permission-${permission.id}`} className="text-sm font-normal cursor-pointer">
                           {permission.name}
                         </Label>
                       </div>
@@ -742,20 +748,18 @@ export default function ApiKeyManagementPage() {
                   )}
                 </div>
               </div>
-              
+
               <Alert>
-                <AlertTitle>Important</AlertTitle>
-                <AlertDescription>
-                  After creation, the API key will be shown only once. Make sure to copy it immediately.
-                </AlertDescription>
+                <AlertTitle>{t("important", lang)}</AlertTitle>
+                <AlertDescription>{t("api_key_shown_once", lang)}</AlertDescription>
               </Alert>
             </div>
           </ScrollArea>
           <DialogFooter className="mt-4">
             <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
-            <Button onClick={createApiKey}>Create</Button>
+            <Button onClick={createApiKey}>{t("create", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -764,121 +768,115 @@ export default function ApiKeyManagementPage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit API Key</DialogTitle>
+            <DialogTitle>{t("edit_api_key", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="edit_application">Application Name</Label>
-              <Input 
-                id="edit_application" 
-                placeholder="Enter application name" 
+              <Label htmlFor="edit_application">{t("application_name", lang)}</Label>
+              <Input
+                id="edit_application"
+                placeholder={t("enter_application_name", lang)}
                 value={formApplication}
                 onChange={(e) => setFormApplication(e.target.value)}
               />
-              {formErrors.application && (
-                <p className="text-sm text-red-500">{formErrors.application}</p>
-              )}
+              {formErrors.application && <p className="text-sm text-red-500">{formErrors.application}</p>}
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
-            <Button onClick={updateApiKey}>Update</Button>
+            <Button onClick={updateApiKey}>{t("update", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Permissions Dialog */}
       <Dialog open={permissionsDialogOpen} onOpenChange={setPermissionsDialogOpen}>
-  <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
-    <DialogHeader>
-      <DialogTitle>
-        {permissionsReadOnly ? "View Permissions" : "Manage Permissions"}
-      </DialogTitle>
-    </DialogHeader>
-    <ScrollArea className="flex-grow pr-4">
-      <div className="space-y-4 py-2">
-        <p className="text-sm">
-          {permissionsReadOnly 
-            ? `Viewing permissions for ${selectedKey?.application}`
-            : `Managing permissions for ${selectedKey?.application}`}
-        </p>
-        
-        {permissionsReadOnly && isAutomationKey(selectedKey) && (
-          <Alert>
-            <AlertTitle>System API Key</AlertTitle>
-            <AlertDescription>
-              This is a system API key used for automation. Its permissions cannot be modified.
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="border rounded-md p-3 space-y-2 max-h-[300px] overflow-y-auto">
-          {permissions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No permissions found</p>
-          ) : (
-            permissions.map((permission) => (
-              <div key={permission.id} className="flex items-center space-x-2">
-                <Checkbox 
-                  id={`edit-permission-${permission.id}`}
-                  checked={selectedPermissions.includes(permission.id)}
-                  onCheckedChange={(checked) => {
-                    if (permissionsReadOnly) return;
-                    
-                    if (checked) {
-                      setSelectedPermissions([...selectedPermissions, permission.id]);
-                    } else {
-                      setSelectedPermissions(selectedPermissions.filter(id => id !== permission.id));
-                    }
-                  }}
-                  disabled={permissionsReadOnly}
-                />
-                <Label 
-                  htmlFor={`edit-permission-${permission.id}`}
-                  className={`text-sm font-normal ${permissionsReadOnly ? "" : "cursor-pointer"}`}
-                >
-                  {permission.name}
-                </Label>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {permissionsReadOnly ? t("view_permissions", lang) : t("manage_permissions", lang)}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-grow pr-4">
+            <div className="space-y-4 py-2">
+              <p className="text-sm">
+                {permissionsReadOnly
+                  ? t("viewing_permissions_for", lang) + " " + selectedKey?.application
+                  : t("managing_permissions_for", lang) + " " + selectedKey?.application}
+              </p>
+
+              {permissionsReadOnly && isAutomationKey(selectedKey) && (
+                <Alert>
+                  <AlertTitle>{t("system_api_key", lang)}</AlertTitle>
+                  <AlertDescription>{t("system_api_key_description", lang)}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="border rounded-md p-3 space-y-2 max-h-[300px] overflow-y-auto">
+                {permissions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t("no_permissions_found", lang)}</p>
+                ) : (
+                  permissions.map((permission) => (
+                    <div key={permission.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-permission-${permission.id}`}
+                        checked={selectedPermissions.includes(permission.id)}
+                        onCheckedChange={(checked) => {
+                          if (permissionsReadOnly) return
+
+                          if (checked) {
+                            setSelectedPermissions([...selectedPermissions, permission.id])
+                          } else {
+                            setSelectedPermissions(selectedPermissions.filter((id) => id !== permission.id))
+                          }
+                        }}
+                        disabled={permissionsReadOnly}
+                      />
+                      <Label
+                        htmlFor={`edit-permission-${permission.id}`}
+                        className={`text-sm font-normal ${permissionsReadOnly ? "" : "cursor-pointer"}`}
+                      >
+                        {permission.name}
+                      </Label>
+                    </div>
+                  ))
+                )}
               </div>
-            ))
-          )}
-        </div>
-      </div>
-    </ScrollArea>
-    <DialogFooter className="mt-4">
-      <Button onClick={() => setPermissionsDialogOpen(false)}>
-        {permissionsReadOnly ? "Close" : "Cancel"}
-      </Button>
-      {!permissionsReadOnly && (
-        <Button onClick={updatePermissions}>Save Changes</Button>
-      )}
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setPermissionsDialogOpen(false)}>
+              {permissionsReadOnly ? t("close", lang) : t("cancel", lang)}
+            </Button>
+            {!permissionsReadOnly && <Button onClick={updatePermissions}>{t("save_changes", lang)}</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Regenerate API Key Dialog */}
       <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
         <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Regenerate API Key</DialogTitle>
+            <DialogTitle>{t("regenerate_api_key", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <Alert variant="destructive">
-              <AlertTitle>Warning</AlertTitle>
-              <AlertDescription>
-                Regenerating this API key will invalidate the existing one. Any application using the current key will stop working until updated with the new key.
-              </AlertDescription>
+              <AlertTitle>{t("warning", lang)}</AlertTitle>
+              <AlertDescription>{t("regenerate_warning", lang)}</AlertDescription>
             </Alert>
             <p className="text-sm">
-              Are you sure you want to regenerate the API key for <strong>{selectedKey?.application}</strong>?
+              {t("regenerate_confirmation", lang)} <strong>{selectedKey?.application}</strong>?
             </p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRegenerateDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
-            <Button variant="destructive" onClick={regenerateApiKey}>Regenerate</Button>
+            <Button variant="destructive" onClick={regenerateApiKey}>
+              {t("regenerate", lang)}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -887,32 +885,30 @@ export default function ApiKeyManagementPage() {
       <Dialog open={newKeyDialog} onOpenChange={setNewKeyDialog}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New API Key Generated</DialogTitle>
+            <DialogTitle>{t("new_api_key_generated", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <Alert variant="destructive">
-              <AlertTitle>Important - Copy this key now!</AlertTitle>
-              <AlertDescription>
-                This API key will only be shown once. Make sure to copy it now as you won't be able to retrieve it later.
-              </AlertDescription>
+              <AlertTitle>{t("important_copy_key", lang)}</AlertTitle>
+              <AlertDescription>{t("key_shown_once_warning", lang)}</AlertDescription>
             </Alert>
             <div className="p-3 bg-muted rounded-md">
               <ScrollArea className="w-full max-h-[100px]">
                 <code className="text-sm font-mono break-all whitespace-pre-wrap">{generatedKey}</code>
               </ScrollArea>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 className="mt-2 w-full"
                 onClick={() => generatedKey && copyToClipboard(generatedKey)}
               >
                 <Copy className="h-4 w-4 mr-2" />
-                Copy to Clipboard
+                {t("copy_to_clipboard", lang)}
               </Button>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setNewKeyDialog(false)}>I've Copied It</Button>
+            <Button onClick={() => setNewKeyDialog(false)}>{t("ive_copied_it", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -922,19 +918,19 @@ export default function ApiKeyManagementPage() {
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={deleteApiKey}
-        title="Confirm Delete"
+        title={t("confirm_delete", lang)}
         children={
           <>
-            <p>Are you sure you want to delete the API key for <strong>{keyToDelete?.application}</strong>?</p>
+            <p>
+              {t("delete_confirmation", lang)} <strong>{keyToDelete?.application}</strong>?
+            </p>
             <Alert variant="destructive" className="mt-4">
-              <AlertTitle>Warning</AlertTitle>
-              <AlertDescription>
-                Deleting this API key will immediately revoke access for any applications using it. This action cannot be undone.
-              </AlertDescription>
+              <AlertTitle>{t("warning", lang)}</AlertTitle>
+              <AlertDescription>{t("delete_warning", lang)}</AlertDescription>
             </Alert>
           </>
         }
-        confirmText="Delete"
+        confirmText={t("delete", lang)}
       />
     </div>
   );

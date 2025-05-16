@@ -16,6 +16,9 @@ import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import toast from "react-hot-toast";
+import { useLanguage } from "@app/contexts/LanguageContext";
+import { t } from "@app/lib/i18n";
+
 
 interface AccountTurnover {
   id: string;
@@ -60,6 +63,7 @@ export default function AccountTurnoverPage() {
   const [bonusDetailsDialogOpen, setBonusDetailsDialogOpen] = useState(false);
   const [selectedBonusDetails, setSelectedBonusDetails] = useState<Bonus | null>(null);
   const router = useRouter();
+  const { lang, setLang } = useLanguage()
 
   // Form state for edit
   const [formUsername, setFormUsername] = useState("");
@@ -350,11 +354,11 @@ export default function AccountTurnoverPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Account Turnover Management" }]} />
+      <Breadcrumb items={[{ label: t("account_turnover_management", lang)}]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Account Turnover Management</CardTitle>
+          <CardTitle>{t("account_turnover_management", lang)}</CardTitle>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
             <Button 
               onClick={handleViewExchangeRates} 
@@ -362,14 +366,14 @@ export default function AccountTurnoverPage() {
               variant="outline"
             >
               <DollarSign className="mr-2 h-4 w-4" />
-              View Exchange Rates
+              {t("view_exchange_rates", lang)}
             </Button>
             <Button 
               onClick={handleCreateMatch} 
               className="w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Create Match
+              {t("create_match", lang)}
             </Button>
             <Button 
               onClick={fetchAccountTurnovers} 
@@ -377,7 +381,7 @@ export default function AccountTurnoverPage() {
               variant="outline"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
+              {t("refresh", lang)}
             </Button>
             <Select
               value={showAll ? "all" : pageSize.toString()}
@@ -387,10 +391,10 @@ export default function AccountTurnoverPage() {
                 <SelectValue placeholder="Rows per page" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5 rows</SelectItem>
-                <SelectItem value="10">10 rows</SelectItem>
-                <SelectItem value="20">20 rows</SelectItem>
-                <SelectItem value="50">50 rows</SelectItem>
+                <SelectItem value="5">5  {t("row", lang)}</SelectItem>
+                <SelectItem value="10">10  {t("row", lang)}</SelectItem>
+                <SelectItem value="20">20  {t("row", lang)}</SelectItem>
+                <SelectItem value="50">50  {t("row", lang)}</SelectItem>
                 <SelectItem value="all">Show All</SelectItem>
               </SelectContent>
             </Select>
@@ -401,9 +405,9 @@ export default function AccountTurnoverPage() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
             <div className="relative w-full md:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
+              <Input 
                 type="search"
-                placeholder="Search turnovers..."
+                placeholder={t("search_turnovers", lang)}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -415,25 +419,25 @@ export default function AccountTurnoverPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Game</TableHead>
-                  <TableHead>Currency</TableHead>
-                  <TableHead>Turnover</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("username", lang)}</TableHead>
+                  <TableHead>{t("game", lang)}</TableHead>
+                  <TableHead>{t("currency", lang)}</TableHead>
+                  <TableHead>{t("turnover", lang)}</TableHead>
+                  <TableHead>{t("created_at", lang)}</TableHead>
+                  <TableHead className="text-right">{t("actions", lang)}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                      Loading account turnovers...
+                    {t("loading_turnovers", lang)}
                     </TableCell>
                   </TableRow>
                 ) : paginatedTurnovers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                      No account turnovers found
+                    {t("no_turnovers", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -455,11 +459,11 @@ export default function AccountTurnoverPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleEdit(turnover)}>
                               <Edit className="mr-2 h-4 w-4" />
-                              Edit
+                              {t("edit", lang)}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDelete(turnover)}>
                               <Trash className="mr-2 h-4 w-4" />
-                              Delete
+                              {t("delete", lang)}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -475,12 +479,12 @@ export default function AccountTurnoverPage() {
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
                 {showAll ? (
-                  <>Showing all <span className="font-medium">{filteredTurnovers.length}</span> account turnovers</>
+                  <>{t("showing_all", lang)} <span className="font-medium">{filteredTurnovers.length}</span> {t("account_turnovers", lang)}</>
                 ) : (
                   <>
-                    Showing <span className="font-medium">{startItem}</span> to{" "}
+                     {t("showing", lang)}  <span className="font-medium">{startItem}</span> {t("to", lang)}{" "}{" "}
                     <span className="font-medium">{endItem}</span>{" "}
-                    of <span className="font-medium">{filteredTurnovers.length}</span> account turnovers
+                    {t("of", lang)} <span className="font-medium">{filteredTurnovers.length}</span> {t("account_turnovers", lang)}
                   </>
                 )}
               </div>
@@ -494,7 +498,7 @@ export default function AccountTurnoverPage() {
                     size="sm"
                     className="h-8 px-2"
                   >
-                    First
+                    {t("first", lang)}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -503,10 +507,10 @@ export default function AccountTurnoverPage() {
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Previous
+                    {t("previous", lang)}
                   </Button>
                   <span className="px-2 text-sm">
-                    Page {currentPage} of {totalPages}
+                  {t("page", lang)}{currentPage} {t("of", lang)} {totalPages}
                   </span>
                   <Button 
                     variant="outline" 
@@ -515,7 +519,7 @@ export default function AccountTurnoverPage() {
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Next
+                    {t("next", lang)}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -524,7 +528,7 @@ export default function AccountTurnoverPage() {
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Last
+                    {t("last", lang)}
                   </Button>
                 </div>
               )}
@@ -538,24 +542,24 @@ export default function AccountTurnoverPage() {
       <Dialog open={exchangeRatesDialogOpen} onOpenChange={setExchangeRatesDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Exchange Rates</DialogTitle>
+            <DialogTitle>{t("exchange_rates", lang)}</DialogTitle>
           </DialogHeader>
           <ScrollArea className="h-[400px] pr-4">
             <div className="rounded-md border overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>From Currency</TableHead>
-                    <TableHead>To Currency</TableHead>
-                    <TableHead>Rate</TableHead>
-                    <TableHead>Created At</TableHead>
+                    <TableHead>{t("from_currency", lang)}</TableHead>
+                    <TableHead>{t("to_currency", lang)}</TableHead>
+                    <TableHead>{t("rate", lang)}</TableHead>
+                    <TableHead>{t("created_at", lang)}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {exchangeRates.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="h-24 text-center">
-                        No exchange rates found
+                      {t("no_exchange_rates", lang)}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -573,7 +577,7 @@ export default function AccountTurnoverPage() {
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button onClick={() => setExchangeRatesDialogOpen(false)}>Close</Button>
+            <Button onClick={() => setExchangeRatesDialogOpen(false)}>{t("close", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -582,17 +586,17 @@ export default function AccountTurnoverPage() {
       <Dialog open={createMatchDialogOpen} onOpenChange={setCreateMatchDialogOpen}>
         <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Create Match</DialogTitle>
+            <DialogTitle>{t("create_match", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="bonus">Select Bonus Method</Label>
+              <Label htmlFor="bonus">{t("select_bonus_method", lang)}</Label>
               <Select 
                 value={selectedBonus} 
                 onValueChange={setSelectedBonus}
               >
                 <SelectTrigger id="bonus">
-                  <SelectValue placeholder="Select a bonus method" />
+                  <SelectValue placeholder={t("select_bonus_method", lang)} />
                 </SelectTrigger>
                 <SelectContent>
                   {bonuses.map((bonus) => (
@@ -606,22 +610,22 @@ export default function AccountTurnoverPage() {
             
             {/* List of all available bonuses */}
             <div className="space-y-2 mt-4">
-              <Label>Available Bonus Methods</Label>
+              <Label>{t("available_bonus_methods", lang)}</Label>
               <ScrollArea className="h-[250px]">
                 <div className="rounded-md border w-full">
                   <Table>
                     <TableHeader className="sticky top-0 bg-background z-10">
                       <TableRow>
-                        <TableHead className="w-2/5">Name</TableHead>
-                        <TableHead className="hidden sm:table-cell">Description</TableHead>
-                        <TableHead className="w-20 text-right">Action</TableHead>
+                        <TableHead className="w-2/5">{t("name", lang)}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t("description", lang)}</TableHead>
+                        <TableHead className="w-20 text-right">{t("action", lang)}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {bonuses.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={3} className="h-24 text-center">
-                            No bonus methods found
+                          {t("no_bonus_methods", lang)}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -642,7 +646,7 @@ export default function AccountTurnoverPage() {
                                 className="h-8 px-2"
                                 onClick={() => handleViewBonusDetails(bonus)}
                               >
-                                Details
+                                 {t("details", lang)}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -656,9 +660,9 @@ export default function AccountTurnoverPage() {
           </div>
           <DialogFooter className="mt-4 sm:mt-6">
             <Button type="button" variant="outline" onClick={() => setCreateMatchDialogOpen(false)}>
-              Cancel
+            {t("cancel", lang)}
             </Button>
-            <Button onClick={createMatch} disabled={!selectedBonus}>Confirm</Button>
+            <Button onClick={createMatch} disabled={!selectedBonus}>{t("confirm", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -667,12 +671,12 @@ export default function AccountTurnoverPage() {
       <Dialog open={bonusDetailsDialogOpen} onOpenChange={setBonusDetailsDialogOpen}>
         <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] overflow-hidden p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-xl break-words">{selectedBonusDetails?.name || 'Bonus Details'}</DialogTitle>
+            <DialogTitle className="text-xl break-words">{selectedBonusDetails?.name || t("bonus_details", lang)}</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4 mt-4">
             <div className="py-2 space-y-2">
               <div className="text-sm whitespace-pre-wrap p-4 border rounded-md bg-muted/30">
-                {selectedBonusDetails?.description || 'No description available.'}
+                {selectedBonusDetails?.description || t("no_description", lang)}
               </div>
             </div>
           </ScrollArea>
@@ -681,7 +685,7 @@ export default function AccountTurnoverPage() {
               onClick={() => setBonusDetailsDialogOpen(false)} 
               className="w-full sm:w-auto"
             >
-              Close
+              {t("close", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -691,14 +695,14 @@ export default function AccountTurnoverPage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Account Turnover</DialogTitle>
+            <DialogTitle>{t("edit_account_turnover", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="edit_username">Username</Label>
+              <Label htmlFor="edit_username">{t("username", lang)}</Label>
               <Input 
                 id="edit_username" 
-                placeholder="Enter username" 
+                placeholder={t("enter_username", lang)}
                 value={formUsername}
                 onChange={(e) => setFormUsername(e.target.value)}
               />
@@ -707,10 +711,10 @@ export default function AccountTurnoverPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_game">Game</Label>
+              <Label htmlFor="edit_game">{t("game", lang)}</Label>
               <Input 
                 id="edit_game" 
-                placeholder="Enter game" 
+                placeholder={t("enter_game", lang)}
                 value={formGame}
                 onChange={(e) => setFormGame(e.target.value)}
               />
@@ -719,19 +723,19 @@ export default function AccountTurnoverPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_currency">Currency</Label>
+              <Label htmlFor="edit_currency">{t("currency", lang)}</Label>
               <Input 
                 id="edit_currency" 
-                placeholder="Enter currency" 
+                placeholder={t("enter_currency", lang)}
                 value={formCurrency}
                 onChange={(e) => setFormCurrency(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_turnover">Turnover</Label>
+              <Label htmlFor="edit_turnover">{t("turnover", lang)}</Label>
               <Input 
                 id="edit_turnover" 
-                placeholder="Enter turnover" 
+                placeholder={t("enter_turnover", lang)}
                 value={formTurnover}
                 onChange={(e) => setFormTurnover(e.target.value)}
               />
@@ -739,9 +743,9 @@ export default function AccountTurnoverPage() {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
+            {t("cancel", lang)}
             </Button>
-            <Button onClick={updateAccountTurnover}>Update</Button>
+            <Button onClick={updateAccountTurnover}> {t("update", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -751,14 +755,14 @@ export default function AccountTurnoverPage() {
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={deleteAccountTurnover}
-        title="Confirm Delete"
+        title={t("confirm_delete", lang)}
         children={
           <>
-            <p>Are you sure you want to delete this account turnover?</p>
-            <p className="mt-2">This action cannot be undone.</p>
+            <p>{t("delete_warning", lang)}</p>
+            <p className="mt-2">{t("delete_irreversible", lang)}</p>
           </>
         }
-        confirmText="Delete"
+        confirmText={t("delete", lang)}
       />
     </div>
   );

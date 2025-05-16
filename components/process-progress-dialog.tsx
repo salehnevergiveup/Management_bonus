@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import toast from "react-hot-toast"
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 export type ProcessProgressItem = {
   id: string
@@ -33,8 +35,9 @@ interface ProcessProgressDialogProps {
 export default function SimplifiedProcessProgress({
   trigger,
   open: externalOpen,
-  onOpenChange
+  onOpenChange,
 }: ProcessProgressDialogProps) {
+  const { lang } = useLanguage()
   // States
   const [internalOpen, setInternalOpen] = useState(false)
   const [progressData, setProgressData] = useState<ProcessProgressItem[]>([])
@@ -63,7 +66,7 @@ export default function SimplifiedProcessProgress({
       const res = await fetch("/api/process-progress")
 
       if (!res.ok) {
-        toast.error(`Error fetching progress data: ${res.status}`)
+        toast.error(`${t("error_fetching_progress_data", lang)}: ${res.status}`)
         setLoading(false)
         return
       }
@@ -72,8 +75,8 @@ export default function SimplifiedProcessProgress({
       setProgressData(data)
       setLoading(false)
     } catch (error) {
-      console.error("Error fetching progress data:", error)
-      toast.error("Failed to fetch progress data")
+      console.error(t("error_fetching_progress_data", lang), error)
+      toast.error(t("failed_fetch_progress_data", lang))
       setLoading(false)
       setProgressData([])
     }
@@ -84,14 +87,14 @@ export default function SimplifiedProcessProgress({
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" className="gap-2">
-            <Clock className="h-4 w-4" /> View Progress
+            <Clock className="h-4 w-4" /> {t("view_progress", lang)}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b sticky top-0 bg-background z-10">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl">Process Progress Tracker</DialogTitle>
+            <DialogTitle className="text-xl">{t("process_progress_tracker", lang)}</DialogTitle>
             <Button variant="ghost" size="icon" onClick={() => setOpen?.(false)} className="h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
@@ -103,9 +106,7 @@ export default function SimplifiedProcessProgress({
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
             </div>
           ) : progressData.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No progress data found
-            </div>
+            <div className="text-center py-12 text-muted-foreground">{t("no_progress_data_found", lang)}</div>
           ) : (
             <div className="space-y-4">
               {progressData.map((item) => (
@@ -124,6 +125,7 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
   const formatStatus = (status: string) => {
     return status === "success" ? "Success" : "Failed"
   }
+  const { lang, setLang } = useLanguage()
 
   const formatName = (name: string) => {
     if (!name) return "Unknown"
@@ -144,12 +146,11 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
             ) : (
               <XCircle className="h-5 w-5 text-red-500" />
             )}
-            <h3 className="font-medium">Event: {formatName(item.process_stage)}</h3>
+            <h3 className="font-medium">
+              {t("event", lang)}: {formatName(item.process_stage)}
+            </h3>
           </div>
-          <Badge
-            variant={item.status === "success" ? "success" : "destructive"}
-            className="text-black"
-          >
+          <Badge variant={item.status === "success" ? "success" : "destructive"} className="text-black">
             {formatStatus(item.status)}
           </Badge>
         </div>
@@ -157,22 +158,21 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
         <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
           {item.thread_id && (
             <div className="text-sm">
-              <p className="text-muted-foreground">Account Name:</p>
+              <p className="text-muted-foreground">{t("account_name", lang)}:</p>
               <p className="font-mono text-xs">{item.thread_id}</p>
             </div>
           )}
 
           <div>
-              <p className="text-muted-foreground">Created At:</p>
-              <p>{formatName(item.created_at || "")}</p>
+            <p className="text-muted-foreground">{t("created_at", lang)}:</p>
+            <p>{formatName(item.created_at || "")}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
-
           {item.thread_stage && (
             <div>
-              <p className="text-muted-foreground">Process Sub-Stage:</p>
+              <p className="text-muted-foreground">{t("process_sub_stage", lang)}:</p>
               <p>{formatName(item.thread_stage)}</p>
             </div>
           )}
@@ -180,7 +180,7 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
 
         {item.data?.message && (
           <div className="mt-2 p-3 bg-muted/20 rounded-md text-sm">
-            <p className="text-muted-foreground mb-1">Message:</p>
+            <p className="text-muted-foreground mb-1">{t("message", lang)}:</p>
             <p>{item.data.message}</p>
           </div>
         )}

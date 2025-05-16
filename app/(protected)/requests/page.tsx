@@ -19,6 +19,8 @@ import { AppColor, RequestStatus } from "@/constants/enums";
 import toast from "react-hot-toast";
 import { PaginationData } from "@/types/pagination-data.type";
 import { GetResponse } from "@/types/get-response.type";
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface User {
   id: string;
@@ -71,6 +73,7 @@ export default function RequestManagementPage() {
   const [requestToUpdate, setRequestToUpdate] = useState<Request | null>(null);
   const router = useRouter();
   const isAdmin = auth?.role === "admin";
+  const { lang, setLang } = useLanguage()
 
   // Selected requests and bulk action states
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
@@ -580,41 +583,38 @@ export default function RequestManagementPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Request Management" }]} />
+      <Breadcrumb items={[{ label: t("request_management", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Request Management</CardTitle>
+          <CardTitle>{t("request_management", lang)}</CardTitle>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={t("filter_by_status", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value={RequestStatus.PENDING}>Pending</SelectItem>
-                <SelectItem value={RequestStatus.ACCEPTED}>Accepted</SelectItem>
-                <SelectItem value={RequestStatus.REJECTED}>Rejected</SelectItem>
+                <SelectItem value="all">{t("all_statuses", lang)}</SelectItem>
+                <SelectItem value={RequestStatus.PENDING}>{t("pending", lang)}</SelectItem>
+                <SelectItem value={RequestStatus.ACCEPTED}>{t("accepted", lang)}</SelectItem>
+                <SelectItem value={RequestStatus.REJECTED}>{t("rejected", lang)}</SelectItem>
               </SelectContent>
             </Select>
             <Select
               value={pageSize.toString()}
               onValueChange={(val) => {
-                setPageSize(Number(val));
-                setCurrentPage(1);
+                setPageSize(Number(val))
+                setCurrentPage(1)
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Rows per page" />
+                <SelectValue placeholder={t("rows_per_page", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5 rows</SelectItem>
-                <SelectItem value="10">10 rows</SelectItem>
-                <SelectItem value="20">20 rows</SelectItem>
-                <SelectItem value="50">50 rows</SelectItem>
+                <SelectItem value="5">{t("rows_count", lang)}</SelectItem>
+                <SelectItem value="10">10 {t("rows", lang)}</SelectItem>
+                <SelectItem value="20">20 {t("rows", lang)}</SelectItem>
+                <SelectItem value="50">50 {t("rows", lang)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -626,7 +626,7 @@ export default function RequestManagementPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search requests..."
+                placeholder={t("search_requests", lang)}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -635,61 +635,62 @@ export default function RequestManagementPage() {
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                {selectedRequests.length} request{selectedRequests.length !== 1 ? 's' : ''} selected
+                {selectedRequests.length}{" "}
+                {selectedRequests.length !== 1 ? t("requests_selected", lang) : t("request_selected", lang)}
               </span>
               {selectedRequests.length > 0 && (
                 <>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => {
-                      setSelectedRequests([]);
-                      setSelectAllChecked(false);
+                      setSelectedRequests([])
+                      setSelectAllChecked(false)
                     }}
                   >
-                    Clear selection
+                    {t("clear_selection", lang)}
                   </Button>
-                  
+
                   {isAdmin && (
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         className="bg-green-50 hover:bg-green-100 border-green-200"
-                        onClick={() => handleBulkAction('status', RequestStatus.ACCEPTED)}
+                        onClick={() => handleBulkAction("status", RequestStatus.ACCEPTED)}
                       >
                         <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                        Accept All
+                        {t("accept_all", lang)}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         className="bg-red-50 hover:bg-red-100 border-red-200"
-                        onClick={() => handleBulkAction('status', RequestStatus.REJECTED)}
+                        onClick={() => handleBulkAction("status", RequestStatus.REJECTED)}
                       >
                         <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                        Reject All
+                        {t("reject_all", lang)}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
-                        onClick={() => handleBulkAction('status', RequestStatus.PENDING)}
+                        onClick={() => handleBulkAction("status", RequestStatus.PENDING)}
                       >
                         <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                        Pending All
+                        {t("pending_all", lang)}
                       </Button>
                     </div>
                   )}
-                  
+
                   <Button
                     size="sm"
                     variant="outline"
                     className="bg-red-50 hover:bg-red-100 border-red-200"
-                    onClick={() => handleBulkAction('delete')}
+                    onClick={() => handleBulkAction("delete")}
                   >
                     <Trash className="h-4 w-4 text-red-500 mr-1" />
-                    Delete All
+                    {t("delete_all", lang)}
                   </Button>
                 </>
               )}
@@ -704,30 +705,30 @@ export default function RequestManagementPage() {
                     <Checkbox
                       checked={selectAllChecked}
                       onCheckedChange={toggleSelectAll}
-                      aria-label="Select all"
+                      aria-label={t("select_all", lang)}
                     />
                   </TableHead>
-                  <TableHead>Requestor</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Admin</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead>Updated At</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("requestor", lang)}</TableHead>
+                  <TableHead>{t("action", lang)}</TableHead>
+                  <TableHead>{t("model", lang)}</TableHead>
+                  <TableHead>{t("status", lang)}</TableHead>
+                  <TableHead>{t("admin", lang)}</TableHead>
+                  <TableHead>{t("created_at", lang)}</TableHead>
+                  <TableHead>{t("updated_at", lang)}</TableHead>
+                  <TableHead className="text-right">{t("actions", lang)}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center">
-                      Loading requests...
+                      {t("loading_requests", lang)}
                     </TableCell>
                   </TableRow>
                 ) : paginatedRequests.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center">
-                      No requests found
+                      {t("no_requests_found", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -737,19 +738,16 @@ export default function RequestManagementPage() {
                         <Checkbox
                           checked={selectedRequests.includes(request.id)}
                           onCheckedChange={() => toggleRequestSelection(request.id)}
-                          aria-label={`Select request ${request.id}`}
+                          aria-label={`${t("select_request", lang)} ${request.id}`}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{request.sender?.username || 'Unknown'}</TableCell>
-                      <TableCell>{request.action || 'N/A'}</TableCell>
+                      <TableCell className="font-medium">{request.sender?.username || t("unknown", lang)}</TableCell>
+                      <TableCell>{request.action || t("not_available", lang)}</TableCell>
                       <TableCell>{request.model_name}</TableCell>
                       <TableCell>
-                        <Badge
-                          color={getStatusColor(request.status)}
-                          text={request.status}
-                        />
+                        <Badge color={getStatusColor(request.status)} text={request.status} />
                       </TableCell>
-                      <TableCell>{request.admin?.username || 'Not assigned'}</TableCell>
+                      <TableCell>{request.admin?.username || t("not_assigned", lang)}</TableCell>
                       <TableCell>{formatDate(request.created_at)}</TableCell>
                       <TableCell>{formatDate(request.updated_at)}</TableCell>
                       <TableCell className="text-right">
@@ -758,7 +756,7 @@ export default function RequestManagementPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleViewRequest(request)}
-                            title="View details"
+                            title={t("view_details", lang)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -771,31 +769,31 @@ export default function RequestManagementPage() {
                                   size="sm"
                                   className="bg-green-50 hover:bg-green-100 border-green-200"
                                   onClick={() => handleStatusUpdate(request, RequestStatus.ACCEPTED)}
-                                  title="Accept request"
+                                  title={t("accept_request", lang)}
                                 >
                                   <CheckCircle className="h-4 w-4 text-green-500" />
                                 </Button>
                               )}
-                              
+
                               {request.status !== RequestStatus.REJECTED && (
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   className="bg-red-50 hover:bg-red-100 border-red-200"
                                   onClick={() => handleStatusUpdate(request, RequestStatus.REJECTED)}
-                                  title="Reject request"
+                                  title={t("reject_request", lang)}
                                 >
                                   <XCircle className="h-4 w-4 text-red-500" />
                                 </Button>
                               )}
-                              
+
                               {request.status !== RequestStatus.PENDING && (
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200"
                                   onClick={() => handleStatusUpdate(request, RequestStatus.PENDING)}
-                                  title="Mark as pending"
+                                  title={t("mark_as_pending", lang)}
                                 >
                                   <Clock className="h-4 w-4 text-yellow-500" />
                                 </Button>
@@ -808,10 +806,10 @@ export default function RequestManagementPage() {
                             size="sm"
                             className="bg-red-50 hover:bg-red-100 border-red-200"
                             onClick={() => {
-                              setRequestToDelete(request);
-                              setDeleteDialogOpen(true);
+                              setRequestToDelete(request)
+                              setDeleteDialogOpen(true)
                             }}
-                            title="Delete request"
+                            title={t("delete_request", lang)}
                           >
                             <Trash className="h-4 w-4 text-red-500" />
                           </Button>
@@ -827,53 +825,49 @@ export default function RequestManagementPage() {
           {pagination && filteredRequests.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-                <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{" "}
-                of <span className="font-medium">{pagination.total}</span> requests
+                {`${t("showing", lang)} ${(pagination.page - 1) * pagination.limit + 1} ${t("to", lang)} ${Math.min(pagination.page * pagination.limit, pagination.total)} ${t("of", lang)} ${pagination.total} ${t("requests", lang)}`}
               </div>
-              
+
               {pagination.totalPages > 1 && (
                 <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(1)}
                     disabled={isLoading || !pagination.hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    First
+                    {t("first", lang)}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(currentPage - 1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(currentPage - 1)}
                     disabled={isLoading || !pagination.hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Previous
+                    {t("previous", lang)}
                   </Button>
                   <span className="px-2 text-sm">
-                    Page {pagination.page} of {pagination.totalPages}
+                    {`${t("page", lang)} ${pagination.page} ${t("of", lang)} ${pagination.totalPages}`}
                   </span>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(currentPage + 1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(currentPage + 1)}
                     disabled={isLoading || !pagination.hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Next
+                    {t("next", lang)}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(pagination.totalPages)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(pagination.totalPages)}
                     disabled={isLoading || !pagination.hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Last
+                    {t("last", lang)}
                   </Button>
                 </div>
               )}
@@ -886,110 +880,109 @@ export default function RequestManagementPage() {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Request Details</DialogTitle>
+            <DialogTitle>{t("request_details", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {selectedRequest && (
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-muted-foreground">Requestor</Label>
-                    <p className="font-medium">{selectedRequest.sender?.username || 'Unknown'}</p>
+                    <Label className="text-sm text-muted-foreground">{t("requestor", lang)}</Label>
+                    <p className="font-medium">{selectedRequest.sender?.username || t("unknown", lang)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Status</Label>
+                    <Label className="text-sm text-muted-foreground">{t("status", lang)}</Label>
                     <div className="pt-1">
-                      <Badge
-                        color={getStatusColor(selectedRequest.status)}
-                        text={selectedRequest.status}
-                      />
+                      <Badge color={getStatusColor(selectedRequest.status)} text={selectedRequest.status} />
                     </div>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Action</Label>
-                    <p className="font-medium">{selectedRequest.action || 'N/A'}</p>
+                    <Label className="text-sm text-muted-foreground">{t("action", lang)}</Label>
+                    <p className="font-medium">{selectedRequest.action || t("not_available", lang)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Model</Label>
+                    <Label className="text-sm text-muted-foreground">{t("model", lang)}</Label>
                     <p className="font-medium">{selectedRequest.model_name}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Model ID</Label>
+                    <Label className="text-sm text-muted-foreground">{t("model_id", lang)}</Label>
                     <p className="font-medium">{selectedRequest.model_id}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Handled By</Label>
-                    <p className="font-medium">{selectedRequest.admin?.username || 'Not assigned'}</p>
+                    <Label className="text-sm text-muted-foreground">{t("handled_by", lang)}</Label>
+                    <p className="font-medium">{selectedRequest.admin?.username || t("not_assigned", lang)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Created</Label>
+                    <Label className="text-sm text-muted-foreground">{t("created", lang)}</Label>
                     <p className="font-medium">{formatDate(selectedRequest.created_at)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Updated</Label>
+                    <Label className="text-sm text-muted-foreground">{t("updated", lang)}</Label>
                     <p className="font-medium">{formatDate(selectedRequest.updated_at)}</p>
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">Message</Label>
+                  <Label className="text-sm text-muted-foreground">{t("message", lang)}</Label>
                   {(() => {
-                    console.log("=== Debug Info ===");
-                    console.log("Request Model Name:", selectedRequest.model_name);
-                    console.log("Request Action:", selectedRequest.action);
-                    console.log("Request Model ID:", selectedRequest.model_id);
-                    console.log("Message type:", typeof selectedRequest.message);
-                    console.log("Message content:", selectedRequest.message);
-                    console.log("Is Create Match Request:", isCreateMatchRequest(selectedRequest));
-                    
+                    console.log("=== Debug Info ===")
+                    console.log("Request Model Name:", selectedRequest.model_name)
+                    console.log("Request Action:", selectedRequest.action)
+                    console.log("Request Model ID:", selectedRequest.model_id)
+                    console.log("Message type:", typeof selectedRequest.message)
+                    console.log("Message content:", selectedRequest.message)
+                    console.log("Is Create Match Request:", isCreateMatchRequest(selectedRequest))
+
                     // Try different approaches to parse the message
-                    let parsedData = null;
-                    
+                    let parsedData = null
+
                     // Approach 1: Direct parse attempt
                     if (isCreateMatchRequest(selectedRequest)) {
-                      parsedData = parseCreateMatchRequest(selectedRequest.message);
-                      console.log("Parse result:", parsedData);
+                      parsedData = parseCreateMatchRequest(selectedRequest.message)
+                      console.log("Parse result:", parsedData)
                     }
-                    
+
                     // Approach 2: If parsing failed, try manual extraction
-                    if (!parsedData && selectedRequest.message.includes('matches')) {
+                    if (!parsedData && selectedRequest.message.includes("matches")) {
                       try {
                         // Look for the JSON structure within the message
-                        const messageStr = selectedRequest.message;
-                        const matchesMatch = messageStr.match(/\{"matches":\[(.*?)\],"reason":"(.*?)"\}/);
-                        
+                        const messageStr = selectedRequest.message
+                        const matchesMatch = messageStr.match(/\{"matches":\[(.*?)\],"reason":"(.*?)"\}/)
+
                         if (matchesMatch) {
-                          console.log("Found matches via regex");
+                          console.log("Found matches via regex")
                           // Try to create a clean JSON string and parse it
-                          const cleanJson = matchesMatch[0].replace(/\\"/g, '"');
-                          parsedData = JSON.parse(cleanJson);
+                          const cleanJson = matchesMatch[0].replace(/\\"/g, '"')
+                          parsedData = JSON.parse(cleanJson)
                         }
                       } catch (e) {
-                        console.log("Manual extraction failed:", e);
+                        console.log("Manual extraction failed:", e)
                       }
                     }
-                    
+
                     if (parsedData && parsedData.matches) {
                       // Display formatted match data
                       return (
                         <div className="mt-2 space-y-4">
                           {parsedData.reason && (
                             <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-                              <p className="text-blue-900"><strong>Reason:</strong> {parsedData.reason}</p>
+                              <p className="text-blue-900">
+                                <strong>{t("reason", lang)}:</strong> {parsedData.reason}
+                              </p>
                             </div>
                           )}
-                          
+
                           <div>
                             <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                              Matches to Create ({parsedData.matches.length})
+                              {t("matches_to_create", lang)} ({parsedData.matches.length})
                             </h4>
                             <div className="overflow-x-auto border rounded-lg">
                               <Table>
                                 <TableHeader>
                                   <TableRow className="bg-gray-50">
-                                    <TableHead className="font-semibold">Username</TableHead>
-                                    <TableHead className="font-semibold">Amount</TableHead>
-                                    <TableHead className="font-semibold">Currency</TableHead>
-                                    <TableHead className="font-semibold">Transfer Account</TableHead>
+                                    <TableHead className="font-semibold">{t("username", lang)}</TableHead>
+                                    <TableHead className="font-semibold">{t("amount", lang)}</TableHead>
+                                    <TableHead className="font-semibold">{t("currency", lang)}</TableHead>
+                                    <TableHead className="font-semibold">{t("transfer_account", lang)}</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1008,7 +1001,7 @@ export default function RequestManagementPage() {
                             </div>
                           </div>
                         </div>
-                      );
+                      )
                     } else {
                       // Display raw message
                       return (
@@ -1019,12 +1012,10 @@ export default function RequestManagementPage() {
                             </pre>
                           </div>
                           {isCreateMatchRequest(selectedRequest) && (
-                            <p className="text-sm text-amber-600 mt-2">
-                              ⚠️ This appears to be a match creation request, but the data couldn't be parsed.
-                            </p>
+                            <p className="text-sm text-amber-600 mt-2">⚠️ {t("match_creation_parse_error", lang)}</p>
                           )}
                         </div>
-                      );
+                      )
                     }
                   })()}
                 </div>
@@ -1032,7 +1023,7 @@ export default function RequestManagementPage() {
             )}
           </div>
           <DialogFooter>
-            <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+            <Button onClick={() => setViewDialogOpen(false)}>{t("close", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1042,24 +1033,24 @@ export default function RequestManagementPage() {
         isOpen={statusUpdateDialogOpen}
         onClose={() => setStatusUpdateDialogOpen(false)}
         onConfirm={updateRequestStatus}
-        title={`Update Request Status`}
+        title={t("update_request_status", lang)}
         children={
           <>
             {requestToUpdate && isCreateMatchRequest(requestToUpdate) && newStatus === RequestStatus.ACCEPTED ? (
               <>
-                <p>Are you sure you want to accept this match creation request?</p>
-                <p className="mt-2 text-green-600 font-semibold">This will create the following matches:</p>
+                <p>{t("confirm_accept_match_creation", lang)}</p>
+                <p className="mt-2 text-green-600 font-semibold">{t("will_create_following_matches", lang)}</p>
                 {(() => {
-                  const matchData = parseCreateMatchRequest(requestToUpdate.message);
+                  const matchData = parseCreateMatchRequest(requestToUpdate.message)
                   if (matchData && matchData.matches) {
                     return (
                       <div className="mt-3 border rounded-lg overflow-hidden">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50">
-                              <TableHead>Username</TableHead>
-                              <TableHead>Amount</TableHead>
-                              <TableHead>Currency</TableHead>
+                              <TableHead>{t("username", lang)}</TableHead>
+                              <TableHead>{t("amount", lang)}</TableHead>
+                              <TableHead>{t("currency", lang)}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1073,27 +1064,31 @@ export default function RequestManagementPage() {
                           </TableBody>
                         </Table>
                       </div>
-                    );
+                    )
                   } else {
                     return (
                       <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <p className="text-sm text-yellow-800">
-                          Warning: Unable to parse match data. The request will be accepted but matches may need to be created manually.
-                        </p>
+                        <p className="text-sm text-yellow-800">{t("warning_unable_to_parse", lang)}</p>
                       </div>
-                    );
+                    )
                   }
                 })()}
               </>
             ) : (
               <>
-                <p>Are you sure you want to change the status to <strong>{newStatus}</strong>?</p>
-                <p className="mt-2">This will notify the requestor of the status change.</p>
+                <p>
+                  {t("confirm_status_change", lang)} <strong>{newStatus}</strong>?
+                </p>
+                <p className="mt-2">{t("will_notify_requestor", lang)}</p>
               </>
             )}
           </>
         }
-        confirmText={newStatus === RequestStatus.ACCEPTED && requestToUpdate && isCreateMatchRequest(requestToUpdate) ? "Accept & Create Matches" : "Update Status"}
+        confirmText={
+          newStatus === RequestStatus.ACCEPTED && requestToUpdate && isCreateMatchRequest(requestToUpdate)
+            ? t("accept_and_create_matches", lang)
+            : t("update_status", lang)
+        }
       />
 
       {/* Delete Confirmation Dialog */}
@@ -1101,14 +1096,14 @@ export default function RequestManagementPage() {
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={deleteRequest}
-        title="Confirm Delete"
+        title={t("confirm_delete", lang)}
         children={
           <>
-            <p>Are you sure you want to delete this request?</p>
-            <p className="mt-2">This action cannot be undone.</p>
+            <p>{t("confirm_delete_request", lang)}</p>
+            <p className="mt-2">{t("action_cannot_be_undone", lang)}</p>
           </>
         }
-        confirmText="Delete"
+        confirmText={t("delete", lang)}
       />
 
       {/* Bulk Action Confirmation Dialog */}
@@ -1116,26 +1111,33 @@ export default function RequestManagementPage() {
         isOpen={bulkActionDialog}
         onClose={() => setBulkActionDialog(false)}
         onConfirm={executeBulkAction}
-        title={bulkAction?.type === 'delete' ? 'Confirm Bulk Delete' : 'Confirm Bulk Status Update'}
+        title={bulkAction?.type === "delete" ? t("confirm_bulk_delete", lang) : t("confirm_bulk_status_update", lang)}
         children={
           <>
-            {bulkAction?.type === 'delete' ? (
+            {bulkAction?.type === "delete" ? (
               <>
-                <p>Are you sure you want to delete <strong>{selectedRequests.length}</strong> selected requests?</p>
-                <p className="mt-2 text-red-600">This action cannot be undone.</p>
+               <p>
+                  {t("confirm_delete_selected_requests_prefix", lang)} <strong>{selectedRequests.length}</strong>{" "}
+                  {t("confirm_delete_selected_requests_suffix", lang)}
+                </p>
+                <p className="mt-2 text-red-600">{t("action_cannot_be_undone", lang)}</p>
               </>
             ) : (
               <>
-                <p>Are you sure you want to update the status of <strong>{selectedRequests.length}</strong> selected requests to <strong>{bulkAction?.value}</strong>?</p>
+                <p>
+                {t("confirm_update_selected_requests_prefix", lang)} <strong>{selectedRequests.length}</strong>{" "}
+                  {t("confirm_update_selected_requests_middle", lang)} <strong>{bulkAction?.value}</strong>
+                  {t("confirm_update_selected_requests_suffix", lang)}
+                </p>
                 {bulkAction?.value === RequestStatus.ACCEPTED && (
-                  <p className="mt-2 text-yellow-600">Note: Create match requests cannot be bulk accepted and will be skipped.</p>
+                  <p className="mt-2 text-yellow-600">{t("note_create_match_requests", lang)}</p>
                 )}
-                <p className="mt-2">This will notify all affected requestors of the status change.</p>
+                <p className="mt-2">{t("will_notify_all_requestors", lang)}</p>
               </>
             )}
           </>
         }
-        confirmText={bulkAction?.type === 'delete' ? 'Delete All' : 'Update All'}
+        confirmText={bulkAction?.type === "delete" ? t("delete_all", lang) : t("update_all", lang)}
       />
     </div>
   );

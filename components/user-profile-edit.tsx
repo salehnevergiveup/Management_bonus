@@ -10,6 +10,8 @@ import { ArrowLeft, Upload, Save } from "lucide-react"
 import { Badge } from "@/components/badge"
 import { AppColor, UserStatus } from "@/constants/enums"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface Role {
   id: string
@@ -48,6 +50,7 @@ export function UserProfileEdit({
     confirmPassword: "",
     profile_img: null as string | null,
   })
+  const { lang, setLang } = useLanguage()
   
   const [error, setError] = useState<string | null>(null)
 
@@ -74,7 +77,7 @@ export function UserProfileEdit({
 
     const maxSizeInBytes = 1024 * 1024 // 1MB
     if (file.size > maxSizeInBytes) {
-      setError("File size should not exceed 1MB")
+      setError(t("file_size_exceed", lang))
       return
     }
 
@@ -88,7 +91,7 @@ export function UserProfileEdit({
     }
 
     reader.onerror = () => {
-      setError("Error reading file. Please try again.")
+      setError(t("error_reading_file", lang))
     }
 
     reader.readAsDataURL(file)
@@ -97,36 +100,38 @@ export function UserProfileEdit({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    
+
     // Validate password fields if user is trying to change password
     if (formData.newPassword || formData.confirmPassword || formData.currentPassword) {
       if (!formData.currentPassword) {
-        setError("Current password is required to change your password")
+        setError(t("current_password_required", lang))
         return
       }
-      
+
       if (formData.newPassword !== formData.confirmPassword) {
-        setError("New passwords don't match")
+        setError(t("passwords_dont_match", lang))
         return
       }
-      
+
       if (formData.newPassword.length < 8) {
-        setError("New password must be at least 8 characters long")
+        setError(t("password_length", lang))
         return
       }
     }
-    
+
     // Prepare the data to submit
     const dataToSubmit = {
       name: formData.name,
       profile_img: formData.profile_img,
       // Only include password fields if user is changing password
-      ...(formData.newPassword ? {
-        currentPassword: formData.currentPassword,
-        newPassword: formData.newPassword
-      } : {})
+      ...(formData.newPassword
+        ? {
+            currentPassword: formData.currentPassword,
+            newPassword: formData.newPassword,
+          }
+        : {}),
     }
-    
+
     onSubmit(dataToSubmit)
   }
 
@@ -141,14 +146,12 @@ export function UserProfileEdit({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        
+
         <div className="flex flex-col items-center space-y-2">
           <Avatar className="h-24 w-24">
-            <AvatarImage src={displayImage} alt={formData.name} />
+            <AvatarImage src={displayImage || "/placeholder.svg"} alt={formData.name} />
             <AvatarFallback className="text-2xl">
-              {formData.name
-                ? formData.name.substring(0, 2).toUpperCase()
-                : "U"}
+              {formData.name ? formData.name.substring(0, 2).toUpperCase() : "U"}
             </AvatarFallback>
           </Avatar>
 
@@ -158,48 +161,42 @@ export function UserProfileEdit({
               className="cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md flex items-center"
             >
               <Upload className="mr-2 h-4 w-4" />
-              Change Photo
+              {t("change_photo", lang)}
             </Label>
-            <Input
-              id="picture"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageUpload}
-            />
+            <Input id="picture" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </div>
         </div>
-        
+
         {/* Display account information (non-editable) */}
         <div className="bg-muted/40 p-4 rounded-lg">
-          <h3 className="font-medium mb-2">Account Information</h3>
+          <h3 className="font-medium mb-2">{t("account_information", lang)}</h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-muted-foreground">Email:</span>
+              <span className="text-muted-foreground">{t("email", lang)}:</span>
               <p>{user.email}</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Username:</span>
+              <span className="text-muted-foreground">{t("username", lang)}:</span>
               <p>{user.username}</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Role:</span>
+              <span className="text-muted-foreground">{t("role", lang)}:</span>
               <p>
                 <Badge color={AppColor.SUCCESS} text={user.role.name} />
               </p>
             </div>
             <div>
-              <span className="text-muted-foreground">Status:</span>
+              <span className="text-muted-foreground">{t("status", lang)}:</span>
               <p>
                 <Badge
                   color={
                     user.status === UserStatus.ACTIVE
                       ? AppColor.SUCCESS
                       : user.status === UserStatus.INACTIVE
-                      ? AppColor.WARNING
-                      : user.status === UserStatus.BANNED
-                      ? AppColor.ERROR
-                      : AppColor.INFO
+                        ? AppColor.WARNING
+                        : user.status === UserStatus.BANNED
+                          ? AppColor.ERROR
+                          : AppColor.INFO
                   }
                   text={user.status}
                 />
@@ -207,27 +204,19 @@ export function UserProfileEdit({
             </div>
           </div>
         </div>
-        
+
         {/* Editable fields */}
         <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
-          <Input
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
+          <Label htmlFor="name">{t("full_name", lang)}</Label>
+          <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
         </div>
 
         <div className="border-t pt-4">
-          <h3 className="font-medium mb-2">Change Password</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Leave these fields blank if you don't want to change your password
-          </p>
-          
+          <h3 className="font-medium mb-2">{t("change_password", lang)}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{t("leave_blank", lang)}</p>
+
           <div className="space-y-2">
-            <Label htmlFor="currentPassword">Current Password</Label>
+            <Label htmlFor="currentPassword">{t("current_password", lang)}</Label>
             <Input
               id="currentPassword"
               name="currentPassword"
@@ -236,9 +225,9 @@ export function UserProfileEdit({
               onChange={handleChange}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="newPassword">New Password</Label>
+            <Label htmlFor="newPassword">{t("new_password", lang)}</Label>
             <Input
               id="newPassword"
               name="newPassword"
@@ -247,9 +236,9 @@ export function UserProfileEdit({
               onChange={handleChange}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+            <Label htmlFor="confirmPassword">{t("confirm_new_password", lang)}</Label>
             <Input
               id="confirmPassword"
               name="confirmPassword"
@@ -263,15 +252,15 @@ export function UserProfileEdit({
       <CardFooter className="flex justify-between pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Cancel
+          {t("cancel", lang)}
         </Button>
         <Button type="submit" disabled={isLoading}>
           {isLoading ? (
-            "Saving..."
+            t("saving", lang)
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Profile
+              {t("save_profile", lang)}
             </>
           )}
         </Button>

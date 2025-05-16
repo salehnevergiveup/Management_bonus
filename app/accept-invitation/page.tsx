@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,11 +12,14 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Suspense } from "react"
 import { useRouter } from "next/navigation"
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 function AcceptInvitationContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get("token")
+  const { lang } = useLanguage()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,45 +32,45 @@ function AcceptInvitationContent() {
 
   useEffect(() => {
     if (!token) {
-      setError("Invalid invitation link")
+      setError(t("invalid_invitation_link", lang))
       setLoading(false)
       return
     }
 
     fetch(`/api/invitations/verify?token=${token}`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setLoading(false)
         if (data.error) {
           setError(data.error)
         } else {
           setEmail(data.email)
-          setUsername(data.email.split('@')[0])
+          setUsername(data.email.split("@")[0])
         }
       })
-      .catch(err => {
+      .catch((err) => {
         setLoading(false)
-        setError("Failed to verify invitation. Please try again.")
+        setError(t("failed_to_verify_invitation", lang))
         console.error(err)
       })
-  }, [token])
+  }, [token, lang])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Basic validation
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError(t("passwords_do_not_match", lang))
       return
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters long")
+      setError(t("password_length_requirement", lang))
       return
     }
 
     if (!username.trim()) {
-      setError("Username is required")
+      setError(t("username_required", lang))
       return
     }
 
@@ -88,20 +93,20 @@ function AcceptInvitationContent() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || "Something went wrong")
+        setError(data.error || t("something_went_wrong", lang))
         setSubmitting(false)
         return
       }
 
       setSuccess(true)
-      
+
       // Redirect to login page after 3 seconds
       setTimeout(() => {
         router.push("/login")
       }, 3000)
     } catch (err) {
       console.error(err)
-      setError("Failed to complete account setup. Please try again.")
+      setError(t("failed_to_complete_setup", lang))
       setSubmitting(false)
     }
   }
@@ -111,7 +116,7 @@ function AcceptInvitationContent() {
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-gray-600">Verifying invitation...</p>
+          <p className="mt-4 text-gray-600">{t("verifying_invitation", lang)}</p>
         </div>
       </div>
     )
@@ -122,17 +127,17 @@ function AcceptInvitationContent() {
       <div className="flex justify-center items-center min-h-screen bg-gray-50 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center">Invalid Invitation</CardTitle>
+            <CardTitle className="text-center">{t("invalid_invitation", lang)}</CardTitle>
           </CardHeader>
           <CardContent>
             <Alert variant="destructive">
               <XCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
+              <AlertTitle>{t("error", lang)}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           </CardContent>
           <CardFooter className="flex justify-center">
-            <Button onClick={() => router.push("/login")}>Go to Login</Button>
+            <Button onClick={() => router.push("/login")}>{t("go_to_login", lang)}</Button>
           </CardFooter>
         </Card>
       </div>
@@ -144,13 +149,11 @@ function AcceptInvitationContent() {
       <div className="flex justify-center items-center min-h-screen bg-gray-50 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center">Account Setup Complete</CardTitle>
+            <CardTitle className="text-center">{t("account_setup_complete", lang)}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <p className="text-gray-600">
-              Your account has been successfully created. You will be redirected to the login page shortly.
-            </p>
+            <p className="text-gray-600">{t("account_created_redirect", lang)}</p>
           </CardContent>
         </Card>
       </div>
@@ -161,50 +164,48 @@ function AcceptInvitationContent() {
     <div className="flex justify-center items-center min-h-screen bg-gray-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center">Complete Your Account Setup</CardTitle>
-          <CardDescription className="text-center">
-            You've been invited to join the system. Please set up your account to continue.
-          </CardDescription>
+          <CardTitle className="text-center">{t("complete_account_setup", lang)}</CardTitle>
+          <CardDescription className="text-center">{t("invitation_description", lang)}</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email", lang)}</Label>
               <Input id="email" type="email" value={email || ""} disabled />
-              <p className="text-sm text-muted-foreground">This email cannot be changed</p>
+              <p className="text-sm text-muted-foreground">{t("email_cannot_change", lang)}</p>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input 
-                id="username" 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)} 
-                placeholder="Choose a username"
+              <Label htmlFor="username">{t("username", lang)}</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={t("choose_username", lang)}
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                placeholder="Create a password"
+              <Label htmlFor="password">{t("password", lang)}</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t("create_password", lang)}
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input 
-                id="confirmPassword" 
-                type="password" 
-                value={confirmPassword} 
-                onChange={(e) => setConfirmPassword(e.target.value)} 
-                placeholder="Confirm your password"
+              <Label htmlFor="confirmPassword">{t("confirm_password", lang)}</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder={t("confirm_your_password", lang)}
                 required
               />
             </div>
@@ -214,10 +215,10 @@ function AcceptInvitationContent() {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Setting up account...
+                  {t("setting_up_account", lang)}
                 </>
               ) : (
-                "Complete Setup"
+                t("complete_setup", lang)
               )}
             </Button>
           </CardFooter>
@@ -228,15 +229,19 @@ function AcceptInvitationContent() {
 }
 
 export default function AcceptInvitationPage() {
+  const { lang } = useLanguage()
+
   return (
-    <Suspense fallback={
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-gray-600">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center min-h-screen bg-gray-50">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="mt-4 text-gray-600">{t("loading", lang)}</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <AcceptInvitationContent />
     </Suspense>
   )

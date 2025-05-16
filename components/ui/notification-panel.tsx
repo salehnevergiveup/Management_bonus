@@ -9,6 +9,8 @@ import { ConfirmationDialog } from "@/components/dialog";
 import { NotificationStatus, NotificationType } from "@/constants/enums";
 import { Notification } from "@/types/notification.types";
 import toast from 'react-hot-toast';
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface NotificationPanelProps {
   isOpen: boolean;
@@ -48,6 +50,8 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
       setIsLoading(false);
     }
   };
+
+  const { lang, setLang } = useLanguage()
 
   const updateUnreadCount = (notifs: Notification[]) => {
     const unreadCount = notifs.filter((n) => n.status === NotificationStatus.UNREAD).length;
@@ -173,7 +177,7 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="right" className="w-[400px] sm:w-[540px]">
           <SheetHeader className="flex flex-row justify-between items-center">
-            <SheetTitle>Notifications</SheetTitle>
+            <SheetTitle>{t("notification", lang)}</SheetTitle>
             {hasUnreadNotifications && (
               <Button 
                 variant="outline" 
@@ -182,14 +186,14 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
                 disabled={isLoading}
               >
                 <Check className="mr-2 h-4 w-4" />
-                Mark All as Read
+                {t("mark_all_as_read", lang)}
               </Button>
             )}
           </SheetHeader>
           
           {notifications.length === 0 ? (
             <div className="flex justify-center items-center h-[calc(100vh-15rem)] text-muted-foreground">
-              No notifications
+              {t("no_notifications_found", lang)}
             </div>
           ) : (
             <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
@@ -210,12 +214,12 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
                       <div className="mt-2 flex space-x-2">
                         <Button size="sm" variant="outline" onClick={() => handleView(notification)}>
                           <Eye className="mr-2 h-4 w-4" />
-                          View
+                          {t("view", lang)}
                         </Button>
                         {notification.status === NotificationStatus.UNREAD && (
                           <Button size="sm" variant="outline" onClick={() => markAsRead(notification.id)}>
                             <Check className="mr-2 h-4 w-4" />
-                            Mark as Read
+                            {t("mark_as_read", lang)}
                           </Button>
                         )}
                         <Button 
@@ -225,7 +229,7 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
                           onClick={() => handleDelete(notification)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          {t("delete", lang)}
                         </Button>
                       </div>
                     </div>
@@ -242,7 +246,7 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
         isOpen={viewDialogOpen}
         onClose={() => setViewDialogOpen(false)}
         onConfirm={() => setViewDialogOpen(false)}
-        title="Notification Details"
+        title={t("notification_details", lang)}
         confirmText="Close"
         showCancelButton={false}
       >
@@ -257,7 +261,7 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
             </div>
             <p>{selectedNotification.message}</p>
             <p className="text-sm text-muted-foreground">
-              Received: {new Date(selectedNotification.createdAt).toLocaleString()}
+            {t("received", lang)}: {new Date(selectedNotification.createdAt).toLocaleString()}
             </p>
           </div>
         )}
@@ -267,9 +271,9 @@ export function NotificationPanel({ isOpen, onClose, onUpdateUnreadCount }: Noti
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={() => selectedNotification && deleteNotification(selectedNotification.id)}
-        title="Delete Notification"
-        children="Are you sure you want to delete this notification? This action cannot be undone."
-        confirmText="Delete"
+        title={t("delete_notification", lang)}
+        children={t("confirm_delete_notification_message", lang)}
+        confirmText={t("delete", lang)}
       />
     </>
   );

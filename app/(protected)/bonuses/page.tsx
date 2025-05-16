@@ -16,6 +16,8 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import CodeEditor from '@/components/ui/code-editor';
 import { Bonus } from '@/types/bonus.type';
+import { useLanguage } from "@app/contexts/LanguageContext";
+import { t } from "@app/lib/i18n";
 
 export default function BonusManagementPage() {
   const { auth, isLoading } = useUser();
@@ -34,6 +36,8 @@ export default function BonusManagementPage() {
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bonusToDelete, setBonusToDelete] = useState<Bonus | null>(null);
+
+  const { lang, setLang } = useLanguage()
 
   // Filter bonuses based on search term
   const filteredBonuses = allBonuses.filter(bonus => 
@@ -191,17 +195,17 @@ export default function BonusManagementPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Bonus Management" }]} />
+      <Breadcrumb items={[{ label: t("bonus_management", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Bonus Management</CardTitle>
+          <CardTitle>{t("bonus_management", lang)}</CardTitle>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-            {auth?.can('bonuses:create') && (
+            {auth?.can("bonuses:create") && (
               <Link href="/bonuses/create">
                 <Button className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
-                  Create Bonus
+                  {t("create_bonus", lang)}
                 </Button>
               </Link>
             )}
@@ -214,7 +218,7 @@ export default function BonusManagementPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search bonuses..."
+                placeholder={t("search_bonuses", lang)}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -226,11 +230,11 @@ export default function BonusManagementPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead>Updated At</TableHead>
-                  {(auth?.can('bonuses:edit') || auth?.can('bonuses:delete') || auth?.can('bonuses:view')) && (
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("name", lang)}</TableHead>
+                  <TableHead>{t("created_at", lang)}</TableHead>
+                  <TableHead>{t("updated_at", lang)}</TableHead>
+                  {(auth?.can("bonuses:edit") || auth?.can("bonuses:delete") || auth?.can("bonuses:view")) && (
+                    <TableHead className="text-right">{t("actions", lang)}</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -238,42 +242,46 @@ export default function BonusManagementPage() {
                 {paginatedBonuses.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
-                      No bonuses found
+                      {t("no_bonuses_found", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedBonuses.map((bonus) => (
                     <TableRow key={bonus.id}>
                       <TableCell className="font-medium">{bonus.name}</TableCell>
-                      <TableCell>{bonus.created_at? formatDate(bonus.created_at): "N/A"}</TableCell>
-                      <TableCell>{bonus.updated_at? formatDate(bonus.updated_at): "N/A"}</TableCell>
+                      <TableCell>
+                        {bonus.created_at ? formatDate(bonus.created_at) : t("not_available", lang)}
+                      </TableCell>
+                      <TableCell>
+                        {bonus.updated_at ? formatDate(bonus.updated_at) : t("not_available", lang)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
+                              <span className="sr-only">{t("open_menu", lang)}</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleShowDetails(bonus)}>
                               <Info className="mr-2 h-4 w-4" />
-                              Show Details
+                              {t("show_details", lang)}
                             </DropdownMenuItem>
-                            
-                            {auth?.can('bonuses:edit') && (
+
+                            {auth?.can("bonuses:edit") && (
                               <Link href={`/bonuses/edit/${bonus.id}`} className="w-full">
                                 <DropdownMenuItem>
                                   <Edit className="mr-2 h-4 w-4" />
-                                  Edit
+                                  {t("edit", lang)}
                                 </DropdownMenuItem>
                               </Link>
                             )}
-                            
-                            {auth?.can('bonuses:delete') && (
+
+                            {auth?.can("bonuses:delete") && (
                               <DropdownMenuItem onClick={() => handleDelete(bonus)}>
                                 <Trash className="mr-2 h-4 w-4" />
-                                Delete
+                                {t("delete", lang)}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -289,51 +297,51 @@ export default function BonusManagementPage() {
           {filteredBonuses.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{startItem}</span> to{" "}
-                <span className="font-medium">{endItem}</span>{" "}
-                of <span className="font-medium">{filteredBonuses.length}</span> bonuses
+                {t("showing", lang)} <span className="font-medium">{startItem}</span> {t("to", lang)}{" "}
+                <span className="font-medium">{endItem}</span> {t("of", lang)}{" "}
+                <span className="font-medium">{filteredBonuses.length}</span> {t("bonuses", lang)}
               </div>
-              
+
               {totalPages > 1 && (
                 <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(1)}
                     disabled={!hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    First
+                    {t("first", lang)}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(currentPage - 1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(currentPage - 1)}
                     disabled={!hasPreviousPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Previous
+                    {t("previous", lang)}
                   </Button>
                   <span className="px-2 text-sm">
-                    Page {currentPage} of {totalPages}
+                    {t("page", lang)} {currentPage} {t("of", lang)} {totalPages}
                   </span>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(currentPage + 1)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(currentPage + 1)}
                     disabled={!hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Next
+                    {t("next", lang)}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => goToPage(totalPages)} 
+                  <Button
+                    variant="outline"
+                    onClick={() => goToPage(totalPages)}
                     disabled={!hasNextPage}
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Last
+                    {t("last", lang)}
                   </Button>
                 </div>
               )}
@@ -341,111 +349,115 @@ export default function BonusManagementPage() {
           )}
         </CardContent>
       </Card>
-    {/* Details Dialog */}
-    <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {selectedBonus?.name} Details
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="py-4">
-          <div className="flex border-b mb-4">
-            <button
-              className={`px-4 py-2 font-medium ${activeTab === 'function' ? 'border-b-2 border-primary' : ''}`}
-              onClick={() => setActiveTab('function')}
-            >
-              Function
-            </button>
-            <button
-              className={`px-4 py-2 font-medium ${activeTab === 'baseline' ? 'border-b-2 border-primary' : ''}`}
-              onClick={() => setActiveTab('baseline')}
-            >
-              Baseline
-            </button>
-            <button
-              className={`px-4 py-2 font-medium ${activeTab === 'description' ? 'border-b-2 border-primary' : ''}`}
-              onClick={() => setActiveTab('description')}
-            >
-              Description
-            </button>
-          </div>
-          
-          {activeTab === 'function' && selectedBonus && (
-            <div className="relative">
-              <button 
-                className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20 z-10"
-                onClick={() => copyToClipboard(selectedBonus.function)}
+      {/* Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedBonus?.name} {t("details", lang)}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="flex border-b mb-4">
+              <button
+                className={`px-4 py-2 font-medium ${activeTab === "function" ? "border-b-2 border-primary" : ""}`}
+                onClick={() => setActiveTab("function")}
               >
-                <Copy size={16} />
+                {t("function", lang)}
               </button>
-              <CodeEditor
-                value={formatCodeForDisplay(selectedBonus.function)}
-                onChange={() => {}} // No-op since it's read-only
-                language="javascript"
-                height="400px"
-                readOnly={true}
-              />
+              <button
+                className={`px-4 py-2 font-medium ${activeTab === "baseline" ? "border-b-2 border-primary" : ""}`}
+                onClick={() => setActiveTab("baseline")}
+              >
+                {t("baseline", lang)}
+              </button>
+              <button
+                className={`px-4 py-2 font-medium ${activeTab === "description" ? "border-b-2 border-primary" : ""}`}
+                onClick={() => setActiveTab("description")}
+              >
+                {t("description", lang)}
+              </button>
             </div>
-          )}
-          
-          {activeTab === 'baseline' && selectedBonus && (
-            <div className="relative">
-              <button 
-                className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20 z-10"
-                onClick={() => copyToClipboard(typeof selectedBonus.baseline === 'string' 
-                  ? formatCodeForDisplay(selectedBonus.baseline)
-                  : JSON.stringify(selectedBonus.baseline, null, 2))}
-              >
-                <Copy size={16} />
-              </button>
-              <CodeEditor
-                value={typeof selectedBonus.baseline === 'string' 
-                  ? formatCodeForDisplay(selectedBonus.baseline) 
-                  : JSON.stringify(selectedBonus.baseline, null, 2)}
-                onChange={() => {}} // No-op since it's read-only
-                language="json"
-                height="400px"
-                readOnly={true}
-              />
-            </div>
-          )}
-          
-          {activeTab === 'description' && selectedBonus && (
-            <div className="relative">
-              <button 
-                className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20"
-                onClick={() => copyToClipboard(selectedBonus.description)}
-              >
-                <Copy size={16} />
-              </button>
-              <div className="bg-muted p-4 rounded-md whitespace-pre-wrap">
-                {selectedBonus.description}
+
+            {activeTab === "function" && selectedBonus && (
+              <div className="relative">
+                <button
+                  className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20 z-10"
+                  onClick={() => copyToClipboard(selectedBonus.function)}
+                >
+                  <Copy size={16} />
+                </button>
+                <CodeEditor
+                  value={formatCodeForDisplay(selectedBonus.function)}
+                  onChange={() => {}} // No-op since it's read-only
+                  language="javascript"
+                  height="400px"
+                  readOnly={true}
+                />
               </div>
-            </div>
-          )}
-        </div>
-        
-        <DialogFooter>
-          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            )}
+
+            {activeTab === "baseline" && selectedBonus && (
+              <div className="relative">
+                <button
+                  className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20 z-10"
+                  onClick={() =>
+                    copyToClipboard(
+                      typeof selectedBonus.baseline === "string"
+                        ? formatCodeForDisplay(selectedBonus.baseline)
+                        : JSON.stringify(selectedBonus.baseline, null, 2),
+                    )
+                  }
+                >
+                  <Copy size={16} />
+                </button>
+                <CodeEditor
+                  value={
+                    typeof selectedBonus.baseline === "string"
+                      ? formatCodeForDisplay(selectedBonus.baseline)
+                      : JSON.stringify(selectedBonus.baseline, null, 2)
+                  }
+                  onChange={() => {}} // No-op since it's read-only
+                  language="json"
+                  height="400px"
+                  readOnly={true}
+                />
+              </div>
+            )}
+
+            {activeTab === "description" && selectedBonus && (
+              <div className="relative">
+                <button
+                  className="absolute top-2 right-2 p-1 rounded bg-primary/10 hover:bg-primary/20"
+                  onClick={() => copyToClipboard(selectedBonus.description)}
+                >
+                  <Copy size={16} />
+                </button>
+                <div className="bg-muted p-4 rounded-md whitespace-pre-wrap">{selectedBonus.description}</div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setDetailsDialogOpen(false)}>{t("close", lang)}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={deleteBonus}
-        title="Confirm Delete"
+        title={t("confirm_delete", lang)}
         children={
           <>
-            <p>Are you sure you want to delete this bonus?</p>
-            <p className="mt-2">This action cannot be undone.</p>
+            <p>{t("delete_bonus_confirmation", lang)}</p>
+            <p className="mt-2">{t("delete_irreversible", lang)}</p>
           </>
         }
-        confirmText="Delete"
+        confirmText={t("delete", lang)}
       />
     </div>
   );

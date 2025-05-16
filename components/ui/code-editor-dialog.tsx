@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import CodeEditor from './code-editor';
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface ValidationResult {
   isValid: boolean;
@@ -68,6 +70,8 @@ const CodeEditorDialog: React.FC<CodeEditorDialogProps> = ({
     }
   };
 
+  const { lang, setLang } = useLanguage()
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh]">
@@ -80,7 +84,7 @@ const CodeEditorDialog: React.FC<CodeEditorDialogProps> = ({
                 size="sm" 
                 onClick={() => setShowSample(!showSample)}
               >
-                {showSample ? 'Hide' : 'View'} Sample Data
+                {showSample ? 'Hide' : 'View'} {t("sample_data", lang)}
               </Button>
             )}
           </DialogTitle>
@@ -124,7 +128,7 @@ const CodeEditorDialog: React.FC<CodeEditorDialogProps> = ({
 
           {showSample && testSampleData && (
             <div className="mt-4 space-y-2">
-              <h3 className="font-semibold">{testSampleLabel || 'Sample Data'}</h3>
+              <h3 className="font-semibold">{testSampleLabel || t("sample_data", lang)}</h3>
               <CodeEditor
                 value={typeof testSampleData === 'string' 
                   ? testSampleData 
@@ -141,16 +145,16 @@ const CodeEditorDialog: React.FC<CodeEditorDialogProps> = ({
         <DialogFooter className="space-x-2">
           {onValidate && !readOnly && (
             <Button variant="secondary" onClick={handleValidate}>
-              Validate
+              {t("validate", lang)}
             </Button>
           )}
           {readOnly ? (
             <Button onClick={() => onOpenChange(false)}>
-              Close
+             {t("close", lang)}
             </Button>
           ) : (
             <Button onClick={handleSave}>
-              {onSave ? 'Save' : 'Close'}
+              {onSave ? t("save", lang) : t("close", lang)}
             </Button>
           )}
         </DialogFooter>

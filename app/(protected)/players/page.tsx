@@ -17,6 +17,8 @@ import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import { TransferAccountTypes } from "@constants/enums";
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface TransferAccount {
   id: string;
@@ -202,6 +204,7 @@ export default function PlayerManagementPage() {
       toast.error(error instanceof Error ? error.message : "Failed to update player");
     }
   };
+  const { lang, setLang } = useLanguage()
 
   const deletePlayer = async () => {
     if (!playerToDelete) return;
@@ -275,11 +278,11 @@ export default function PlayerManagementPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Player Management" }]} />
+      <Breadcrumb items={[{ label: t("player_management", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Player Management</CardTitle>
+          <CardTitle>{t("player_management", lang)}</CardTitle>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
             {auth?.can("players:create") && (
               <Button 
@@ -287,7 +290,7 @@ export default function PlayerManagementPage() {
                 className="w-full sm:w-auto"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Create Player
+                {t("create_player", lang)}
               </Button>
             )}
             <Select
@@ -297,13 +300,13 @@ export default function PlayerManagementPage() {
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Rows per page" />
+                <SelectValue placeholder={t("rows_per_page", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5 rows</SelectItem>
-                <SelectItem value="10">10 rows</SelectItem>
-                <SelectItem value="20">20 rows</SelectItem>
-                <SelectItem value="50">50 rows</SelectItem>
+              <SelectItem value="10">10 {t("rows", lang)}</SelectItem>
+                <SelectItem value="20">20 {t("rows", lang)}</SelectItem>
+                <SelectItem value="50">50 {t("rows", lang)}</SelectItem>
+                <SelectItem value="100">100 {t("rows", lang)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -315,7 +318,7 @@ export default function PlayerManagementPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search players..."
+                placeholder={t("search_players", lang)}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -327,12 +330,12 @@ export default function PlayerManagementPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Transfer Account</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead>Updated At</TableHead>
+                  <TableHead>{t("username", lang)}</TableHead>
+                  <TableHead>{t("transfer_account", lang)}</TableHead>
+                  <TableHead>{t("created_at", lang)}</TableHead>
+                  <TableHead>{t("updated_at", lang)}</TableHead>
                   {(auth?.can("players:edit") || auth?.can("players:delete")) && (
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">{t("actions", lang)}</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -340,20 +343,20 @@ export default function PlayerManagementPage() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      Loading players...
+                      {t("loading_players", lang)}
                     </TableCell>
                   </TableRow>
                 ) : paginatedPlayers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No players found
+                      {t("no_players_found", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedPlayers.map((player) => (
                     <TableRow key={player.id}>
                       <TableCell className="font-medium">{player.account_username}</TableCell>
-                      <TableCell>{player.transferAccount?.username || 'Unknown'}</TableCell>
+                      <TableCell>{player.transferAccount?.username || t("unknown", lang)}</TableCell>
                       <TableCell>{formatDate(player.created_at)}</TableCell>
                       <TableCell>{formatDate(player.updated_at)}</TableCell>
                       {(auth?.can("players:edit") || auth?.can("players:delete")) && (
@@ -361,7 +364,7 @@ export default function PlayerManagementPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
+                                <span className="sr-only">{t("open_menu", lang)}</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -369,14 +372,14 @@ export default function PlayerManagementPage() {
                               {auth?.can("players:edit") && (
                                 <DropdownMenuItem onClick={() => handleEdit(player)}>
                                   <Edit className="mr-2 h-4 w-4" />
-                                  Edit
+                                  {t("edit", lang)}
                                 </DropdownMenuItem>
                               )}
                               
                               {auth?.can("players:delete") && (
                                 <DropdownMenuItem onClick={() => handleDelete(player)}>
                                   <Trash className="mr-2 h-4 w-4" />
-                                  Delete
+                                  {t("delete", lang)}
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -393,9 +396,7 @@ export default function PlayerManagementPage() {
           {filteredPlayers.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{startItem}</span> to{" "}
-                <span className="font-medium">{endItem}</span>{" "}
-                of <span className="font-medium">{filteredPlayers.length}</span> players
+              {`${t("showing", lang)} ${startItem} ${t("to", lang)} ${endItem} ${t("of", lang)} ${filteredPlayers.length} ${t("players", lang)}`}
               </div>
               
               {totalPages > 1 && (
@@ -407,7 +408,7 @@ export default function PlayerManagementPage() {
                     size="sm"
                     className="h-8 px-2"
                   >
-                    First
+                    {t("first", lang)}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -416,10 +417,10 @@ export default function PlayerManagementPage() {
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Previous
+                    {t("previous", lang)}
                   </Button>
                   <span className="px-2 text-sm">
-                    Page {currentPage} of {totalPages}
+                  {`${t("page", lang)} ${currentPage} ${t("of", lang)} ${totalPages}`}
                   </span>
                   <Button 
                     variant="outline" 
@@ -428,7 +429,7 @@ export default function PlayerManagementPage() {
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Next
+                    {t("next", lang)}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -437,7 +438,7 @@ export default function PlayerManagementPage() {
                     size="sm"
                     className="h-8 px-2"
                   >
-                    Last
+                    {t("last", lang)}
                   </Button>
                 </div>
               )}
@@ -450,14 +451,14 @@ export default function PlayerManagementPage() {
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Create Player</DialogTitle>
+            <DialogTitle>{t("create_player", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="account_username">Username</Label>
+              <Label htmlFor="account_username">{t("username", lang)}</Label>
               <Input 
                 id="account_username" 
-                placeholder="Enter username" 
+                placeholder={t("enter_username", lang)} 
                 value={formUsername}
                 onChange={(e) => setFormUsername(e.target.value)}
               />
@@ -466,13 +467,13 @@ export default function PlayerManagementPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="transfer_account_id">Transfer Account</Label>
+              <Label htmlFor="transfer_account_id">{t("transfer_account", lang)}</Label>
               <Select 
                 value={formTransferAccountId} 
                 onValueChange={setFormTransferAccountId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a transfer account" />
+                  <SelectValue placeholder={t("select_transfer_account", lang)} />
                 </SelectTrigger>
                 <SelectContent>
                   {transferAccounts.map((account) => (
@@ -489,9 +490,9 @@ export default function PlayerManagementPage() {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
-            <Button onClick={createPlayer}>Create</Button>
+            <Button onClick={createPlayer}>{t("create", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -500,14 +501,14 @@ export default function PlayerManagementPage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Player</DialogTitle>
+            <DialogTitle>{t("edit_player", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="edit_account_username">Username</Label>
+              <Label htmlFor="edit_account_username">{t("username", lang)}</Label>
               <Input 
                 id="edit_account_username" 
-                placeholder="Enter username" 
+                placeholder={t("enter_username", lang)} 
                 value={formUsername}
                 onChange={(e) => setFormUsername(e.target.value)}
               />
@@ -516,13 +517,13 @@ export default function PlayerManagementPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_transfer_account_id">Transfer Account</Label>
+              <Label htmlFor="edit_transfer_account_id">{t("transfer_account", lang)}</Label>
               <Select 
                 value={formTransferAccountId} 
                 onValueChange={setFormTransferAccountId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a transfer account" />
+                  <SelectValue placeholder={t("select_transfer_account", lang)} />
                 </SelectTrigger>
                 <SelectContent>
                   {transferAccounts.map((account) => (
@@ -539,9 +540,9 @@ export default function PlayerManagementPage() {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
-            <Button onClick={updatePlayer}>Update</Button>
+            <Button onClick={updatePlayer}>{t("update", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -551,14 +552,14 @@ export default function PlayerManagementPage() {
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={deletePlayer}
-        title="Confirm Delete"
+        title={t("confirm_delete", lang)}
         children={
           <>
-            <p>Are you sure you want to delete this player?</p>
-            <p className="mt-2">This action cannot be undone.</p>
+            <p>{t("delete_player_confirmation", lang)}</p>
+            <p className="mt-2">{t("action_cannot_be_undone", lang)}</p>
           </>
         }
-        confirmText="Delete"
+        confirmText={t("delete", lang)}
       />
     </div>
   );
