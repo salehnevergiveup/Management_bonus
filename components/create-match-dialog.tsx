@@ -1,135 +1,150 @@
-"use client";
+"use client"
 
-import toast from "react-hot-toast";
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { Trash2, Plus } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import toast from "react-hot-toast"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card } from "@/components/ui/card"
+import { Trash2, Plus } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface Match {
-  username: string;
-  transfer_account_id: string | null;
-  process_id?: string;
-  amount: number;
-  currency: string;
-  transferAccountUsername?: string;
+  username: string
+  transfer_account_id: string | null
+  process_id?: string
+  amount: number
+  currency: string
+  transferAccountUsername?: string
+  searchQuery?: string
 }
+
 interface Player {
-  id: string;
-  account_username: string;
-  transfer_account_id: string;
-  created_at: string;
-  updated_at: string;
+  id: string
+  account_username: string
+  transfer_account_id: string
+  created_at: string
+  updated_at: string
   transferAccount: {
-    id: string;
-    username: string;
-    password: string;
-    pin_code: string;
-    type: string;
-    parent_id: string | null;
-    created_at: string;
-    updated_at: string;
-  };
+    id: string
+    username: string
+    password: string
+    pin_code: string
+    type: string
+    parent_id: string | null
+    created_at: string
+    updated_at: string
+  }
 }
 
 interface CreateMatchDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  isRequest?: boolean;
-  processId: string; 
+  isOpen: boolean
+  onClose: () => void
+  isRequest?: boolean
+  processId: string
+  onSuccess?: () => void // Add callback for successful submission
 }
 
-export default function CreateMatchDialog({ isOpen, onClose, isRequest = false, processId}: CreateMatchDialogProps) {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [matches, setMatches] = useState<Match[]>([{
-    username: "",
-    amount: 0,
-    currency: "USD",
-    transfer_account_id: null,
-    transferAccountUsername: "",
-  }]);
-  const [requestMessage, setRequestMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const fetchPlayers = async () => {
-    try {
-      const response = await fetch("/api/players");
-      if (!response.ok) {
-        throw new Error("Failed to fetch players");
-      }
-      const data = await response.json();
-      setPlayers(data.data);
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchPlayers();
-    }
-  }, [isOpen]);
-
-  const addMatch = () => {
-    setMatches([...matches, {
+export default function CreateMatchDialog({
+  isOpen,
+  onClose,
+  isRequest = false,
+  processId,
+  onSuccess,
+}: CreateMatchDialogProps) {
+  const { lang } = useLanguage()
+  const [players, setPlayers] = useState<Player[]>([])
+  const [matches, setMatches] = useState<Match[]>([
+    {
       username: "",
       amount: 0,
       currency: "USD",
       transfer_account_id: null,
       transferAccountUsername: "",
-    }]);
-  };
+      searchQuery: "",
+    },
+  ])
+  const [requestMessage, setRequestMessage] = useState("")
+  const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null)
+
+  const fetchPlayers = async () => {
+    try {
+      const response = await fetch("/api/players")
+      if (!response.ok) {
+        throw new Error(t("failed_fetch_players", lang))
+      }
+      const data = await response.json()
+      setPlayers(data.data)
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchPlayers()
+    }
+  }, [isOpen])
+
+  const addMatch = () => {
+    setMatches([
+      ...matches,
+      {
+        username: "",
+        amount: 0,
+        currency: "USD",
+        transfer_account_id: null,
+        transferAccountUsername: "",
+        searchQuery: "",
+      },
+    ])
+  }
 
   const removeMatch = (index: number) => {
     if (matches.length > 1) {
-      const newMatches = [...matches];
-      newMatches.splice(index, 1);
-      setMatches(newMatches);
+      const newMatches = [...matches]
+      newMatches.splice(index, 1)
+      setMatches(newMatches)
     }
-  };
+  }
 
   const updateMatch = (index: number, field: keyof Match, value: string | number | null) => {
-    const newMatches = [...matches];
-    newMatches[index] = { ...newMatches[index], [field]: value };
+    const newMatches = [...matches]
+    newMatches[index] = { ...newMatches[index], [field]: value }
 
-    // If username changes, check for matching player
     if (field === "username" && typeof value === "string") {
-      const matchingPlayer = players.find(p => p.account_username === value);
+      newMatches[index].searchQuery = value
+
+      const matchingPlayer = players.find((p) => p.account_username === value)
       if (matchingPlayer) {
-        newMatches[index].transfer_account_id = matchingPlayer.transfer_account_id;
-        newMatches[index].transferAccountUsername = matchingPlayer.transferAccount.username;
+        newMatches[index].transfer_account_id = matchingPlayer.transfer_account_id
+        newMatches[index].transferAccountUsername = matchingPlayer.transferAccount.username
       } else {
-        newMatches[index].transfer_account_id = null;
-        newMatches[index].transferAccountUsername = "";
+        newMatches[index].transfer_account_id = null
+        newMatches[index].transferAccountUsername = ""
       }
     }
 
-    setMatches(newMatches);
-  };
+    setMatches(newMatches)
+  }
 
   const validateMatches = () => {
-    return matches.every(match => 
-      match.username && 
-      match.transfer_account_id && 
-      match.amount > 0 && 
-      match.currency
-    );
-  };
+    return matches.every((match) => match.username && match.transfer_account_id && match.amount > 0 && match.currency)
+  }
 
   const handleCreateMatch = () => {
-    return matches.map(match => ({
+    return matches.map((match) => ({
       username: match.username,
       amount: match.amount,
       currency: match.currency,
       transfer_account_id: match.transfer_account_id,
       process_id: processId,
-    }));
-  };
+    }))
+  }
 
   const handleCreateMatchRequest = () => {
     return {
@@ -137,81 +152,108 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false, 
       model_id: "batch-create",
       action: "create",
       message: JSON.stringify({
-        matches: matches.map(match => ({
+        matches: matches.map((match) => ({
           username: match.username,
           amount: match.amount,
           currency: match.currency,
           transfer_account_id: match.transfer_account_id,
           process_id: processId,
         })),
-        reason: requestMessage
-      })
-    };
-  };
+        reason: requestMessage,
+      }),
+    }
+  }
 
   const handleSubmit = async () => {
     if (!validateMatches()) {
-      toast.error("Please fill in all required fields correctly");
-      return;
+      toast.error(t("fill_required_fields", lang))
+      return
     }
 
     if (isRequest && !requestMessage.trim()) {
-      toast.error("Please provide a reason for the request");
-      return;
+      toast.error(t("provide_reason", lang))
+      return
     }
 
-    let endpoint = "";
-    let payload: any = null;
-    let method = "";
+    let endpoint = ""
+    let payload: any = null
+    let method = ""
 
     if (isRequest) {
-      endpoint = "/api/requests";
-      payload = handleCreateMatchRequest();
-      method = "POST";
+      endpoint = "/api/requests"
+      payload = handleCreateMatchRequest()
+      method = "POST"
     } else {
-      endpoint = "/api/matches/create-matches";
-      payload = { matches: handleCreateMatch() };
-      method = "POST";
+      endpoint = "/api/matches/create-matches"
+      payload = { matches: handleCreateMatch() }
+      method = "POST"
     }
 
     try {
       const response = await fetch(endpoint, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
-      });
-     
-      if (!response.ok) {
-        throw Error("Unable to create matches");
-      }
-      toast.success(isRequest ? "Match creation request submitted successfully" : "Matches created successfully");
-      onClose();
-      setMatches([{
-        username: "",
-        amount: 0,
-        currency: "USD",
-        transfer_account_id: null,
-        transferAccountUsername: "",
-      }]);
-      setRequestMessage("");
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
+        body: JSON.stringify(payload),
+      })
 
-  // Filter players based on search query
-  const filteredPlayers = players.filter(player => 
-    player.account_username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      if (!response.ok) {
+        throw Error(t("unable_create_matches", lang))
+      }
+      toast.success(isRequest ? t("request_submitted_successfully", lang) : t("matches_created_successfully", lang))
+
+      // Call the onSuccess callback to refresh the parent component
+      if (onSuccess) {
+        onSuccess()
+      }
+
+      onClose()
+      setMatches([
+        {
+          username: "",
+          amount: 0,
+          currency: "USD",
+          transfer_account_id: null,
+          transferAccountUsername: "",
+          searchQuery: "",
+        },
+      ])
+      setRequestMessage("")
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
+  const handleFocus = (index: number) => {
+    setActiveSearchIndex(index)
+  }
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      setActiveSearchIndex(null)
+    }, 200)
+  }
+
+  const selectPlayer = (index: number, player: Player) => {
+    const newMatches = [...matches]
+    newMatches[index] = {
+      ...newMatches[index],
+      username: player.account_username,
+      transfer_account_id: player.transfer_account_id,
+      transferAccountUsername: player.transferAccount.username,
+      searchQuery: player.account_username,
+    }
+    setMatches(newMatches)
+    setActiveSearchIndex(null)
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isRequest ? "Request to Create Matches" : "Create Multiple Matches"}
+            {isRequest ? t("request_to_create_matches", lang) : t("create_multiple_matches", lang)}
           </DialogTitle>
         </DialogHeader>
 
@@ -220,62 +262,63 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false, 
             <Card key={index} className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Username</Label>
+                  <Label>{t("username", lang)}</Label>
                   <div className="relative">
                     <Input
                       value={match.username}
                       onChange={(e) => {
-                        updateMatch(index, "username", e.target.value);
-                        setSearchQuery(e.target.value);
+                        updateMatch(index, "username", e.target.value)
                       }}
-                      placeholder="Enter username"
+                      onFocus={() => handleFocus(index)}
+                      onBlur={handleBlur}
+                      placeholder={t("enter_username", lang)}
                       className={!match.transfer_account_id && match.username ? "border-red-500" : ""}
                     />
                     {!match.transfer_account_id && match.username && (
-                      <p className="text-xs text-red-500 mt-1">No player found</p>
+                      <p className="text-xs text-red-500 mt-1">{t("no_player_found", lang)}</p>
+                    )}
+
+                    {activeSearchIndex === index && match.searchQuery && (
+                      <div className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-40 overflow-y-auto">
+                        {players
+                          .filter((player) =>
+                            player.account_username.toLowerCase().includes(match.searchQuery?.toLowerCase() || ""),
+                          )
+                          .map((player) => (
+                            <div
+                              key={player.id}
+                              className="p-2 hover:bg-gray-100 cursor-pointer"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                selectPlayer(index, player)
+                              }}
+                            >
+                              {player.account_username}
+                            </div>
+                          ))}
+                        {players.filter((player) =>
+                          player.account_username.toLowerCase().includes(match.searchQuery?.toLowerCase() || ""),
+                        ).length === 0 && <div className="p-2 text-gray-500">{t("no_players_found", lang)}</div>}
+                      </div>
                     )}
                   </div>
-                  
-                  {/* Dropdown suggestions for players */}
-                  {searchQuery && index === matches.length - 1 && (
-                    <div className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-40 overflow-y-auto">
-                      {filteredPlayers.map(player => (
-                        <div
-                          key={player.id}
-                          className="p-2 hover:bg-gray-100 cursor-pointer"
-                          onClick={() => {
-                            updateMatch(index, "username", player.account_username);
-                            setSearchQuery("");
-                          }}
-                        >
-                          {player.account_username}
-                        </div>
-                      ))}
-                      {filteredPlayers.length === 0 && (
-                        <div className="p-2 text-gray-500">No players found</div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Amount</Label>
+                  <Label>{t("amount", lang)}</Label>
                   <Input
                     type="number"
                     value={match.amount || ""}
-                    onChange={(e) => updateMatch(index, "amount", parseFloat(e.target.value) || 0)}
-                    placeholder="Enter amount"
+                    onChange={(e) => updateMatch(index, "amount", Number.parseFloat(e.target.value) || 0)}
+                    placeholder={t("enter_amount", lang)}
                     step="0.01"
                     min="0"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Currency</Label>
-                  <Select
-                    value={match.currency}
-                    onValueChange={(value) => updateMatch(index, "currency", value)}
-                  >
+                  <Label>{t("currency", lang)}</Label>
+                  <Select value={match.currency} onValueChange={(value) => updateMatch(index, "currency", value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -287,11 +330,11 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false, 
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Transfer Account</Label>
+                  <Label>{t("transfer_account", lang)}</Label>
                   <Input
                     value={match.transferAccountUsername || ""}
                     disabled
-                    placeholder="Auto-selected"
+                    placeholder={t("auto_selected", lang)}
                     className="bg-gray-100"
                   />
                 </div>
@@ -311,22 +354,18 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false, 
             </Card>
           ))}
 
-          <Button
-            variant="outline"
-            onClick={addMatch}
-            className="w-full"
-          >
+          <Button variant="outline" onClick={addMatch} className="w-full">
             <Plus className="h-4 w-4 mr-2" />
-            Add Another Match
+            {t("add_another_match", lang)}
           </Button>
 
           {isRequest && (
             <div className="space-y-2">
-              <Label>Reason for Request</Label>
+              <Label>{t("reason_for_request", lang)}</Label>
               <Textarea
                 value={requestMessage}
                 onChange={(e) => setRequestMessage(e.target.value)}
-                placeholder="Explain why you need to create these matches..."
+                placeholder={t("explain_why_create_matches", lang)}
                 rows={4}
               />
             </div>
@@ -335,16 +374,13 @@ export default function CreateMatchDialog({ isOpen, onClose, isRequest = false, 
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("cancel", lang)}
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!validateMatches() || (isRequest && !requestMessage.trim())}
-          >
-            {isRequest ? "Submit Request" : "Create Matches"} ({matches.length})
+          <Button onClick={handleSubmit} disabled={!validateMatches() || (isRequest && !requestMessage.trim())}>
+            {isRequest ? t("submit_request", lang) : t("create_matches", lang)} ({matches.length})
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

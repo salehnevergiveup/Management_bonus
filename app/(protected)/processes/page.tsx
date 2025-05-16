@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, Play,MoreHorizontal, Calendar, AlertCircle } from "lucide-react";
+import { Eye, Play,MoreHorizontal, Calendar, AlertCircle,Pause,RefreshCw ,XCircle, Trash2} from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle,DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,9 @@ import toast from "react-hot-toast";
 import { ProcessStatus, AppColor } from "@/constants/enums";
 import { PaginationData } from "@/types/pagination-data.type";
 import { Alert, AlertDescription } from "@components/ui/alert";
+import { ProcessDetailsDialog } from "@/components/process-details-dialog"
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface AgentAccount {
   id: string;
@@ -38,6 +41,7 @@ interface ConnectedUser {
 
 interface Process {
   id: string;
+  process_name: string;
   status: string;
   start_time: string;
   end_time?: string;
@@ -74,6 +78,7 @@ export default function ProcessManagementPage() {
   const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
   const [selectedTerminateProcess, setSelectedTerminateProcess] = useState<Process | null>(null);
   const [isTerminating, setIsTerminating] = useState(false);
+  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null)
 
   // Date selection states
   const [startProcessDialogOpen, setStartProcessDialogOpen] = useState(false);
@@ -82,6 +87,17 @@ export default function ProcessManagementPage() {
   const [dateErrors, setDateErrors] = useState<{fromDate?: string; toDate?: string}>({});
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const todayDate = new Date().toISOString().split('T')[0]; 
+  const [hasPendingProcess, setHasPendingProcess] = useState(false);
+  const [isStatusChanging, setIsStatusChanging] = useState(false);
+  const [markFailedDialogOpen, setMarkFailedDialogOpen] = useState(false)
+  const [processToMarkFailed, setProcessToMarkFailed] = useState<Process | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [processToDelete, setProcessToDelete] = useState<Process | null>(null)
+  const [processName, setProcessName] = useState("")
+  const [processNameError, setProcessNameError] = useState<string | null>(null)
+  const { lang, setLang } = useLanguage()
+
 
   const fetchProcesses = async () => {
     if (auth) {
@@ -260,6 +276,8 @@ export default function ProcessManagementPage() {
   
   const handleStartProcessClick = () => {
     // Reset form
+    setProcessName("")
+    setProcessNameError(null)
     setFromDate("");
     setToDate("");
     setDateErrors({});
@@ -268,7 +286,15 @@ export default function ProcessManagementPage() {
   };
 
   const startProcess = async () => {
-    if (!validateDateRange()) return;
+    const isProcessNameValid = validateProcessName()
+
+    // Validate date range
+    const isDateRangeValid = validateDateRange()
+
+    // If either validation fails, return early
+    if (!isProcessNameValid || !isDateRangeValid) {
+      return
+    }
 
     try {
       const response = await fetch("/api/processes/start", {
@@ -277,6 +303,7 @@ export default function ProcessManagementPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          process_name: processName.trim(),
           from_date: fromDate,
           to_date: toDate,
           agent_accounts: selectedAgents,
@@ -299,9 +326,163 @@ export default function ProcessManagementPage() {
   };
 
   const handleView = (process: Process) => {
-    setSelectedProcess(process);
+    setSelectedProcessId(process.id)
     setViewDialogOpen(true);
   };
+
+  const handleMakeOnHold = async (process: Process) => {
+    if (process.status !== ProcessStatus.PENDING) {
+      toast.error("Only pending processes can be put on hold")
+      return
+    }
+
+    setIsStatusChanging(true)
+    try {
+      const response = await fetch(`/api/processes/${process.id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: ProcessStatus.ONBHOLD,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to update process status")
+      }
+
+      const result = await response.json()
+      toast.success(result.message || "Process status updated to On Hold")
+      fetchProcesses() // Refresh the list
+    } catch (error) {
+      console.error("Error updating process status:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to update process status")
+    } finally {
+      setIsStatusChanging(false)
+    }
+  }
+
+  // Modified handleMakePending function to use the enum
+  const handleMakePending = async (process: Process) => {
+    if (process.status !== ProcessStatus.ONBHOLD) {
+      toast.error("Only on-hold processes can be made pending")
+      return
+    }
+
+    if (hasPendingProcess) {
+      toast.error("Cannot make process pending while another pending process exists")
+      return
+    }
+
+    setIsStatusChanging(true)
+    try {
+      const response = await fetch(`/api/processes/${process.id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: ProcessStatus.PENDING,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to update process status")
+      }
+
+      const result = await response.json()
+      toast.success(result.message || "Process status updated to Pending")
+      fetchProcesses() // Refresh the list
+    } catch (error) {
+      console.error("Error updating process status:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to update process status")
+    } finally {
+      setIsStatusChanging(false)
+    }
+  }
+
+  const handleMarkFailedClick = (process: Process) => {
+    setProcessToMarkFailed(process)
+    setMarkFailedDialogOpen(true)
+  }
+
+  const validateProcessName = () => {
+    if (!processName.trim()) {
+      setProcessNameError("Process name is required")
+      return false
+    }
+    setProcessNameError(null)
+    return true
+  }
+
+
+  // New function to handle confirming mark as failed
+  const confirmMarkFailed = async () => {
+    if (!processToMarkFailed) return
+
+    setIsStatusChanging(true)
+    try {
+      const response = await fetch(`/api/processes/${processToMarkFailed.id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: ProcessStatus.FAILED,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to update process status")
+      }
+
+      const result = await response.json()
+      toast.success(result.message || "Process status updated to Failed")
+      setMarkFailedDialogOpen(false)
+      fetchProcesses() // Refresh the list
+    } catch (error) {
+      console.error("Error updating process status:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to update process status")
+    } finally {
+      setIsStatusChanging(false)
+    }
+  }
+
+  const handleDeleteClick = (process: Process) => {
+    setProcessToDelete(process)
+    setDeleteDialogOpen(true)
+  }
+
+  // New function to handle confirming process deletion
+  const confirmDelete = async () => {
+    if (!processToDelete) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/processes/${processToDelete.id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete process")
+      }
+
+      const result = await response.json()
+      toast.success(result.message || "Process deleted successfully")
+      setDeleteDialogOpen(false)
+      fetchProcesses() // Refresh the list
+    } catch (error) {
+      console.error("Error deleting process:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to delete process")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -326,33 +507,33 @@ export default function ProcessManagementPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Process Management" }]} />
+      <Breadcrumb items={[{ label: t("process_management", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Process Management</CardTitle>
+          <CardTitle>{t("process_management", lang)}</CardTitle>
           <div className="flex items-center space-x-2">
             {!hasPendingOrProcessing && (
               <Button onClick={handleStartProcessClick}>
                 <Play className="mr-2 h-4 w-4" />
-                 Start Process
+                {t("start_process", lang)}
               </Button>
             )}
             <Select
               value={pageSize.toString()}
               onValueChange={(val) => {
-                setPageSize(Number(val));
-                setCurrentPage(1);
+                setPageSize(Number(val))
+                setCurrentPage(1)
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Rows per page" />
+                <SelectValue placeholder={t("rows_per_page", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5 rows</SelectItem>
-                <SelectItem value="10">10 rows</SelectItem>
-                <SelectItem value="20">20 rows</SelectItem>
-                <SelectItem value="50">50 rows</SelectItem>
+                <SelectItem value="5">{`5 ${t("rows", lang)}`}</SelectItem>
+                <SelectItem value="10">{`10 ${t("rows", lang)}`}</SelectItem>
+                <SelectItem value="20">{`20 ${t("rows", lang)}`}</SelectItem>
+                <SelectItem value="50">{`50 ${t("rows", lang)}`}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -360,123 +541,159 @@ export default function ProcessManagementPage() {
 
         <CardContent>
           <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Process ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date From</TableHead>
-                <TableHead>Date To</TableHead>
-                <TableHead>Started At</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
-                    Loading processes...
-                  </TableCell>
+                  <TableHead>{t("user", lang)}</TableHead>
+                  <TableHead>{t("process_name", lang)}</TableHead>
+                  <TableHead>{t("status", lang)}</TableHead>
+                  <TableHead>{t("date_from", lang)}</TableHead>
+                  <TableHead>{t("date_to", lang)}</TableHead>
+                  <TableHead>{t("started_at", lang)}</TableHead>
+                  <TableHead>{t("last_updated", lang)}</TableHead>
+                  <TableHead className="text-right">{t("actions", lang)}</TableHead>
                 </TableRow>
-              ) : processes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
-                    No processes found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                processes.map((process) => (
-                  <TableRow key={process.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={process.user?.profile_img || undefined} alt={process.user?.name} />
-                          <AvatarFallback>{process.user?.name?.substring(0, 2).toUpperCase() || 'UN'}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div>{process.user?.name || 'Unknown'}</div>
-                          <div className="text-sm text-muted-foreground">{process.user?.email || 'No email'}</div>
-                        </div>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      {t("loading_processes", lang)}
                     </TableCell>
-                    <TableCell className="font-medium">{process.id}</TableCell>
-                    <TableCell>
-                    <span
+                  </TableRow>
+                ) : processes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      {t("no_processes_found", lang)}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  processes.map((process) => (
+                    <TableRow key={process.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={process.user?.profile_img || undefined} alt={process.user?.name} />
+                            <AvatarFallback>{process.user?.name?.substring(0, 2).toUpperCase() || "UN"}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div>{process.user?.name || t("unknown", lang)}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {process.user?.email || t("no_email", lang)}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {process.process_name || `${t("process", lang)}-${process.id}`}
+                      </TableCell>
+                      <TableCell>
+                        <span
                           className={`px-2 py-1 rounded-full  ${
                             process.status === ProcessStatus.PROCESSING
                               ? AppColor.INFO
                               : process.status === ProcessStatus.SUCCESS
                                 ? AppColor.SUCCESS
-                                : process.status === ProcessStatus.FAILED? 
-                                  AppColor.ERROR
-                                  : AppColor.WARNING
+                                : process.status === ProcessStatus.FAILED
+                                  ? AppColor.ERROR
+                                  : process.status === ProcessStatus.ONBHOLD
+                                    ? AppColor.PURPLE // Custom color
+                                    : AppColor.WARNING
                           }`}
                         >
-                        {process.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {process.from_date ? (
-                        <div className="text-sm">
-                          {new Date(process.from_date).toLocaleDateString()}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Not specified</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {process.to_date ? (
-                        <div className="text-sm">
-                          {new Date(process.to_date).toLocaleDateString()}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Not specified</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(process.start_time || process.created_at)}</TableCell>
-                    <TableCell>{formatDate(process.updated_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleView(process)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          {(process.status === ProcessStatus.PENDING || process.status === ProcessStatus.PROCESSING) && (
-                          <DropdownMenuItem 
-                            onClick={() => handleTerminate(process)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <AlertCircle className="mr-2 h-4 w-4" />
-                            Terminate Process
-                          </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                          {process.status}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {process.from_date ? (
+                          <div className="text-sm">{new Date(process.from_date).toLocaleDateString()}</div>
+                        ) : (
+                          <span className="text-muted-foreground">{t("not_specified", lang)}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {process.to_date ? (
+                          <div className="text-sm">{new Date(process.to_date).toLocaleDateString()}</div>
+                        ) : (
+                          <span className="text-muted-foreground">{t("not_specified", lang)}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{formatDate(process.start_time || process.created_at)}</TableCell>
+                      <TableCell>{formatDate(process.updated_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">{t("open_menu", lang)}</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleView(process)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              {t("view_details", lang)}
+                            </DropdownMenuItem>
+                            {(process.status === ProcessStatus.PROCESSING ||
+                              process.status === ProcessStatus.PROCESSING) && (
+                              <DropdownMenuItem
+                                onClick={() => handleTerminate(process)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <AlertCircle className="mr-2 h-4 w-4" />
+                                {t("terminate_process", lang)}
+                              </DropdownMenuItem>
+                            )}
+                            {process.status === ProcessStatus.PENDING && (
+                              <DropdownMenuItem onClick={() => handleMakeOnHold(process)} disabled={isStatusChanging}>
+                                <Pause className="mr-2 h-4 w-4" />
+                                {t("make_on_hold", lang)}
+                              </DropdownMenuItem>
+                            )}
+
+                            {process.status === ProcessStatus.ONBHOLD && !hasPendingProcess && (
+                              <DropdownMenuItem onClick={() => handleMakePending(process)} disabled={isStatusChanging}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                {t("make_pending", lang)}
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* New: Show Mark as Failed button only for ON_HOLD processes */}
+                            {process.status === ProcessStatus.ONBHOLD && (
+                              <DropdownMenuItem
+                                onClick={() => handleMarkFailedClick(process)}
+                                disabled={isStatusChanging}
+                                className="text-red-600 hover:text-red-700 focus:text-red-700"
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                {t("mark_as_failed", lang)}
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* New: Show Delete Process button only for FAILED processes */}
+                            {process.status === ProcessStatus.FAILED && (
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteClick(process)}
+                                disabled={isDeleting}
+                                className="text-red-600 hover:text-red-700 focus:text-red-700"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {t("delete_process", lang)}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
 
           {pagination && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-                <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{" "}
-                of <span className="font-medium">{pagination.total}</span> processes
+                {`${t("showing", lang)} ${(pagination.page - 1) * pagination.limit + 1} ${t("to", lang)} ${Math.min(pagination.page * pagination.limit, pagination.total)} ${t("of", lang)} ${pagination.total} ${t("processes", lang)}`}
               </div>
 
               {pagination.totalPages > 1 && (
@@ -487,7 +704,7 @@ export default function ProcessManagementPage() {
                     disabled={isLoading || !pagination.hasPreviousPage}
                     size="sm"
                   >
-                    First
+                    {t("first", lang)}
                   </Button>
                   <Button
                     variant="outline"
@@ -495,10 +712,10 @@ export default function ProcessManagementPage() {
                     disabled={isLoading || !pagination.hasPreviousPage}
                     size="sm"
                   >
-                    Previous
+                    {t("previous", lang)}
                   </Button>
                   <span className="px-2">
-                    Page {pagination.page} of {pagination.totalPages}
+                    {`${t("page", lang)} ${pagination.page} ${t("of", lang)} ${pagination.totalPages}`}
                   </span>
                   <Button
                     variant="outline"
@@ -506,7 +723,7 @@ export default function ProcessManagementPage() {
                     disabled={isLoading || !pagination.hasNextPage}
                     size="sm"
                   >
-                    Next
+                    {t("next", lang)}
                   </Button>
                   <Button
                     variant="outline"
@@ -514,7 +731,7 @@ export default function ProcessManagementPage() {
                     disabled={isLoading || !pagination.hasNextPage}
                     size="sm"
                   >
-                    Last
+                    {t("last", lang)}
                   </Button>
                 </div>
               )}
@@ -527,11 +744,28 @@ export default function ProcessManagementPage() {
       <Dialog open={startProcessDialogOpen} onOpenChange={setStartProcessDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Start New Process</DialogTitle>
+            <DialogTitle>{t("start_new_process", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Process Name Field */}
             <div className="space-y-2">
-              <Label htmlFor="from_date">From Date</Label>
+              <Label htmlFor="process_name">{t("process_name", lang)}</Label>
+              <Input
+                id="process_name"
+                placeholder={t("enter_process_name", lang)}
+                value={processName}
+                onChange={(e) => {
+                  setProcessName(e.target.value)
+                  if (e.target.value.trim()) {
+                    setProcessNameError(null)
+                  }
+                }}
+                className={processNameError ? "border-red-500" : ""}
+              />
+              {processNameError && <p className="text-sm text-red-500">{processNameError}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="from_date">{t("from_date", lang)}</Label>
               <div className="relative">
                 <Input
                   id="from_date"
@@ -543,12 +777,10 @@ export default function ProcessManagementPage() {
                 />
                 <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
-              {dateErrors.fromDate && (
-                <p className="text-sm text-red-500">{dateErrors.fromDate}</p>
-              )}
+              {dateErrors.fromDate && <p className="text-sm text-red-500">{dateErrors.fromDate}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="to_date">To Date</Label>
+              <Label htmlFor="to_date">{t("to_date", lang)}</Label>
               <div className="relative">
                 <Input
                   id="to_date"
@@ -556,161 +788,86 @@ export default function ProcessManagementPage() {
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                   min={fromDate || "2020-01-01"}
-                  max={todayDate} 
+                  max={todayDate}
                 />
                 <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
-              {dateErrors.toDate && (
-                <p className="text-sm text-red-500">{dateErrors.toDate}</p>
-              )}
+              {dateErrors.toDate && <p className="text-sm text-red-500">{dateErrors.toDate}</p>}
             </div>
             <div className="text-sm text-muted-foreground mt-2">
-              <p>Note: Date range cannot exceed 3 months, must be after 2020, and cannot be in the future.</p>
+              <p>{t("date_range_note", lang)}</p>
             </div>
           </div>
           <div className="space-y-2 mt-4">
-            <Label>Select Agent Accounts</Label>
+            <Label>{t("select_agent_accounts", lang)}</Label>
             <div className="flex items-center gap-2 mb-2">
               <input
                 type="checkbox"
                 id="select_all"
                 checked={selectedAgents.length === agentAccounts.length}
-                onChange={(e) =>
-                  setSelectedAgents(e.target.checked ? agentAccounts.map((a) => a.username) : [])
-                }
+                onChange={(e) => setSelectedAgents(e.target.checked ? agentAccounts.map((a) => a.username) : [])}
               />
-              <Label htmlFor="select_all" className="text-sm">Select All</Label>
+              <Label htmlFor="select_all" className="text-sm">
+                {t("select_all", lang)}
+              </Label>
             </div>
-              <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-2">
-                {agentAccounts.map((account) => (
-                  <div key={account.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={account.username}
-                      checked={selectedAgents.includes(account.username)}
-                      onChange={(e) => {
-                        setSelectedAgents((prev) =>
-                          e.target.checked
-                            ? [...prev, account.username]
-                            : prev.filter((u) => u !== account.username)
-                        );
-                      }}
-                    />
-                    <Label htmlFor={account.username} className="text-sm">{account.username}</Label>
-                  </div>
-                ))}
-              </div>
+            <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-2">
+              {agentAccounts.map((account) => (
+                <div key={account.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id={account.username}
+                    checked={selectedAgents.includes(account.username)}
+                    onChange={(e) => {
+                      setSelectedAgents((prev) =>
+                        e.target.checked ? [...prev, account.username] : prev.filter((u) => u !== account.username),
+                      )
+                    }}
+                  />
+                  <Label htmlFor={account.username} className="text-sm">
+                    {account.username}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStartProcessDialogOpen(false)}>
-              Cancel
+              {t("cancel", lang)}
             </Button>
-            <Button onClick={startProcess}>Start Process</Button>
+            <Button onClick={startProcess}>{t("start_process", lang)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* View Process Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Process Details</DialogTitle>
-          </DialogHeader>
-          {selectedProcess && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 mb-4">
-                <Avatar>
-                  <AvatarImage src={selectedProcess.user?.profile_img || undefined} alt={selectedProcess.user?.name} />
-                  <AvatarFallback>{selectedProcess.user?.name?.substring(0, 2).toUpperCase() || 'UN'}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium">{selectedProcess.user?.name || 'Unknown'}</div>
-                  <div className="text-sm text-muted-foreground">{selectedProcess.user?.email || 'No email'}</div>
-                </div>
-                <span
-                  className={`ml-auto px-2 py-1 rounded-full text-xs ${getStatusColor(selectedProcess.status)}`}
-                >
-                  {selectedProcess.status}
-                </span>
-              </div>
-              
-              <p className="font-medium">Process ID: {selectedProcess.id}</p>
-              
-              {selectedProcess.from_date && selectedProcess.to_date && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium mb-1">Date Range:</p>
-                  <p className="text-sm">From: {new Date(selectedProcess.from_date).toLocaleDateString()}</p>
-                  <p className="text-sm">To: {new Date(selectedProcess.to_date).toLocaleDateString()}</p>
-                </div>
-              )}
-              
-              {selectedProcess.connected_users && selectedProcess.connected_users.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium mb-1">Connected Users:</p>
-                  <div className="max-h-40 overflow-y-auto border rounded p-2">
-                    {selectedProcess.connected_users.map(user => (
-                      <div key={user.id} className="text-sm py-1 border-b last:border-0">
-                        {user.username}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <p className="text-sm text-muted-foreground">
-                Started: {formatDate(selectedProcess.start_time || selectedProcess.created_at)}
-              </p>
-              
-              {selectedProcess.end_time && (
-                <p className="text-sm text-muted-foreground">
-                  Ended: {formatDate(selectedProcess.end_time)}
-                </p>
-              )}
-              
-              <p className="text-sm text-muted-foreground">
-                Last Updated: {formatDate(selectedProcess.updated_at)}
-              </p>
-              
-              <p className="text-sm text-muted-foreground">
-                Status: {selectedProcess.status}
-              </p>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       {/* Terminate Process Dialog */}
       <Dialog open={terminateDialogOpen} onOpenChange={setTerminateDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Terminate Process</DialogTitle>
+            <DialogTitle>{t("terminate_process", lang)}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Are you sure you want to terminate this process? This action cannot be undone.
-              </AlertDescription>
+              <AlertDescription>{t("terminate_process_confirmation", lang)}</AlertDescription>
             </Alert>
             {selectedTerminateProcess && (
               <div className="mt-4 space-y-2">
                 <p className="text-sm">
-                  <strong>Process ID:</strong> {selectedTerminateProcess.id}
+                  <strong>{t("process_id", lang)}:</strong> {selectedTerminateProcess.id}
                 </p>
                 <p className="text-sm">
-                  <strong>Status:</strong> {selectedTerminateProcess.status}
+                  <strong>{t("status", lang)}:</strong> {selectedTerminateProcess.status}
                 </p>
                 <p className="text-sm">
-                  <strong>User:</strong> {selectedTerminateProcess.user?.name || 'Unknown'}
+                  <strong>{t("user", lang)}:</strong> {selectedTerminateProcess.user?.name || t("unknown", lang)}
                 </p>
                 {selectedTerminateProcess.from_date && selectedTerminateProcess.to_date && (
                   <>
                     <p className="text-sm">
-                      <strong>Date Range:</strong> {new Date(selectedTerminateProcess.from_date).toLocaleDateString()} - {new Date(selectedTerminateProcess.to_date).toLocaleDateString()}
+                      <strong>{t("date_range", lang)}:</strong>{" "}
+                      {new Date(selectedTerminateProcess.from_date).toLocaleDateString()} -{" "}
+                      {new Date(selectedTerminateProcess.to_date).toLocaleDateString()}
                     </p>
                   </>
                 )}
@@ -718,23 +875,103 @@ export default function ProcessManagementPage() {
             )}
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setTerminateDialogOpen(false)}
-              disabled={isTerminating}
-            >
-              Cancel
+            <Button variant="outline" onClick={() => setTerminateDialogOpen(false)} disabled={isTerminating}>
+              {t("cancel", lang)}
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmTerminate}
-              disabled={isTerminating}
-            >
-              {isTerminating ? "Terminating..." : "Terminate Process"}
+            <Button variant="destructive" onClick={confirmTerminate} disabled={isTerminating}>
+              {isTerminating ? t("terminating", lang) : t("terminate_process", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mark as Failed Confirmation Dialog */}
+      <Dialog open={markFailedDialogOpen} onOpenChange={setMarkFailedDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">{t("mark_process_as_failed", lang)}</DialogTitle>
+            <DialogDescription>{t("mark_failed_confirmation", lang)}</DialogDescription>
+          </DialogHeader>
+
+          {processToMarkFailed && (
+            <div className="py-4">
+              <div className="mb-4 p-3 border rounded-md bg-gray-50">
+                <p className="font-medium">
+                  {t("process_id", lang)}: {processToMarkFailed.id}
+                </p>
+                {processToMarkFailed.from_date && processToMarkFailed.to_date && (
+                  <p className="text-sm mt-2">
+                    {t("date_range", lang)}: {new Date(processToMarkFailed.from_date).toLocaleDateString()}{" "}
+                    {t("to", lang)} {new Date(processToMarkFailed.to_date).toLocaleDateString()}
+                  </p>
+                )}
+                <p className="text-sm mt-2">
+                  {t("created_by", lang)}: {processToMarkFailed.user?.name || t("unknown", lang)}
+                </p>
+                <p className="text-sm mt-2">
+                  {t("current_status", lang)}: <span className="font-medium text-blue-600">{t("on_hold", lang)}</span>
+                </p>
+              </div>
+
+              <p className="text-sm text-red-600">{t("mark_failed_warning", lang)}</p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setMarkFailedDialogOpen(false)}>
+              {t("cancel", lang)}
+            </Button>
+            <Button variant="destructive" onClick={confirmMarkFailed} disabled={isStatusChanging}>
+              {isStatusChanging ? t("processing", lang) : t("confirm", lang)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New: Delete Process Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">{t("delete_process", lang)}</DialogTitle>
+            <DialogDescription>{t("delete_process_confirmation", lang)}</DialogDescription>
+          </DialogHeader>
+
+          {processToDelete && (
+            <div className="py-4">
+              <div className="mb-4 p-3 border rounded-md bg-gray-50">
+                <p className="font-medium">
+                  {t("process_id", lang)}: {processToDelete.id}
+                </p>
+                {processToDelete.from_date && processToDelete.to_date && (
+                  <p className="text-sm mt-2">
+                    {t("date_range", lang)}: {new Date(processToDelete.from_date).toLocaleDateString()} {t("to", lang)}{" "}
+                    {new Date(processToDelete.to_date).toLocaleDateString()}
+                  </p>
+                )}
+                <p className="text-sm mt-2">
+                  {t("created_by", lang)}: {processToDelete.user?.name || t("unknown", lang)}
+                </p>
+                <p className="text-sm mt-2">
+                  {t("current_status", lang)}: <span className="font-medium text-red-600">{t("failed", lang)}</span>
+                </p>
+              </div>
+
+              <p className="text-sm text-red-600 font-medium">{t("delete_process_warning", lang)}</p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              {t("cancel", lang)}
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? t("deleting", lang) : t("delete_process", lang)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ProcessDetailsDialog open={viewDialogOpen} onOpenChange={setViewDialogOpen} processId={selectedProcessId} />
     </div>
   );
 }

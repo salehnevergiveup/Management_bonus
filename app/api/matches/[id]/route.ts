@@ -31,7 +31,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // Handle status update if provided
     if (body.status !== undefined) {
       // Validate status value - only allow valid status options
-      const validStatuses = ["pending", "success", "onhold"];
+      const validStatuses = ["pending", "success", "failed"];
       if (!validStatuses.includes(body.status.toLowerCase())) {
         return NextResponse.json(
           { error: "Status must be one of: pending, success, onhold" },

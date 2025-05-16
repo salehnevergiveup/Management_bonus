@@ -7,7 +7,8 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { useUser } from "@/contexts/usercontext";
 import { UserStatus } from "@/constants/enums";
 import type { User } from "@/types/user.types";
-
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 
 
@@ -18,6 +19,7 @@ export default function ViewUserPage() {
   const [fetchedUser, setFetchedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { auth, isLoading } = useUser();
+  const { lang, setLang } = useLanguage()
 
   useEffect(() => {
 
@@ -45,7 +47,7 @@ export default function ViewUserPage() {
   }, [userId]);
 
   if (isLoading  || loading) {
-    return <p>Loading...</p>;
+    return <p>{t("loading", lang)}</p>;
   }
 
   if (!fetchedUser) {
@@ -53,13 +55,13 @@ export default function ViewUserPage() {
       <div className="container mx-auto py-6">
         <Breadcrumb
           items={[
-            { label: "Users", href: "/users" },
-            { label: "User Not Found" },
+            { label: t("users", lang), href: "/users" },
+            { label:t("user_not_found", lang) },
           ]}
         />
         <div className="flex justify-center">
           <div className="bg-destructive/10 text-destructive p-4 rounded-md">
-            User not found. The user may have been deleted or you may have followed an invalid link.
+          {t("user_not_found", lang)}. The user may have been deleted or you may have followed an invalid link.
           </div>
         </div>
       </div>

@@ -4,6 +4,8 @@ import { Activity } from "lucide-react"
 import { cn } from "@/lib/utils"
 import ProcessProgressDialog from "./process-progress-dialog"
 import { Events } from "@constants/enums"
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface FloatingProcessButtonProps {
   position?: "left" | "right"
@@ -15,6 +17,7 @@ export default function FloatingProcessButton({ position = "right" }: FloatingPr
   const [processCount, setProcessCount] = useState(0)
   const [isUpdating, setIsUpdating] = useState(false)
   const prevCountRef = useRef(0)
+  const { lang, setLang } = useLanguage()
 
   // Fetch process count - using the correct endpoint
   const fetchProcessCount = async () => {
@@ -89,7 +92,7 @@ export default function FloatingProcessButton({ position = "right" }: FloatingPr
         )}
       >
         <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg">
-          Active Process Tracker
+          {t("active_process_tracker",lang)}
         </div>
       </div>
       <ProcessProgressDialog

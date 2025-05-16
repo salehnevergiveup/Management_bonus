@@ -10,6 +10,8 @@ import Link from "next/link"
 import { MoreHorizontal, Search, Eye, Pencil, Trash2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import type { User } from "@/types/user.types";
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 // Define the User type
 
 
@@ -20,6 +22,7 @@ interface UserTableProps {
 export function UserTable({ users }: UserTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("")
+  const { lang } = useLanguage()
 
   // Filter users based on search term and role filter
   const filteredUsers = users.filter((user) => {
@@ -35,7 +38,7 @@ export function UserTable({ users }: UserTableProps) {
 
   const handleDelete = (id: string) => {
     // In a real app, this would call an API to delete the user
-    alert(`Delete user with ID: ${id}`)
+    alert(`${t("delete_user_with_id", lang)}: ${id}`)
   }
 
   return (
@@ -45,7 +48,7 @@ export function UserTable({ users }: UserTableProps) {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search users..."
+            placeholder={t("search_users", lang)}
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -53,13 +56,13 @@ export function UserTable({ users }: UserTableProps) {
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by role" />
+            <SelectValue placeholder={t("filter_by_role", lang)} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="Admin">Admin</SelectItem>
-            <SelectItem value="User">User</SelectItem>
-            <SelectItem value="Editor">Editor</SelectItem>
+            <SelectItem value="all">{t("all_roles", lang)}</SelectItem>
+            <SelectItem value="Admin">{t("admin", lang)}</SelectItem>
+            <SelectItem value="User">{t("user", lang)}</SelectItem>
+            <SelectItem value="Editor">{t("editor", lang)}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -68,12 +71,12 @@ export function UserTable({ users }: UserTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t("user", lang)}</TableHead>
+              <TableHead>{t("username", lang)}</TableHead>
+              <TableHead>{t("email", lang)}</TableHead>
+              <TableHead>{t("role", lang)}</TableHead>
+              <TableHead>{t("created", lang)}</TableHead>
+              <TableHead className="text-right">{t("actions", lang)}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -103,12 +106,12 @@ export function UserTable({ users }: UserTableProps) {
                     {user.role.name}
                   </span>
                 </TableCell>
-                <TableCell>{user.created_at.toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
+                        <span className="sr-only">{t("open_menu", lang)}</span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -116,18 +119,18 @@ export function UserTable({ users }: UserTableProps) {
                       <Link href={`/user/${user.id}`}>
                         <DropdownMenuItem>
                           <Eye className="mr-2 h-4 w-4" />
-                          View
+                          {t("view", lang)}
                         </DropdownMenuItem>
                       </Link>
                       <Link href={`/user/${user.id}/edit`}>
                         <DropdownMenuItem>
                           <Pencil className="mr-2 h-4 w-4" />
-                          Edit
+                          {t("edit", lang)}
                         </DropdownMenuItem>
                       </Link>
                       <DropdownMenuItem onClick={() => handleDelete(user.id)}>
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
+                        {t("delete", lang)}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -140,4 +143,3 @@ export function UserTable({ users }: UserTableProps) {
     </>
   )
 }
-

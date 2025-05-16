@@ -24,6 +24,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { CheckCircle2, XCircle, AlertCircle, Code, Loader2 } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import CodeEditorDialog from "@/components/ui/code-editor-dialog";
+import { useLanguage } from "@app/contexts/LanguageContext";
+import { t } from "@app/lib/i18n";
 
 
 export default function EditBonusPage({ params }: { params: Promise<{ id: string }> }) {
@@ -45,6 +47,8 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
   const [generalErrors, setGeneralErrors] = useState<string[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [validationPassed, setValidationPassed] = useState(false);
+
+  const { lang, setLang } = useLanguage()
   
   // Preview/confirmation states
   const [showPreview, setShowPreview] = useState(false);
@@ -94,7 +98,7 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
   // Authorization check
   useEffect(() => {
     if (auth) {
-      if (!auth.can("bonus:edit")) {
+      if (!auth.can("bonuses:edit")) {
         router.push("/dashboard");
       }
     }
@@ -307,16 +311,13 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[
-        { label: "Bonuses", href: "/bonuses" }, 
-        { label: "Edit" }
-      ]} />
-      
+      <Breadcrumb items={[{ label: t("bonuses", lang), href: "/bonuses" }, { label: t("edit", lang) }]} />
+
       {/* Validation Errors */}
       {generalErrors.length > 0 && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Validation Failed</AlertTitle>
+          <AlertTitle>{t("validation_failed", lang)}</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-5">
               {generalErrors.map((error, idx) => (
@@ -326,73 +327,61 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
           </AlertDescription>
         </Alert>
       )}
-      
+
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Edit Bonus Rule</CardTitle>
+          <CardTitle>{t("edit_bonus_rule", lang)}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Bonus Name</Label>
-            <Input 
-              id="name" 
+            <Label htmlFor="name">{t("bonus_name", lang)}</Label>
+            <Input
+              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter a name for this bonus rule"
+              placeholder={t("enter_bonus_name_placeholder", lang)}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea 
-              id="description" 
+            <Label htmlFor="description">{t("description", lang)}</Label>
+            <Textarea
+              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe how this bonus works"
+              placeholder={t("describe_bonus_placeholder", lang)}
               rows={3}
             />
           </div>
-          
+
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="bonusFunction">
-                Bonus Function
-              </Label>
+              <Label htmlFor="bonusFunction">{t("bonus_function", lang)}</Label>
               <div className="space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowTestData(true)}
-                >
-                  View Test Data
+                <Button variant="outline" size="sm" onClick={() => setShowTestData(true)}>
+                  {t("view_test_data", lang)}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setFunctionEditorOpen(true)}
-                >
+                <Button variant="outline" size="sm" onClick={() => setFunctionEditorOpen(true)}>
                   <Code className="h-4 w-4 mr-2" />
-                  Edit Function
+                  {t("edit_function", lang)}
                 </Button>
               </div>
             </div>
-            
+
             <div className="bg-gray-50 p-3 rounded-md border min-h-[100px] font-mono text-sm overflow-auto">
               {bonusFunction ? (
                 <pre className="whitespace-pre-wrap">
-                  {bonusFunction.length > 300 
-                    ? bonusFunction.substring(0, 300) + '...' 
-                    : bonusFunction}
+                  {bonusFunction.length > 300 ? bonusFunction.substring(0, 300) + "..." : bonusFunction}
                 </pre>
               ) : (
-                <span className="text-gray-400">No function defined</span>
+                <span className="text-gray-400">{t("no_function_defined", lang)}</span>
               )}
             </div>
-            
+
             {functionErrors.length > 0 && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertTitle>Function Errors</AlertTitle>
+                <AlertTitle>{t("function_errors", lang)}</AlertTitle>
                 <AlertDescription>
                   <ul className="list-disc pl-5">
                     {functionErrors.map((error, idx) => (
@@ -403,36 +392,30 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
               </Alert>
             )}
           </div>
-          
+
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="baseline">Baseline Data (optional, JSON format)</Label>
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => setBaselineEditorOpen(true)}
-              >
+              <Label htmlFor="baseline">{t("baseline_data_optional", lang)}</Label>
+              <Button variant="outline" size="sm" onClick={() => setBaselineEditorOpen(true)}>
                 <Code className="h-4 w-4 mr-2" />
-                {baseline ? 'Edit JSON' : 'Create JSON'}
+                {baseline ? t("edit_json", lang) : t("create_json", lang)}
               </Button>
             </div>
-            
+
             <div className="bg-gray-50 p-3 rounded-md border min-h-[50px] font-mono text-sm overflow-auto">
-                {baseline ? (
-                    <pre className="whitespace-pre-wrap">
-                    {baseline.length > 200 
-                        ? baseline.substring(0, 200) + '...' 
-                        : baseline}
-                    </pre>
-                ) : (
-                    <span className="text-gray-400">No baseline data defined</span>
-                )}
+              {baseline ? (
+                <pre className="whitespace-pre-wrap">
+                  {baseline.length > 200 ? baseline.substring(0, 200) + "..." : baseline}
+                </pre>
+              ) : (
+                <span className="text-gray-400">{t("no_baseline_data", lang)}</span>
+              )}
             </div>
-                            
+
             {baselineErrors.length > 0 && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertTitle>Baseline Data Errors</AlertTitle>
+                <AlertTitle>{t("baseline_data_errors", lang)}</AlertTitle>
                 <AlertDescription>
                   <ul className="list-disc pl-5">
                     {baselineErrors.map((error, idx) => (
@@ -444,93 +427,89 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
             )}
           </div>
         </CardContent>
-        
+
         <CardFooter className="flex justify-between">
-          <Button 
-            variant="outline" 
-            onClick={() => router.push('/bonuses')}
-          >
-            Cancel
+          <Button variant="outline" onClick={() => router.push("/bonuses")}>
+            {t("cancel", lang)}
           </Button>
           <div className="space-x-2">
-            <Button 
-              onClick={handleValidate}
-              disabled={isValidating || !hasChanges()}
-            >
-              {isValidating ? 'Checking...' : 'Update Bonus'}
+            <Button onClick={handleValidate} disabled={isValidating || !hasChanges()}>
+              {isValidating ? t("checking", lang) : t("update_bonus", lang)}
             </Button>
           </div>
         </CardFooter>
       </Card>
-      
+
       {/* Function Editor Dialog */}
       <CodeEditorDialog
         open={functionEditorOpen}
         onOpenChange={setFunctionEditorOpen}
-        title="Edit Bonus Function"
+        title={t("edit_bonus_function", lang)}
         code={bonusFunction}
         onChange={setBonusFunction}
         language="javascript"
         onValidate={validateFunction}
         onSave={() => {
-          toast.success('Function saved!');
+          toast.success(t("function_saved", lang))
         }}
         testSampleData={{
           turnoverData: turnoverData,
           exchangeRates: exchangeRates,
-          baselineData: exampleBaselineData
+          baselineData: exampleBaselineData,
         }}
-        testSampleLabel="Function Parameters Sample"
+        testSampleLabel={t("function_parameters_sample", lang)}
       />
 
       {/* Baseline Editor Dialog */}
       <CodeEditorDialog
         open={baselineEditorOpen}
         onOpenChange={setBaselineEditorOpen}
-        title="Edit Baseline JSON"
+        title={t("edit_baseline_json", lang)}
         code={baseline}
         onChange={setBaseLine}
         language="json"
         onValidate={validateBaseline}
         onSave={() => {
-          toast.success('Baseline data saved!');
+          toast.success(t("baseline_data_saved", lang))
         }}
         testSampleData={exampleBaselineData}
-        testSampleLabel="Example Baseline Data"
+        testSampleLabel={t("example_baseline_data", lang)}
       />
-      
+
       {/* Preview/Confirmation Dialog */}
       {showPreview && (
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
           <DialogContent className="max-w-2xl max-h-[80vh]">
             <DialogHeader>
               <DialogTitle>
-                {validationPassed ? 'Confirm Bonus Update' : 'Validation Results'}
+                {validationPassed ? t("confirm_bonus_update", lang) : t("validation_results", lang)}
               </DialogTitle>
             </DialogHeader>
-            
+
             {validationPassed ? (
               <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
                 <Alert className="bg-green-50 border-green-200">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <AlertTitle>Validation Passed</AlertTitle>
-                  <AlertDescription>
-                    The function has been validated and produces the correct output format.
-                  </AlertDescription>
+                  <AlertTitle>{t("validation_passed_title", lang)}</AlertTitle>
+                  <AlertDescription>{t("validation_passed_description", lang)}</AlertDescription>
                 </Alert>
-                
+
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Function Output Preview:</h3>
+                  <h3 className="font-semibold">{t("function_output_preview", lang)}:</h3>
                   <div className="bg-gray-50 p-4 rounded border font-mono text-sm overflow-x-auto">
                     <pre>{JSON.stringify(previewResults, null, 2)}</pre>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <h3 className="font-semibold">Updated Bonus Details:</h3>
+                  <h3 className="font-semibold">{t("updated_bonus_details", lang)}:</h3>
                   <div className="space-y-1">
-                    <p><span className="font-semibold">Name:</span> {name}</p>
-                    <p><span className="font-semibold">Description:</span> {description}</p>
+                    <p>
+                      <span className="font-semibold">{t("name", lang)}:</span> {name}
+                    </p>
+                    <p>
+                      <span className="font-semibold">{t("description", lang)}:</span> {description}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -538,15 +517,13 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
               <div className="space-y-4">
                 <Alert variant="destructive">
                   <XCircle className="h-4 w-4" />
-                  <AlertTitle>Validation Failed</AlertTitle>
-                  <AlertDescription>
-                    Please fix the errors before continuing.
-                  </AlertDescription>
+                  <AlertTitle>{t("validation_failed", lang)}</AlertTitle>
+                  <AlertDescription>{t("fix_errors_before_continuing", lang)}</AlertDescription>
                 </Alert>
-                
+
                 {functionErrors.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Function Errors:</h3>
+                    <h3 className="font-semibold">{t("function_errors", lang)}:</h3>
                     <ul className="list-disc pl-5">
                       {functionErrors.map((error, idx) => (
                         <li key={idx}>{error}</li>
@@ -554,10 +531,10 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
                     </ul>
                   </div>
                 )}
-                
+
                 {baselineErrors.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Baseline Errors:</h3>
+                    <h3 className="font-semibold">{t("baseline_errors", lang)}:</h3>
                     <ul className="list-disc pl-5">
                       {baselineErrors.map((error, idx) => (
                         <li key={idx}>{error}</li>
@@ -567,57 +544,54 @@ export default function EditBonusPage({ params }: { params: Promise<{ id: string
                 )}
               </div>
             )}
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowPreview(false)}>
-                {validationPassed ? 'Make Changes' : 'Close'}
+                {validationPassed ? t("make_changes", lang) : t("close", lang)}
               </Button>
               {validationPassed && (
-                <Button 
-                  onClick={handleUpdate} 
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Updating...' : 'Confirm & Update'}
+                <Button onClick={handleUpdate} disabled={isSubmitting}>
+                  {isSubmitting ? t("updating", lang) : t("confirm_and_update", lang)}
                 </Button>
               )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
-      
+
       {/* Test Data Dialog */}
       {showTestData && (
         <Dialog open={showTestData} onOpenChange={setShowTestData}>
           <DialogContent className="max-w-2xl max-h-[80vh]">
             <DialogHeader>
-              <DialogTitle>Test Data</DialogTitle>
+              <DialogTitle>{t("test_data", lang)}</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
               <div className="space-y-2">
-                <h3 className="font-semibold">Turnover Data:</h3>
+                <h3 className="font-semibold">{t("turnover_data", lang)}:</h3>
                 <div className="bg-gray-50 p-4 rounded border font-mono text-sm overflow-x-auto">
                   <pre>{JSON.stringify(turnoverData, null, 2)}</pre>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                <h3 className="font-semibold">Exchange Rates:</h3>
+                <h3 className="font-semibold">{t("exchange_rates", lang)}:</h3>
                 <div className="bg-gray-50 p-4 rounded border font-mono text-sm overflow-x-auto">
                   <pre>{JSON.stringify(exchangeRates, null, 2)}</pre>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                <h3 className="font-semibold">Example Baseline Data:</h3>
+                <h3 className="font-semibold">{t("example_baseline_data", lang)}:</h3>
                 <div className="bg-gray-50 p-4 rounded border font-mono text-sm overflow-x-auto">
                   <pre>{JSON.stringify(exampleBaselineData, null, 2)}</pre>
                 </div>
               </div>
             </div>
-            
+
             <DialogFooter>
-              <Button onClick={() => setShowTestData(false)}>Close</Button>
+              <Button onClick={() => setShowTestData(false)}>{t("close", lang)}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

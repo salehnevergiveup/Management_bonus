@@ -3,6 +3,7 @@ export enum AppColor {
     WARNING = "bg-yellow-100 text-yellow-800",
     ERROR = "bg-red-100 text-red-800",
     INFO = "bg-blue-100 text-blue-800",
+    PURPLE = "bg-purple-100 text-purple-800",
 }
 
 export enum EventOptionType {

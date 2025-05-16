@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { UserForm } from "@/components/user-form"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { useUser } from "@/contexts/usercontext";
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 
 export default function EditUserPage() {
@@ -18,6 +20,8 @@ export default function EditUserPage() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const { auth, isLoading } = useUser();
 
+  const { lang, setLang } = useLanguage()
+
   useEffect(() => {
     if (auth) {
       if (!auth.can("users:edit")) {
@@ -28,7 +32,7 @@ export default function EditUserPage() {
     async function fetchData() {
       try {
         const userRes = await fetch(`/api/users/${userId}`)
-        if (!userRes.ok) throw new Error("User not found")
+        if (!userRes.ok) throw new Error(t("user_not_found", lang))
         const userData = await userRes.json()
         setUser(userData)
       } catch (error: any) {
@@ -39,7 +43,7 @@ export default function EditUserPage() {
     async function fetchRoles() {
       try {
         const rolesRes = await fetch(`/api/roles`)
-        if (!rolesRes.ok) throw new Error("Roles not found")
+        if (!rolesRes.ok) throw new Error(t("role_not_found", lang))
         const rolesData = await rolesRes.json()
         setRoles(rolesData)
       } catch (error) {
@@ -56,9 +60,9 @@ export default function EditUserPage() {
       <div className="container mx-auto py-6">
         <Breadcrumb
           items={[
-            { label: "Users", href: "/users" },
-            { label: "Edit", href: `/users/${userId}` },
-            { label: "User Not Found" },
+            { label: t("users", lang), href: "/users" },
+            { label: t("edit", lang), href: `/users/${userId}` },
+            { label: t("user_not_found", lang) },
           ]}
         />
         <div className="flex justify-center">

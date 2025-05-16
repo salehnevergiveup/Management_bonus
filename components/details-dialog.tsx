@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface DetailsDialogProps {
   data: {
@@ -11,6 +13,8 @@ interface DetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const { lang } = useLanguage()
 
 const DetailsDialog: React.FC<DetailsDialogProps> = ({ data, isOpen, onClose }) => {
   if (!isOpen) return null;

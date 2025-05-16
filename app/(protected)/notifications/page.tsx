@@ -18,7 +18,8 @@ import {Notification} from  "@/types/notification.types"
 import  {AppColor,NotificationType, NotificationStatus} from  "@/constants/enums"
 import {PaginationData} from  "@/types/pagination-data.type"
 import   {GetResponse} from "@/types/get-response.type" 
-
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 interface SelectedNotification {
   id: string
   user_id: string,
@@ -46,6 +47,7 @@ export default function NotificationsPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [selectedNotification, setSelectedNotification] = useState<SelectedNotification | null>(null)
   const router = useRouter()
+  const { lang, setLang } = useLanguage()
 
   const fetchNotifications = async () => {
     if (auth) {
@@ -110,7 +112,7 @@ export default function NotificationsPage() {
   }, [searchTerm])
 
   if (isLoading) {
-    return <p>Loading session...</p>
+    return <p>{t("loading_session", lang)}</p>
   }
 
   const deleteNotification = async () => {
@@ -152,13 +154,15 @@ export default function NotificationsPage() {
     setCurrentPage(page)
   }
 
+ 
+
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Notifications" }]} />
+      <Breadcrumb items={[{ label: t("notifications", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Notification Management</CardTitle>
+          <CardTitle>{t("notification_management", lang)}</CardTitle>
           <div className="flex items-center space-x-2">
             <Select
               value={pageSize.toString()}
@@ -168,14 +172,14 @@ export default function NotificationsPage() {
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Rows per page" />
+                <SelectValue placeholder={t("rows_per_page", lang)} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5 rows</SelectItem>
-                <SelectItem value="10">10 rows</SelectItem>
-                <SelectItem value="20">20 rows</SelectItem>
-                <SelectItem value="50">50 rows</SelectItem>
-                <SelectItem value="100">100 rows</SelectItem>
+                <SelectItem value="5">{t("five_rows", lang)}</SelectItem>
+                <SelectItem value="10">{t("ten_rows", lang)}</SelectItem>
+                <SelectItem value="20">{t("twenty_rows", lang)}</SelectItem>
+                <SelectItem value="50">{t("fifty_rows", lang)}</SelectItem>
+                <SelectItem value="100">{t("hundred_rows", lang)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -187,7 +191,7 @@ export default function NotificationsPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search notifications..."
+                placeholder={t("search_notifications", lang)}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => {
@@ -215,13 +219,13 @@ export default function NotificationsPage() {
                 }}
               >
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter by type" />
+                  <SelectValue placeholder={t("filter_by_type", lang)} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="success">Success</SelectItem>
+                  <SelectItem value="all">{t("all_types", lang)}</SelectItem>
+                  <SelectItem value="info">{t("info", lang)}</SelectItem>
+                  <SelectItem value="warning">{t("warning", lang)}</SelectItem>
+                  <SelectItem value="success">{t("success", lang)}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -233,12 +237,12 @@ export default function NotificationsPage() {
                 }}
               >
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder={t("filter_by_status", lang)} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value={NotificationStatus.READ}>Read</SelectItem>
-                  <SelectItem value={NotificationStatus.UNREAD}>Unread</SelectItem>
+                  <SelectItem value="all">{t("all_statuses", lang)}</SelectItem>
+                  <SelectItem value={NotificationStatus.READ}>{t("read", lang)}</SelectItem>
+                  <SelectItem value={NotificationStatus.UNREAD}>{t("unread", lang)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -248,25 +252,25 @@ export default function NotificationsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Message</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("user", lang)}</TableHead>
+                  <TableHead>{t("message", lang)}</TableHead>
+                  <TableHead>{t("type", lang)}</TableHead>
+                  <TableHead>{t("status", lang)}</TableHead>
+                  <TableHead>{t("created_at", lang)}</TableHead>
+                  <TableHead className="text-right">{t("actions", lang)}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                      Loading notifications...
+                      {t("loading_notifications", lang)}
                     </TableCell>
                   </TableRow>
                 ) : notifications.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                      No notifications found
+                      {t("no_notifications_found", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -314,7 +318,7 @@ export default function NotificationsPage() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
+                              <span className="sr-only">{t("open_menu", lang)}</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -322,14 +326,14 @@ export default function NotificationsPage() {
                             <DropdownMenuItem
                               onClick={() => handleView({
                                 ...n, 
-                                userName: n.user?.name || 'Unknown',
-                                userEmail: n.user?.email || 'No email',
-                                userRole: n.user?.role.name || 'Unknown',
-                                userStatus: n.user?.status || 'Unknown',
+                                userName: n.user?.name || t("unknown", lang),
+                                userEmail: n.user?.email || t("no_email", lang),
+                                userRole: n.user?.role.name || t("unknown", lang),
+                                userStatus: n.user?.status || t("unknown", lang),
                               })}
                             >
                               <Eye className="mr-2 h-4 w-4" />
-                              View
+                              {t("view", lang)}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
@@ -338,7 +342,7 @@ export default function NotificationsPage() {
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {t("delete", lang)}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -353,11 +357,11 @@ export default function NotificationsPage() {
           {pagination && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
+                {t("showing", lang)} <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> {t("to", lang)}{" "}
                 <span className="font-medium">
                   {Math.min(pagination.page * pagination.limit, pagination.total)}
                 </span>{" "}
-                of <span className="font-medium">{pagination.total}</span> notifications
+                {t("of", lang)} <span className="font-medium">{pagination.total}</span> {t("notifications", lang)}
               </div>
               
               {pagination.totalPages > 1 && (
@@ -368,7 +372,7 @@ export default function NotificationsPage() {
                     disabled={isLoading || !pagination.hasPreviousPage}
                     size="sm"
                   >
-                    First
+                    {t("first", lang)}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -376,10 +380,10 @@ export default function NotificationsPage() {
                     disabled={isLoading || !pagination.hasPreviousPage}
                     size="sm"
                   >
-                    Previous
+                    {t("previous", lang)}
                   </Button>
                   <span className="px-2">
-                    Page {pagination.page} of {pagination.totalPages}
+                    {t("page", lang)} {pagination.page} {t("of", lang)} {pagination.totalPages}
                   </span>
                   <Button 
                     variant="outline" 
@@ -387,7 +391,7 @@ export default function NotificationsPage() {
                     disabled={isLoading || !pagination.hasNextPage}
                     size="sm"
                   >
-                    Next
+                    {t("next", lang)}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -395,7 +399,7 @@ export default function NotificationsPage() {
                     disabled={isLoading || !pagination.hasNextPage}
                     size="sm"
                   >
-                    Last
+                    {t("last", lang)}
                   </Button>
                 </div>
               )}
@@ -408,16 +412,16 @@ export default function NotificationsPage() {
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={deleteNotification}
-        title="Confirm Delete"
-        children="Are you sure you want to delete this notification? This action cannot be undone."
-        confirmText="Delete"
+        title={t("confirm_delete", lang)}
+        children={t("confirm_delete_notification_message", lang)}
+        confirmText={t("delete", lang)}
       />
 <ConfirmationDialog
   isOpen={viewDialogOpen}
   onClose={() => setViewDialogOpen(false)}
   onConfirm={() => setViewDialogOpen(false)}
-  title="Notification Details"
-  confirmText="Close"
+  title={t("notification_details", lang)}
+  confirmText={t("close", lang)}
   showCancelButton={false}
 >
   {selectedNotification && (
@@ -438,21 +442,21 @@ export default function NotificationsPage() {
       <p className="font-medium">{selectedNotification.message}</p>
      
         <p className="text-sm text-muted-foreground">
-          Sent to: {selectedNotification.userName || 'Unknown'} 
-          ({selectedNotification.userEmail || 'No email'})
+          {t("sent_to", lang)}: {selectedNotification.userName || t("unknown", lang)} 
+          ({selectedNotification.userEmail || t("no_email", lang)})
         </p>
       <p className="text-sm text-muted-foreground">
-        Sent at: {formatDate(new Date(selectedNotification.createdAt).toDateString())}
+        {t("sent_at", lang)}: {formatDate(new Date(selectedNotification.createdAt).toDateString())}
       </p>
       <p className="text-sm text-muted-foreground">
-        Status: {selectedNotification.status}
+        {t("status", lang)}: {selectedNotification.status}
       </p>
    
           <p className="text-sm text-muted-foreground">
-            User role: {selectedNotification?.userRole || 'Unknown'}
+            {t("user_role", lang)}: {selectedNotification?.userRole || t("unknown", lang)}
           </p>
           <p className="text-sm text-muted-foreground">
-            User status: {selectedNotification.userStatus || 'Unknown'}
+            {t("user_status", lang)}: {selectedNotification.userStatus || t("unknown", lang)}
           </p>
 
 

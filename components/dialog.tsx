@@ -24,6 +24,8 @@ interface ConfirmationDialogProps {
   showConfirmButton?: boolean;
   showCancelButton?: boolean;
   confirmButtonColor?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  confirmVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  isLoading?: boolean
 }
 
 export function ConfirmationDialog({
@@ -36,6 +38,8 @@ export function ConfirmationDialog({
   showConfirmButton = true,
   showCancelButton = true,
   confirmButtonColor = "default",
+  confirmVariant = "default",
+  isLoading = false,
 }: ConfirmationDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>

@@ -18,7 +18,7 @@ const rateLimiter = {
   }
 };
 
-export async function POST(request: Request, {params} : { params: Promise<{ id: string }> }){
+export async function PUT(request: Request, {params} : { params: Promise<{ id: string }> }){
   try {
     if (!rateLimiter.canMakeRequest()) {
       return NextResponse.json(

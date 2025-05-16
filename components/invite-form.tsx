@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Mail } from "lucide-react"
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 interface Role {
   id: string
@@ -25,6 +27,7 @@ interface InviteFormProps {
 export function InviteForm({ roles, onSubmit, onCancel, isLoading }: InviteFormProps) {
   const [email, setEmail] = useState("")
   const [roleId, setRoleId] = useState("")
+  const { lang, setLang } = useLanguage()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,26 +39,26 @@ export function InviteForm({ roles, onSubmit, onCancel, isLoading }: InviteFormP
       <CardContent className="space-y-4 pt-6">
         <div className="text-center mb-4">
           <Mail className="h-12 w-12 mx-auto text-primary" />
-          <p className="mt-2 text-muted-foreground">Send an invitation email to allow a user to join your system</p>
+          <p className="mt-2 text-muted-foreground">{t("invitation_description", lang)}</p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="inviteEmail">Email Address</Label>
+          <Label htmlFor="inviteEmail">{t("email_address", lang)}</Label>
           <Input
             id="inviteEmail"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter email address"
+            placeholder={t("enter_email_address", lang)}
             required
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="inviteRole">Role</Label>
+          <Label htmlFor="inviteRole">{t("role", lang)}</Label>
           <Select value={roleId} onValueChange={setRoleId}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a role" />
+              <SelectValue placeholder={t("select_a_role", lang)} />
             </SelectTrigger>
             <SelectContent>
               {roles.map((role) => (
@@ -70,10 +73,10 @@ export function InviteForm({ roles, onSubmit, onCancel, isLoading }: InviteFormP
       <CardFooter className="flex justify-between">
         <Button type="button" variant="outline" onClick={onCancel}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Cancel
+          {t("cancel", lang)}
         </Button>
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Sending..." : "Send Invitation"}
+          {isLoading ? t("sending", lang) : t("send_invitation", lang)}
         </Button>
       </CardFooter>
     </form>

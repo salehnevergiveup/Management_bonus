@@ -16,6 +16,8 @@ import { Badge } from "@/components/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import toast from 'react-hot-toast'
+import { useLanguage } from "@app/contexts/LanguageContext"
+import { t } from "@app/lib/i18n"
 
 export default function DashboardPage() {
   const { auth, isLoading } = useUser()
@@ -158,6 +160,7 @@ export default function DashboardPage() {
     return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
   }
 
+  const { lang, setLang } = useLanguage()
   // Get appropriate color class based on status for the custom Badge component
   const getStatusColorClass = (status: string) => {
     switch (status.toLowerCase()) {
@@ -180,36 +183,38 @@ export default function DashboardPage() {
   }
 
   if (isLoading) {
-    return <p>Loading session...</p>
+    return <p>{t("dashboard_overview", lang)}</p>
   }
 
   // Notification status data for pie chart
   const notificationStatusData = [
-    { name: 'Read', value: stats.totalNotifications.read || 0 },
-    { name: 'Unread', value: stats.totalNotifications.unread || 0 }
+    { name: t("read", lang), value: stats.totalNotifications.read || 0 },
+    { name: t("unread", lang), value: stats.totalNotifications.unread || 0 }
   ].filter(item => item.value > 0);
 
   // Process status data for pie chart
   const processStatusData = [
-    { name: 'Completed', value: stats.totalProcesses.completed || 0 },
-    { name: 'Failed', value: stats.totalProcesses.failed || 0 }
+    { name:  t("completed", lang), value: stats.totalProcesses.completed || 0 },
+    { name:  t("failed", lang), value: stats.totalProcesses.failed || 0 }
   ].filter(item => item.value > 0);
+
+
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: "Dashboard" }]} />
-      
+      <Breadcrumb items={[{ label: t("dashboard", lang) }]} />
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* User Profile Card */}
         <Card className="col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Profile</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("profile", lang)}</CardTitle>
             <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center space-y-4 pt-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={auth?.picture} alt={auth?.name} />
+                <AvatarImage src={auth?.picture || "/placeholder.svg"} alt={auth?.name} />
                 <AvatarFallback>{auth?.name.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="text-center">
@@ -229,42 +234,37 @@ export default function DashboardPage() {
         <Card className="col-span-1 md:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Dashboard Overview</CardTitle>
-              <Select
-                value={timeRange}
-                onValueChange={(value) => setTimeRange(value)}
-              >
+              <CardTitle>{t("dashboard_overview", lang)}</CardTitle>
+              <Select value={timeRange} onValueChange={(value) => setTimeRange(value)}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select time range" />
+                  <SelectValue placeholder={t("select_time_range", lang)} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="week">Last Week</SelectItem>
-                  <SelectItem value="month">Last Month</SelectItem>
-                  <SelectItem value="year">Last Year</SelectItem>
-                  <SelectItem value="five_years">Last 5 Years</SelectItem>
+                  <SelectItem value="week">{t("last_week", lang)}</SelectItem>
+                  <SelectItem value="month">{t("last_month", lang)}</SelectItem>
+                  <SelectItem value="year">{t("last_year", lang)}</SelectItem>
+                  <SelectItem value="five_years">{t("last_5_years", lang)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <CardDescription>
-              View system metrics for the selected time period
-            </CardDescription>
+            <CardDescription>{t("view_system_metrics", lang)}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="flex flex-col space-y-2">
-                <span className="text-sm font-medium text-muted-foreground">Users</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("users", lang)}</span>
                 <span className="text-2xl font-bold">{stats.totalUsers}</span>
               </div>
               <div className="flex flex-col space-y-2">
-                <span className="text-sm font-medium text-muted-foreground">Transfer Accounts</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("transfer_accounts", lang)}</span>
                 <span className="text-2xl font-bold">{stats.totalTransferAccounts}</span>
               </div>
               <div className="flex flex-col space-y-2">
-                <span className="text-sm font-medium text-muted-foreground">Players</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("players", lang)}</span>
                 <span className="text-2xl font-bold">{stats.totalPlayers}</span>
               </div>
               <div className="flex flex-col space-y-2">
-                <span className="text-sm font-medium text-muted-foreground">Processes</span>
+                <span className="text-sm font-medium text-muted-foreground">{t("processes", lang)}</span>
                 <span className="text-2xl font-bold">
                   {stats.totalProcesses.completed + stats.totalProcesses.failed}
                 </span>
@@ -273,24 +273,22 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* Users and Transfer Accounts */}
         <Card className="col-span-1 md:col-span-2">
           <CardHeader>
-            <CardTitle>User & Account Growth</CardTitle>
-            <CardDescription>
-              Tracking user and account metrics over time
-            </CardDescription>
+            <CardTitle>{t("user_account_growth", lang)}</CardTitle>
+            <CardDescription>{t("tracking_metrics", lang)}</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart
                 data={dashboardData.users.map((item, index) => ({
-                  name: item.date || `Point ${index}`,
+                  name: item.date || `${t("point", lang)} ${index}`,
                   users: item.count || 0,
                   transferAccounts: dashboardData.transferAccounts[index]?.count || 0,
-                  players: dashboardData.players[index]?.count || 0
+                  players: dashboardData.players[index]?.count || 0,
                 }))}
                 margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
               >
@@ -299,9 +297,9 @@ export default function DashboardPage() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="users" stroke="#8884d8" name="Users" />
-                <Line type="monotone" dataKey="transferAccounts" stroke="#82ca9d" name="Transfer Accounts" />
-                <Line type="monotone" dataKey="players" stroke="#ffc658" name="Players" />
+                <Line type="monotone" dataKey="users" stroke="#8884d8" name={t("users", lang)} />
+                <Line type="monotone" dataKey="transferAccounts" stroke="#82ca9d" name={t("transfer_accounts", lang)} />
+                <Line type="monotone" dataKey="players" stroke="#ffc658" name={t("players", lang)} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -310,10 +308,8 @@ export default function DashboardPage() {
         {/* Process Status Distribution */}
         <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Process Status</CardTitle>
-            <CardDescription>
-              Distribution of completed vs failed processes
-            </CardDescription>
+            <CardTitle>{t("process_status", lang)}</CardTitle>
+            <CardDescription>{t("distribution_processes", lang)}</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <ResponsiveContainer width="100%" height={250}>
@@ -326,7 +322,9 @@ export default function DashboardPage() {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: { name: string; percent: number }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
                 >
                   {processStatusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -339,15 +337,13 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Notification Status */}
         <Card>
           <CardHeader>
-            <CardTitle>Notification Status</CardTitle>
-            <CardDescription>
-              Breakdown of read vs unread notifications
-            </CardDescription>
+            <CardTitle>{t("notification_status", lang)}</CardTitle>
+            <CardDescription>{t("breakdown_notifications", lang)}</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <ResponsiveContainer width="100%" height={250}>
@@ -360,7 +356,9 @@ export default function DashboardPage() {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: { name: string; percent: number }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
                 >
                   {notificationStatusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -376,40 +374,28 @@ export default function DashboardPage() {
         {/* UPDATED: Active Processes with Scrollable Accounts */}
         <Card>
           <CardHeader>
-            <CardTitle>Active Processes</CardTitle>
-            <CardDescription>
-              Current running processes and their progress
-            </CardDescription>
+            <CardTitle>{t("active_processes", lang)}</CardTitle>
+            <CardDescription>{t("current_processes", lang)}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {dashboardData.activeProcesses && dashboardData.activeProcesses.length > 0 ? (
-                dashboardData.activeProcesses.map(process => (
-                  <Accordion 
-                    key={process.id} 
-                    type="single" 
-                    collapsible
-                    className="border rounded-md"
-                  >
+                dashboardData.activeProcesses.map((process) => (
+                  <Accordion key={process.id} type="single" collapsible className="border rounded-md">
                     <AccordionItem value={process.id}>
                       <AccordionTrigger className="px-4 py-2 hover:no-underline">
                         <div className="w-full">
                           <div className="flex justify-between items-center mb-2">
                             <span className="font-medium text-sm">
-                              Process ID: {process.id.substring(0, 8)}...
+                              {t("process_id", lang)}: {process.id.substring(0, 8)}...
                             </span>
-                            <Badge 
-                              color={getStatusColorClass(process.status)}
-                              text={formatStatus(process.status)}
-                            />
+                            <Badge color={getStatusColorClass(process.status)} text={formatStatus(process.status)} />
                           </div>
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-xs text-muted-foreground">
-                              Started: {formatDate(process.created_at)}
+                              {t("started", lang)}: {formatDate(process.created_at)}
                             </span>
-                            <span className="text-xs font-medium">
-                              {Math.round(process.progress)}%
-                            </span>
+                            <span className="text-xs font-medium">{Math.round(process.progress)}%</span>
                           </div>
                           <Progress value={process.progress} className="h-2" />
                         </div>
@@ -418,10 +404,10 @@ export default function DashboardPage() {
                         <Tabs defaultValue="transfer">
                           <TabsList className="mb-2">
                             <TabsTrigger value="transfer">
-                              Transfer Accounts ({process.transferAccounts?.length || 0})
+                              {t("transfer_accounts", lang)} ({process.transferAccounts?.length || 0})
                             </TabsTrigger>
                             <TabsTrigger value="agent">
-                              Agent Accounts ({process.agent_account?.length || 0})
+                              {t("agent_accounts", lang)} ({process.agent_account?.length || 0})
                             </TabsTrigger>
                           </TabsList>
 
@@ -429,34 +415,36 @@ export default function DashboardPage() {
                             <ScrollArea className="h-40 rounded-md border p-2">
                               <div className="space-y-3">
                                 {process.transferAccounts && process.transferAccounts.length > 0 ? (
-                                  process.transferAccounts.map(account => (
+                                  process.transferAccounts.map((account) => (
                                     <div key={account.id} className="p-2 border rounded-md">
                                       <div className="flex justify-between items-center mb-1">
                                         <span className="font-medium text-sm">{account.username}</span>
-                                        <Badge 
+                                        <Badge
                                           color={getStatusColorClass(account.status)}
                                           text={formatStatus(account.status)}
                                         />
                                       </div>
                                       <div className="flex justify-between items-center mb-1">
                                         <span className="text-xs text-muted-foreground">
-                                          Type: {account.type}
+                                          {t("type", lang)}: {account.type}
                                         </span>
                                         <span className="text-xs font-medium">
-                                          {account.progress !== null ? `${account.progress}%` : 'N/A'}
+                                          {account.progress !== null
+                                            ? `${account.progress}%`
+                                            : t("not_available", lang)}
                                         </span>
                                       </div>
                                       {account.progress !== null && (
                                         <Progress value={account.progress} className="h-1.5" />
                                       )}
                                       <div className="text-xs text-muted-foreground mt-1">
-                                        Updated: {formatDate(account.updated_at)}
+                                        {t("updated", lang)}: {formatDate(account.updated_at)}
                                       </div>
                                     </div>
                                   ))
                                 ) : (
                                   <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                                    <p>No transfer accounts</p>
+                                    <p>{t("no_transfer_accounts", lang)}</p>
                                   </div>
                                 )}
                               </div>
@@ -467,34 +455,36 @@ export default function DashboardPage() {
                             <ScrollArea className="h-40 rounded-md border p-2">
                               <div className="space-y-3">
                                 {process.agent_account && process.agent_account.length > 0 ? (
-                                  process.agent_account.map(account => (
+                                  process.agent_account.map((account) => (
                                     <div key={account.id} className="p-2 border rounded-md">
                                       <div className="flex justify-between items-center mb-1">
                                         <span className="font-medium text-sm">{account.username}</span>
-                                        <Badge 
+                                        <Badge
                                           color={getStatusColorClass(account.status)}
                                           text={formatStatus(account.status)}
                                         />
                                       </div>
                                       <div className="flex justify-between items-center mb-1">
                                         <span className="text-xs text-muted-foreground">
-                                          Agent Account
+                                          {t("agent_account", lang)}
                                         </span>
                                         <span className="text-xs font-medium">
-                                          {account.progress !== null ? `${account.progress}%` : 'N/A'}
+                                          {account.progress !== null
+                                            ? `${account.progress}%`
+                                            : t("not_available", lang)}
                                         </span>
                                       </div>
                                       {account.progress !== null && (
                                         <Progress value={account.progress} className="h-1.5" />
                                       )}
                                       <div className="text-xs text-muted-foreground mt-1">
-                                        Updated: {formatDate(account.updated_at)}
+                                        {t("updated", lang)}: {formatDate(account.updated_at)}
                                       </div>
                                     </div>
                                   ))
                                 ) : (
                                   <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                                    <p>No agent accounts</p>
+                                    <p>{t("no_agent_accounts", lang)}</p>
                                   </div>
                                 )}
                               </div>
@@ -508,58 +498,52 @@ export default function DashboardPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
                   <Clock className="h-10 w-10 mb-2" />
-                  <p>No active processes</p>
+                  <p>{t("no_active_processes", lang)}</p>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("total_users", lang)}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              User accounts in the system
-            </p>
+            <p className="text-xs text-muted-foreground">{t("user_accounts_system", lang)}</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transfer Accounts</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("transfer_accounts", lang)}</CardTitle>
             <Fingerprint className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalTransferAccounts}</div>
-            <p className="text-xs text-muted-foreground">
-              Total transfer accounts registered
-            </p>
+            <p className="text-xs text-muted-foreground">{t("total_transfer_accounts", lang)}</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Players</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("players", lang)}</CardTitle>
             <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalPlayers}</div>
-            <p className="text-xs text-muted-foreground">
-              Total players in the system
-            </p>
+            <p className="text-xs text-muted-foreground">{t("total_players_system", lang)}</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Notifications</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("notifications", lang)}</CardTitle>
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -567,11 +551,15 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mt-2">
               <div className="flex items-center">
                 <div className="mr-1 h-2 w-2 rounded-full bg-green-500"></div>
-                <span className="text-xs">{stats.totalNotifications.read} Read</span>
+                <span className="text-xs">
+                  {stats.totalNotifications.read} {t("read", lang)}
+                </span>
               </div>
               <div className="flex items-center">
                 <div className="mr-1 h-2 w-2 rounded-full bg-red-500"></div>
-                <span className="text-xs">{stats.totalNotifications.unread} Unread</span>
+                <span className="text-xs">
+                  {stats.totalNotifications.unread} {t("unread", lang)}
+                </span>
               </div>
             </div>
           </CardContent>
