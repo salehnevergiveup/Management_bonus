@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Edit, Trash, MoreHorizontal, Plus, Search, DollarSign, RefreshCw, Info } from "lucide-react";
+import { Plus, Search, DollarSign, RefreshCw } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,8 @@ import { Input } from "@/components/ui/input";
 import { useUser } from "@/contexts/usercontext";
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { ConfirmationDialog } from "@/components/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import toast from "react-hot-toast";
@@ -53,10 +51,6 @@ export default function AccountTurnoverPage() {
   const [pageSize, setPageSize] = useState(10);
   const [showAll, setShowAll] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [turnoverToDelete, setTurnoverToDelete] = useState<AccountTurnover | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedTurnover, setSelectedTurnover] = useState<AccountTurnover | null>(null);
   const [exchangeRatesDialogOpen, setExchangeRatesDialogOpen] = useState(false);
   const [createMatchDialogOpen, setCreateMatchDialogOpen] = useState(false);
   const [selectedBonus, setSelectedBonus] = useState("");
@@ -68,8 +62,6 @@ export default function AccountTurnoverPage() {
   // Form state for edit
   const [formUsername, setFormUsername] = useState("");
   const [formGame, setFormGame] = useState("");
-  const [formCurrency, setFormCurrency] = useState("");
-  const [formTurnover, setFormTurnover] = useState("");
   const [formErrors, setFormErrors] = useState<{ username?: string; game?: string }>({});
 
   // Filter turnovers on the client side
@@ -187,68 +179,6 @@ export default function AccountTurnoverPage() {
     return Object.keys(errors).length === 0;
   };
 
-  const updateAccountTurnover = async () => {
-    if (!selectedTurnover || !validateForm()) return;
-
-    try {
-      const updateData: Record<string, any> = {
-        username: formUsername,
-        game: formGame,
-        currency: formCurrency,
-        turnover: formTurnover
-      };
-
-      const response = await fetch(`/api/account-turnovers/${selectedTurnover.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update account turnover");
-      }
-
-      toast.success("Account turnover updated successfully");
-      
-      setFormUsername("");
-      setFormGame("");
-      setFormCurrency("");
-      setFormTurnover("");
-      setEditDialogOpen(false);
-      fetchAccountTurnovers();
-    } catch (error) {
-      console.error("Error updating account turnover:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update account turnover");
-    }
-  };
-
-  const deleteAccountTurnover = async () => {
-    if (!turnoverToDelete) return;
-
-    try {
-      const response = await fetch(`/api/account-turnovers/${turnoverToDelete.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete account turnover");
-      }
-
-      toast.success("Account turnover deleted successfully");
-      fetchAccountTurnovers();
-    } catch (error) {
-      console.error("Error deleting account turnover:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to delete account turnover");
-    } finally {
-      setDeleteDialogOpen(false);
-      setTurnoverToDelete(null);
-    }
-  };
-
   const createMatch = async () => {
     if (!selectedBonus) {
       toast.error("Please select a bonus method");
@@ -314,21 +244,6 @@ export default function AccountTurnoverPage() {
   const handleViewBonusDetails = (bonus: Bonus) => {
     setSelectedBonusDetails(bonus);
     setBonusDetailsDialogOpen(true);
-  };
-
-  const handleEdit = (turnover: AccountTurnover) => {
-    setSelectedTurnover(turnover);
-    setFormUsername(turnover.username);
-    setFormGame(turnover.game);
-    setFormCurrency(turnover.currency);
-    setFormTurnover(turnover.turnover);
-    setFormErrors({});
-    setEditDialogOpen(true);
-  };
-
-  const handleDelete = (turnover: AccountTurnover) => {
-    setTurnoverToDelete(turnover);
-    setDeleteDialogOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -424,7 +339,6 @@ export default function AccountTurnoverPage() {
                   <TableHead>{t("currency", lang)}</TableHead>
                   <TableHead>{t("turnover", lang)}</TableHead>
                   <TableHead>{t("created_at", lang)}</TableHead>
-                  <TableHead className="text-right">{t("actions", lang)}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -448,26 +362,6 @@ export default function AccountTurnoverPage() {
                       <TableCell>{turnover.currency}</TableCell>
                       <TableCell>{turnover.turnover? Number(turnover.turnover).toFixed(2) : "N/A"}</TableCell>
                       <TableCell>{turnover.createdAt ? formatDate(turnover.createdAt) : 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(turnover)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              {t("edit", lang)}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(turnover)}>
-                              <Trash className="mr-2 h-4 w-4" />
-                              {t("delete", lang)}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -691,79 +585,6 @@ export default function AccountTurnoverPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Account Turnover Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{t("edit_account_turnover", lang)}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="edit_username">{t("username", lang)}</Label>
-              <Input 
-                id="edit_username" 
-                placeholder={t("enter_username", lang)}
-                value={formUsername}
-                onChange={(e) => setFormUsername(e.target.value)}
-              />
-              {formErrors.username && (
-                <p className="text-sm text-red-500">{formErrors.username}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_game">{t("game", lang)}</Label>
-              <Input 
-                id="edit_game" 
-                placeholder={t("enter_game", lang)}
-                value={formGame}
-                onChange={(e) => setFormGame(e.target.value)}
-              />
-              {formErrors.game && (
-                <p className="text-sm text-red-500">{formErrors.game}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_currency">{t("currency", lang)}</Label>
-              <Input 
-                id="edit_currency" 
-                placeholder={t("enter_currency", lang)}
-                value={formCurrency}
-                onChange={(e) => setFormCurrency(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_turnover">{t("turnover", lang)}</Label>
-              <Input 
-                id="edit_turnover" 
-                placeholder={t("enter_turnover", lang)}
-                value={formTurnover}
-                onChange={(e) => setFormTurnover(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-            {t("cancel", lang)}
-            </Button>
-            <Button onClick={updateAccountTurnover}> {t("update", lang)}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={deleteAccountTurnover}
-        title={t("confirm_delete", lang)}
-        children={
-          <>
-            <p>{t("delete_warning", lang)}</p>
-            <p className="mt-2">{t("delete_irreversible", lang)}</p>
-          </>
-        }
-        confirmText={t("delete", lang)}
-      />
     </div>
   );
 }
