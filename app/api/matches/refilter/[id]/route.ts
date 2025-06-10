@@ -2,6 +2,7 @@ import { SessionValidation } from "@lib/sessionvalidation";
 import { NextResponse } from "next/server";
 import ProcessCommand from "@lib/processCommand";
 import { prisma } from "@/lib/prisma";
+import { error } from "console";
 
 export async function PUT(request: Request, {params}: {params: Promise<{id: string}>} ) {  
   try{  
@@ -32,8 +33,16 @@ export async function PUT(request: Request, {params}: {params: Promise<{id: stri
       {status: 400}
      )
     }
+   
+    const bonus_id = match.bonus_id;  
 
-    const bonus = await prisma.bonus.findUnique({where: {id: match.bonus_id}})
+    if(!bonus_id)  {  
+      return  NextResponse.json(
+        {error: "Unable to find the bonus id"},  
+        {status: 400})
+    }
+
+    const bonus = await prisma.bonus.findUnique({where: {id: bonus_id}})
 
     if(!bonus) { 
         return NextResponse.json(
