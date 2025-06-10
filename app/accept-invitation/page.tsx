@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +11,7 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Suspense } from "react"
 import { useRouter } from "next/navigation"
-import { useLanguage } from "@app/contexts/LanguageContext"
+import { LanguageProvider, useLanguage } from "@app/contexts/LanguageContext"
 import { t } from "@app/lib/i18n"
 
 function AcceptInvitationContent() {
@@ -229,20 +228,20 @@ function AcceptInvitationContent() {
 }
 
 export default function AcceptInvitationPage() {
-  const { lang } = useLanguage()
-
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center items-center min-h-screen bg-gray-50">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="mt-4 text-gray-600">{t("loading", lang)}</p>
+    <LanguageProvider>
+      <Suspense
+        fallback={
+          <div className="flex justify-center items-center min-h-screen bg-gray-50">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="mt-4 text-gray-600">Loading...</p>
+            </div>
           </div>
-        </div>
-      }
-    >
-      <AcceptInvitationContent />
-    </Suspense>
+        }
+      >
+        <AcceptInvitationContent />
+      </Suspense>
+    </LanguageProvider>
   )
 }
