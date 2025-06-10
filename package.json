@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint", 
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:status": "prisma migrate status",
+    "db:seed": "prisma db seed",
+    "db:generate": "prisma generate"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.3",
