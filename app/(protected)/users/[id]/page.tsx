@@ -78,7 +78,7 @@ export default function ViewUserPage() {
       <div className="flex justify-center"> 
         <UserProfile
           user={fetchedUser}
-          onBack={() => router.push("/user")}
+          onBack={() => router.push(`/users/`)}
         />
       </div>
     </div>
