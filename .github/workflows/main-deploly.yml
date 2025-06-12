@@ -332,9 +332,9 @@ jobs:
             echo "✅ Database operations completed"
           '
       
-      - name: Build the application
+      - name: Build application 
         run: " npm run build"
-
+        
       - name: Configure systemctl service (first deployment)
         if: needs.check-deployment-status.outputs.first_deployment == 'true' || github.event.inputs.force_initial_setup == 'true'
         run: |
