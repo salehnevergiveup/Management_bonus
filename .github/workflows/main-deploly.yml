@@ -55,7 +55,7 @@ jobs:
       - name: Cleanup SSH key
         if: always()
         run: rm -f ~/.ssh/id_rsa
-
+ 
   database-setup:
     needs: check-deployment-status
     if: needs.check-deployment-status.outputs.needs_db_setup == 'true'
