@@ -2,7 +2,7 @@ name: Main Deployment Pipeline
 
 on:
   push:
-    branches: [testing-deploy]
+    branches: [main]
   workflow_dispatch:
     inputs:
       force_db_setup:
@@ -430,9 +430,11 @@ jobs:
           # Copy built files from build instance to bastion, then to main instance
           echo "📋 Copying built files to main instance..."
           
-          # Copy from build instance to bastion
+          # Copy from build instance to bastion (using environment variables to avoid masking)
           ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            scp -i ~/.ssh/build_rsa ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }}:~/build-temp/build-output.tar.gz ~/
+            BUILD_USER="${{ secrets.BUILD_EC2_USER }}"
+            BUILD_HOST="${{ secrets.BUILD_EC2_HOST }}"
+            scp -i ~/.ssh/build_rsa ${BUILD_USER}@${BUILD_HOST}:~/build-temp/build-output.tar.gz ~/
           '
           
           # Copy from bastion to GitHub runner
