@@ -334,104 +334,79 @@ jobs:
       
       - name: Build application on temporary build server
         run: |
-          # Copy build SSH key to public instance (bastion)
+          # Setup SSH keys
           echo "🔑 Setting up SSH access to build instance..."
           echo "${{ secrets.BUILD_EC2_SSH_KEY }}" > ~/.ssh/build_rsa
           chmod 600 ~/.ssh/build_rsa
           scp -i ~/.ssh/id_rsa ~/.ssh/build_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/.ssh/
           ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "chmod 600 ~/.ssh/build_rsa"
           
-          # Setup build environment on build instance (through bastion)
+          # Setup build environment
           ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             ssh -i ~/.ssh/build_rsa -o StrictHostKeyChecking=no ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }} '
               echo \"🔄 Setting up build environment...\"
-              
-              # Update system if needed
               sudo apt update
-              
-              # Install Node.js if not present
               if ! command -v node &> /dev/null; then
                 echo \"📦 Installing Node.js 18 LTS...\"
                 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
                 sudo apt-get install -y nodejs
               fi
-              
-              # Install Git if not present
               if ! command -v git &> /dev/null; then
                 echo \"📦 Installing Git...\"
                 sudo apt install git -y
               fi
-              
-              # Create build directory
               mkdir -p ~/build-temp
-              cd ~/build-temp
-              
               echo \"✅ Build environment ready\"
             '
           "
           
-          # Clone repository to build instance (through bastion)
+          # Clone and setup
           ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             ssh -i ~/.ssh/build_rsa -o StrictHostKeyChecking=no ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }} '
               cd ~/build-temp
-              
-              echo \"📥 Cloning repository for build...\"
+              echo \"📥 Cloning repository...\"
               rm -rf ./* ./.* 2>/dev/null || true
               git clone https://github.com/${{ github.repository }}.git .
               git checkout ${{ github.sha }}
               
-              echo \"✅ Repository cloned\"
-            '
-          "
-          
-          # Copy environment variables to build instance (through bastion)
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            ssh -i ~/.ssh/build_rsa -o StrictHostKeyChecking=no ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }} '
-              cd ~/build-temp
+              echo \"⚙️ Setting up environment...\"
+              cat > .env << EOF
+          NODE_ENV=${{ secrets.NODE_ENV }}
+          PORT=${{ secrets.PORT }}
+          DATABASE_URL=mysql://${{ secrets.DB_USER_NAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}
+          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+          EMAIL_SERVER_HOST=${{ secrets.EMAIL_SERVER_HOST }}
+          EMAIL_SERVER_PORT=${{ secrets.EMAIL_SERVER_PORT }}
+          EMAIL_SERVER_USER=${{ secrets.EMAIL_SERVER_USER }}
+          EMAIL_SERVER_PASSWORD=${{ secrets.EMAIL_SERVER_PASSWORD }}
+          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+          API_KEY=${{ secrets.API_KEY }}
+          SHARED_SECRET=${{ secrets.SHARED_SECRET }}
+          EXTERNAL_APP_URL=${{ secrets.EXTERNAL_APP_URL }}
+          EOF
               
-              echo \"⚙️ Setting up environment variables for build...\"
-              
-              echo \"NODE_ENV=${{ secrets.NODE_ENV }}\" > .env
-              echo \"PORT=${{ secrets.PORT }}\" >> .env
-              echo \"DATABASE_URL=mysql://${{ secrets.DB_USER_NAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}\" >> .env
-              echo \"NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}\" >> .env
-              echo \"NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}\" >> .env
-              echo \"EMAIL_SERVER_HOST=${{ secrets.EMAIL_SERVER_HOST }}\" >> .env
-              echo \"EMAIL_SERVER_PORT=${{ secrets.EMAIL_SERVER_PORT }}\" >> .env
-              echo \"EMAIL_SERVER_USER=${{ secrets.EMAIL_SERVER_USER }}\" >> .env
-              echo \"EMAIL_SERVER_PASSWORD=${{ secrets.EMAIL_SERVER_PASSWORD }}\" >> .env
-              echo \"EMAIL_FROM=${{ secrets.EMAIL_FROM }}\" >> .env
-              echo \"API_KEY=${{ secrets.API_KEY }}\" >> .env
-              echo \"SHARED_SECRET=${{ secrets.SHARED_SECRET }}\" >> .env
-              echo \"EXTERNAL_APP_URL=${{ secrets.EXTERNAL_APP_URL }}\" >> .env
-              
-              echo \"✅ Environment variables configured\"
-            '
-          "
-          
-          # Install dependencies and build on build instance (through bastion)
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            ssh -i ~/.ssh/build_rsa -o StrictHostKeyChecking=no ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }} '
-              cd ~/build-temp
-              
-              echo \"📦 Installing dependencies...\"
+              echo \"📦 Installing dependencies and building...\"
               npm ci
-              
-              echo \"🏗️ Building Next.js application...\"
               npm run build
-              
-              echo \"📦 Creating build archive...\"
               tar -czf build-output.tar.gz .next package.json package-lock.json node_modules
-              
-              echo \"✅ Build completed successfully\"
+              echo \"✅ Build completed\"
             '
           "
+          
+          # Copy SSH key to build server for return transfer
+          echo "📋 Setting up SSH keys for return transfer..."
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            scp -i ~/.ssh/build_rsa ~/.ssh/id_rsa ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }}:~/.ssh/
+            ssh -i ~/.ssh/build_rsa -o StrictHostKeyChecking=no ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }} 'chmod 600 ~/.ssh/id_rsa'
+          "
+          
           # Transfer build files: SSH to build server and push to main server
           echo "📋 Copying build files from build server to main server..."
           ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             ssh -i ~/.ssh/build_rsa -o StrictHostKeyChecking=no ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }} '
               echo \"📤 Pushing build files to main server...\"
-              scp -i ~/.ssh/id_rsa ~/build-temp/build-output.tar.gz ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.APP_DIR }}/
+              scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ~/build-temp/build-output.tar.gz ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.APP_DIR }}/
               echo \"✅ Build files transferred successfully\"
             '
           "
@@ -446,10 +421,11 @@ jobs:
             echo 'Branch: ${{ github.ref_name }}' >> DEPLOYED
             echo '✅ Build files extracted and deployed'
           "
-          # Cleanup files
-          echo "🧹 Cleaning up temporary files..."
-          rm -f ./build-output.tar.gz ~/.ssh/build_rsa
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "rm -f ~/build-output.tar.gz ~/.ssh/build_rsa"
+          
+          # Cleanup
+          echo "🧹 Cleaning up..."
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "rm -f ~/.ssh/build_rsa"
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "ssh -i ~/.ssh/build_rsa -o StrictHostKeyChecking=no ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }} 'rm -f ~/.ssh/id_rsa' || true"
       
       - name: Configure systemctl service (first deployment)
         if: needs.check-deployment-status.outputs.first_deployment == 'true' || github.event.inputs.force_initial_setup == 'true'
