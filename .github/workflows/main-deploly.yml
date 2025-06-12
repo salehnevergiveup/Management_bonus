@@ -273,7 +273,7 @@ jobs:
             
             echo "⚙️ Setting up environment variables..."
             
-            echo "NODE_ENV=${{ secrets.NODE_ENV }}" > .env
+            echo "NODE_ENV=${{ secrets.NODE_ENV }}" > .env 
             echo "PORT=${{ secrets.PORT }}" >> .env
             echo "DATABASE_URL=mysql://${{ secrets.DB_USER_NAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}" >> .env
             echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env
