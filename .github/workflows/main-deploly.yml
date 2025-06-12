@@ -2,7 +2,7 @@ name: Main Deployment Pipeline
 
 on:
   push:
-    branches: [testing-deploy ]
+    branches: [testing-deploy]
   workflow_dispatch:
     inputs:
       force_db_setup:
@@ -427,38 +427,10 @@ jobs:
             '
           "
           
-          # Copy built files from build instance to bastion, then to main instance
-          echo "📋 Copying built files to main instance..."
+          # Simple one-line transfer chain
+          echo "📋 Transferring build files..."
           
-          # Copy from build instance to bastion (using environment variables to avoid masking)
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            BUILD_USER="${{ secrets.BUILD_EC2_USER }}"
-            BUILD_HOST="${{ secrets.BUILD_EC2_HOST }}"
-            scp -i ~/.ssh/build_rsa ${BUILD_USER}@${BUILD_HOST}:~/build-temp/build-output.tar.gz ~/
-          '
-          
-          # Copy from bastion to GitHub runner
-          scp -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/build-output.tar.gz ./build-output.tar.gz
-          
-          # Upload build files to main instance
-          scp -i ~/.ssh/id_rsa ./build-output.tar.gz ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/
-          
-          # Extract build files on main instance
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            cd ${{ secrets.APP_DIR }}
-            
-            echo "📦 Extracting built files..."
-            tar -xzf ~/build-output.tar.gz
-            rm ~/build-output.tar.gz
-            
-            # Create deployment marker
-            echo "Deployment completed at: $(date)" > DEPLOYED
-            echo "Commit: ${{ github.sha }}" >> DEPLOYED
-            echo "Branch: ${{ github.ref_name }}" >> DEPLOYED
-            echo "Built on: Private Build Instance via Bastion" >> DEPLOYED
-            
-            echo "✅ Build files deployed to main instance"
-          '
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "scp -i ~/.ssh/build_rsa ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }}:~/build-temp/build-output.tar.gz ./ && scp ./build-output.tar.gz ${{ secrets.EC2_USER }}@localhost:${{ secrets.APP_DIR }}/ && cd ${{ secrets.APP_DIR }} && tar -xzf build-output.tar.gz && rm build-output.tar.gz && echo 'Deployment completed at: \$(date)' > DEPLOYED && echo 'Commit: ${{ github.sha }}' >> DEPLOYED && echo 'Branch: ${{ github.ref_name }}' >> DEPLOYED"
           
           # Cleanup files
           echo "🧹 Cleaning up temporary files..."
