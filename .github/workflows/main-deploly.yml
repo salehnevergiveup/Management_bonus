@@ -430,7 +430,14 @@ jobs:
           # Simple one-line transfer chain
           echo "📋 Transferring build files..."
           
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "scp -i ~/.ssh/build_rsa ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }}:~/build-temp/build-output.tar.gz ./ && scp ./build-output.tar.gz ${{ secrets.EC2_USER }}@localhost:${{ secrets.APP_DIR }}/ && cd ${{ secrets.APP_DIR }} && tar -xzf build-output.tar.gz && rm build-output.tar.gz && echo 'Deployment completed at: \$(date)' > DEPLOYED && echo 'Commit: ${{ github.sha }}' >> DEPLOYED && echo 'Branch: ${{ github.ref_name }}' >> DEPLOYED"
+          echo "📋 Step 1: Copy from build server to main server..."
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "scp -i ~/.ssh/build_rsa ${{ secrets.BUILD_EC2_USER }}@${{ secrets.BUILD_EC2_HOST }}:~/build-temp/build-output.tar.gz ~/"
+          
+          echo "📋 Step 2: Move to app directory and extract..."
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cp ~/build-output.tar.gz ${{ secrets.APP_DIR }}/ && cd ${{ secrets.APP_DIR }} && tar -xzf build-output.tar.gz && rm build-output.tar.gz"
+          
+          echo "📋 Step 3: Create deployment marker..."
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "cd ${{ secrets.APP_DIR }} && echo 'Deployment completed at: \$(date)' > DEPLOYED && echo 'Commit: ${{ github.sha }}' >> DEPLOYED && echo 'Branch: ${{ github.ref_name }}' >> DEPLOYED"
           
           # Cleanup files
           echo "🧹 Cleaning up temporary files..."
