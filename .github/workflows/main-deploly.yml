@@ -299,7 +299,7 @@ jobs:
             cd ${{ secrets.APP_DIR }}
             
             echo "📦 Installing dependencies..."
-            npm ci
+            npm install
             
             echo "✅ Dependencies installed"
           '
