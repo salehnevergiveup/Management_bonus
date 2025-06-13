@@ -474,6 +474,48 @@ jobs:
             
             echo "✅ Services started/restarted successfully"
           '
+      - name: Install and configure SSL certificate
+        if: needs.check-deployment-status.outputs.first_deployment == 'true'
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "🔐 Installing Certbot and SSL certificate..."
+            
+            # Install Certbot
+            echo "📦 Installing Certbot..."
+            sudo apt update
+            sudo apt install certbot python3-certbot-nginx -y
+            
+            # Check if we have a domain name configured
+            if [ -n "${{ secrets.DOMAIN_NAME }}" ] && [ "${{ secrets.DOMAIN_NAME }}" != "_" ]; then
+              echo "🌐 Issuing SSL certificate for domain: ${{ secrets.DOMAIN_NAME }}"
+              
+              # Issue certificate non-interactively
+              sudo certbot --nginx \
+                --non-interactive \
+                --agree-tos \
+                --email ${{ secrets.EMAIL_FROM || 'admin@example.com' }} \
+                --domains ${{ secrets.DOMAIN_NAME }} \
+                --redirect
+              
+              echo "✅ SSL certificate issued successfully"
+              
+              # Enable auto-renewal
+              echo "⚙️ Configuring auto-renewal..."
+              sudo systemctl enable certbot.timer
+              sudo systemctl start certbot.timer
+              
+              # Test renewal
+              echo "🧪 Testing certificate renewal..."
+              sudo certbot renew --dry-run
+              
+              echo "✅ SSL certificate auto-renewal configured"
+            else
+              echo "⚠️ No domain name configured, skipping SSL certificate"
+              echo "   To enable SSL, set DOMAIN_NAME secret with your domain"
+            fi
+          '    
       
       - name: Cleanup SSH key
         if: always()
