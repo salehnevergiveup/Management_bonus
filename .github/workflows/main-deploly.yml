@@ -205,240 +205,240 @@ jobs:
           rm -f ~/.ssh/id_rsa ~/.ssh/db_rsa
           ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "rm -f ~/.ssh/db_rsa" 2>/dev/null || true
 
-  application-deployment:
-    needs: [check-deployment-status, database-setup]
-    if: always() && (needs.database-setup.result == 'success' || needs.database-setup.result == 'skipped')
-    runs-on: ubuntu-latest
+  # application-deployment:
+  #   needs: [check-deployment-status, database-setup]
+  #   if: always() && (needs.database-setup.result == 'success' || needs.database-setup.result == 'skipped')
+  #   runs-on: ubuntu-latest
     
-    steps:
-      - name: Setup SSH key for public instance
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+  #   steps:
+  #     - name: Setup SSH key for public instance
+  #       run: |
+  #         mkdir -p ~/.ssh
+  #         echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+  #         chmod 600 ~/.ssh/id_rsa
+  #         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
       
-      - name: Initial system setup
-        if: needs.check-deployment-status.outputs.first_deployment == 'true' || github.event.inputs.force_initial_setup == 'true'
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            echo "🔄 Updating system packages..."
-            sudo apt update && sudo apt upgrade -y
+  #     - name: Initial system setup
+  #       if: needs.check-deployment-status.outputs.first_deployment == 'true' || github.event.inputs.force_initial_setup == 'true'
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           echo "🔄 Updating system packages..."
+  #           sudo apt update && sudo apt upgrade -y
             
-            echo "📦 Installing Node.js 18 LTS..."
-            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-            sudo apt-get install -y nodejs
+  #           echo "📦 Installing Node.js 18 LTS..."
+  #           curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+  #           sudo apt-get install -y nodejs
             
-            echo "📦 Installing Nginx..."
-            sudo apt install nginx -y
-            sudo systemctl enable nginx
+  #           echo "📦 Installing Nginx..."
+  #           sudo apt install nginx -y
+  #           sudo systemctl enable nginx
             
-            echo "📦 Installing Git..."
-            sudo apt install git -y
+  #           echo "📦 Installing Git..."
+  #           sudo apt install git -y
             
-            echo "📦 Installing MySQL client..."
-            sudo apt install mysql-client -y
+  #           echo "📦 Installing MySQL client..."
+  #           sudo apt install mysql-client -y
             
-            echo "📁 Creating application directory..."
-            sudo mkdir -p ${{ secrets.APP_DIR }}
-            sudo chown ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} ${{ secrets.APP_DIR }}
+  #           echo "📁 Creating application directory..."
+  #           sudo mkdir -p ${{ secrets.APP_DIR }}
+  #           sudo chown ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} ${{ secrets.APP_DIR }}
             
-            echo "✅ Initial system setup completed"
-          '
+  #           echo "✅ Initial system setup completed"
+  #         '
       
-      - name: Clone or update repository
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            cd ${{ secrets.APP_DIR }}
+  #     - name: Clone or update repository
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           cd ${{ secrets.APP_DIR }}
             
-            if [ ! -d ".git" ]; then
-              echo "📥 Cloning repository directly into ${{ secrets.APP_DIR }}..."
-              git clone https://github.com/${{ github.repository }}.git .
-            else
-              echo "🔄 Updating repository..."
-              git fetch origin
-              git reset --hard origin/main
-            fi
+  #           if [ ! -d ".git" ]; then
+  #             echo "📥 Cloning repository directly into ${{ secrets.APP_DIR }}..."
+  #             git clone https://github.com/${{ github.repository }}.git .
+  #           else
+  #             echo "🔄 Updating repository..."
+  #             git fetch origin
+  #             git reset --hard origin/main
+  #           fi
             
-            echo "🔄 Checking out commit: ${{ github.sha }}"
-            git checkout ${{ github.sha }}
+  #           echo "🔄 Checking out commit: ${{ github.sha }}"
+  #           git checkout ${{ github.sha }}
             
-            echo "✅ Repository updated successfully"
-          '
+  #           echo "✅ Repository updated successfully"
+  #         '
       
-      - name: Setup environment variables
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            cd ${{ secrets.APP_DIR }}
+  #     - name: Setup environment variables
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           cd ${{ secrets.APP_DIR }}
             
-            echo "⚙️ Setting up environment variables..."
+  #           echo "⚙️ Setting up environment variables..."
             
-            echo "NODE_ENV=${{ secrets.NODE_ENV }}" > .env 
-            echo "PORT=${{ secrets.PORT }}" >> .env
-            echo "DATABASE_URL=mysql://${{ secrets.DB_USER_NAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}" >> .env
-            echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env
-            echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env
-            echo "EMAIL_SERVER_HOST=${{ secrets.EMAIL_SERVER_HOST }}" >> .env
-            echo "EMAIL_SERVER_PORT=${{ secrets.EMAIL_SERVER_PORT }}" >> .env
-            echo "EMAIL_SERVER_USER=${{ secrets.EMAIL_SERVER_USER }}" >> .env
-            echo "EMAIL_SERVER_PASSWORD=${{ secrets.EMAIL_SERVER_PASSWORD }}" >> .env
-            echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
-            echo "API_KEY=${{ secrets.API_KEY }}" >> .env
-            echo "SHARED_SECRET=${{ secrets.SHARED_SECRET }}" >> .env
-            echo "EXTERNAL_APP_URL=${{ secrets.EXTERNAL_APP_URL }}" >> .env
+  #           echo "NODE_ENV=${{ secrets.NODE_ENV }}" > .env 
+  #           echo "PORT=${{ secrets.PORT }}" >> .env
+  #           echo "DATABASE_URL=mysql://${{ secrets.DB_USER_NAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}" >> .env
+  #           echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env
+  #           echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env
+  #           echo "EMAIL_SERVER_HOST=${{ secrets.EMAIL_SERVER_HOST }}" >> .env
+  #           echo "EMAIL_SERVER_PORT=${{ secrets.EMAIL_SERVER_PORT }}" >> .env
+  #           echo "EMAIL_SERVER_USER=${{ secrets.EMAIL_SERVER_USER }}" >> .env
+  #           echo "EMAIL_SERVER_PASSWORD=${{ secrets.EMAIL_SERVER_PASSWORD }}" >> .env
+  #           echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
+  #           echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+  #           echo "SHARED_SECRET=${{ secrets.SHARED_SECRET }}" >> .env
+  #           echo "EXTERNAL_APP_URL=${{ secrets.EXTERNAL_APP_URL }}" >> .env
             
-            chmod 600 .env
-            chown ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} .env
+  #           chmod 600 .env
+  #           chown ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} .env
             
-            echo "✅ Environment variables configured"
-          '
+  #           echo "✅ Environment variables configured"
+  #         '
       
-      - name: Install dependencies
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            cd ${{ secrets.APP_DIR }}
+  #     - name: Install dependencies
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           cd ${{ secrets.APP_DIR }}
             
-            echo "📦 Installing dependencies..."
-            npm ci
+  #           echo "📦 Installing dependencies..."
+  #           npm ci
             
-            echo "✅ Dependencies installed"
-          '
+  #           echo "✅ Dependencies installed"
+  #         '
       
-      - name: Database operations
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            cd ${{ secrets.APP_DIR }}
+  #     - name: Database operations
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           cd ${{ secrets.APP_DIR }}
             
-            echo "🔗 Testing database connection..."
-            mysql -h ${{ secrets.DB_EC2_HOST }} -u ${{ secrets.DB_USER_NAME }} -p${{ secrets.DB_PASSWORD }} -e "SELECT '\''Database connection successful'\'' as status;"
+  #           echo "🔗 Testing database connection..."
+  #           mysql -h ${{ secrets.DB_EC2_HOST }} -u ${{ secrets.DB_USER_NAME }} -p${{ secrets.DB_PASSWORD }} -e "SELECT '\''Database connection successful'\'' as status;"
             
-            if [ -f "package.json" ] && grep -q "migrate:deploy" package.json; then
-              echo "🔄 Running database migrations..."
-              npm run migrate:deploy
-            fi
+  #           if [ -f "package.json" ] && grep -q "migrate:deploy" package.json; then
+  #             echo "🔄 Running database migrations..."
+  #             npm run migrate:deploy
+  #           fi
             
-            if [ -f "package.json" ] && grep -q "db:generate" package.json; then
-              echo "🔧 Running db:generate..."
-              npm run db:generate
-            fi
+  #           if [ -f "package.json" ] && grep -q "db:generate" package.json; then
+  #             echo "🔧 Running db:generate..."
+  #             npm run db:generate
+  #           fi
             
-            if [ "${{ needs.check-deployment-status.outputs.first_deployment }}" == "true" ] || [ "${{ github.event.inputs.force_initial_setup }}" == "true" ]; then
-              if [ -f "package.json" ] && grep -q "db:seed" package.json; then
-                echo "🌱 Seeding database (first deployment only)..."
-                npm run db:seed
-              fi
-            fi
+  #           if [ "${{ needs.check-deployment-status.outputs.first_deployment }}" == "true" ] || [ "${{ github.event.inputs.force_initial_setup }}" == "true" ]; then
+  #             if [ -f "package.json" ] && grep -q "db:seed" package.json; then
+  #               echo "🌱 Seeding database (first deployment only)..."
+  #               npm run db:seed
+  #             fi
+  #           fi
             
-            echo "✅ Database operations completed"
-          '
+  #           echo "✅ Database operations completed"
+  #         '
       
-      - name: Build application
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            cd ${{ secrets.APP_DIR }}
+  #     - name: Build application
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           cd ${{ secrets.APP_DIR }}
             
-            echo "🏗️ Building Next.js application..."
-            npm run build
+  #           echo "🏗️ Building Next.js application..."
+  #           npm run build
             
-            # Create deployment marker
-            echo "Deployment completed at: $(date)" > DEPLOYED
-            echo "Commit: ${{ github.sha }}" >> DEPLOYED
-            echo "Branch: ${{ github.ref_name }}" >> DEPLOYED
+  #           # Create deployment marker
+  #           echo "Deployment completed at: $(date)" > DEPLOYED
+  #           echo "Commit: ${{ github.sha }}" >> DEPLOYED
+  #           echo "Branch: ${{ github.ref_name }}" >> DEPLOYED
             
-            echo "✅ Application built successfully"
-          '
+  #           echo "✅ Application built successfully"
+  #         '
       
-      - name: Configure systemctl service (first deployment)
-        if: needs.check-deployment-status.outputs.first_deployment == 'true' || github.event.inputs.force_initial_setup == 'true'
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            echo "⚙️ Configuring systemctl service..."
+  #     - name: Configure systemctl service (first deployment)
+  #       if: needs.check-deployment-status.outputs.first_deployment == 'true' || github.event.inputs.force_initial_setup == 'true'
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           echo "⚙️ Configuring systemctl service..."
             
-            echo "[Unit]" | sudo tee /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "Description=Next.js Application" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "After=network.target multi-user.target" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "[Service]" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "User=${{ secrets.EC2_USER }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "WorkingDirectory=${{ secrets.APP_DIR }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "ExecStart=/usr/bin/npm start" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "Restart=always" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "Environment=NODE_ENV=production" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "EnvironmentFile=${{ secrets.APP_DIR }}/.env" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "StandardOutput=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "StandardError=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "SyslogIdentifier=${{ secrets.SERVICE_NAME }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "[Install]" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
-            echo "WantedBy=multi-user.target" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "[Unit]" | sudo tee /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "Description=Next.js Application" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "After=network.target multi-user.target" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "[Service]" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "User=${{ secrets.EC2_USER }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "WorkingDirectory=${{ secrets.APP_DIR }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "ExecStart=/usr/bin/npm start" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "Restart=always" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "Environment=NODE_ENV=production" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "EnvironmentFile=${{ secrets.APP_DIR }}/.env" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "StandardOutput=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "StandardError=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "SyslogIdentifier=${{ secrets.SERVICE_NAME }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "[Install]" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+  #           echo "WantedBy=multi-user.target" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
             
-            sudo systemctl daemon-reload
-            sudo systemctl enable ${{ secrets.SERVICE_NAME }}.service
+  #           sudo systemctl daemon-reload
+  #           sudo systemctl enable ${{ secrets.SERVICE_NAME }}.service
             
-            echo "✅ Systemctl service configured"
-          '
+  #           echo "✅ Systemctl service configured"
+  #         '
       
-      - name: Configure nginx reverse proxy (first deployment)
-        if: needs.check-deployment-status.outputs.first_deployment == 'true' || github.event.inputs.force_initial_setup == 'true'
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            echo "🌐 Configuring Nginx reverse proxy..."
+  #     - name: Configure nginx reverse proxy (first deployment)
+  #       if: needs.check-deployment-status.outputs.first_deployment == 'true' || github.event.inputs.force_initial_setup == 'true'
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           echo "🌐 Configuring Nginx reverse proxy..."
             
-            echo "server {" | sudo tee /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "    listen 80;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "    server_name ${{ secrets.DOMAIN_NAME || '_' }};" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "    location / {" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_pass http://localhost:${{ secrets.PORT }};" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_http_version 1.1;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_set_header Upgrade \$http_upgrade;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_set_header Connection \"upgrade\";" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_set_header Host \$host;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_cache_bypass \$http_upgrade;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_set_header X-Real-IP \$remote_addr;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "        proxy_set_header X-Forwarded-Proto \$scheme;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "    }" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
-            echo "}" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "server {" | sudo tee /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "    listen 80;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "    server_name ${{ secrets.DOMAIN_NAME || '_' }};" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "    location / {" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_pass http://localhost:${{ secrets.PORT }};" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_http_version 1.1;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_set_header Upgrade \$http_upgrade;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_set_header Connection \"upgrade\";" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_set_header Host \$host;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_cache_bypass \$http_upgrade;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_set_header X-Real-IP \$remote_addr;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "        proxy_set_header X-Forwarded-Proto \$scheme;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "    }" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+  #           echo "}" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
             
-            sudo ln -sf /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }} /etc/nginx/sites-enabled/
-            sudo rm -f /etc/nginx/sites-enabled/default
+  #           sudo ln -sf /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }} /etc/nginx/sites-enabled/
+  #           sudo rm -f /etc/nginx/sites-enabled/default
             
-            sudo nginx -t
+  #           sudo nginx -t
             
-            echo "✅ Nginx configured successfully"
-          '
+  #           echo "✅ Nginx configured successfully"
+  #         '
       
-      - name: Start or restart services
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            cd ${{ secrets.APP_DIR }}
+  #     - name: Start or restart services
+  #       run: |
+  #         ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+  #           cd ${{ secrets.APP_DIR }}
             
-            if [ "${{ needs.check-deployment-status.outputs.first_deployment }}" == "true" ] || [ "${{ github.event.inputs.force_initial_setup }}" == "true" ]; then
-              echo "🚀 Starting services for first deployment..."
-              sudo systemctl start ${{ secrets.SERVICE_NAME }}
-              sudo systemctl start nginx
-            else
-              echo "🔄 Restarting services for update..."
-              sudo systemctl restart ${{ secrets.SERVICE_NAME }}
-              sudo systemctl reload nginx
-            fi
+  #           if [ "${{ needs.check-deployment-status.outputs.first_deployment }}" == "true" ] || [ "${{ github.event.inputs.force_initial_setup }}" == "true" ]; then
+  #             echo "🚀 Starting services for first deployment..."
+  #             sudo systemctl start ${{ secrets.SERVICE_NAME }}
+  #             sudo systemctl start nginx
+  #           else
+  #             echo "🔄 Restarting services for update..."
+  #             sudo systemctl restart ${{ secrets.SERVICE_NAME }}
+  #             sudo systemctl reload nginx
+  #           fi
             
-            echo "✅ Services started/restarted successfully"
-          '
+  #           echo "✅ Services started/restarted successfully"
+  #         '
       
-      - name: Cleanup SSH key
-        if: always()
-        run: rm -f ~/.ssh/id_rsa
+  #     - name: Cleanup SSH key
+  #       if: always()
+  #       run: rm -f ~/.ssh/id_rsa
       
-      - name: Deployment summary
-        run: |
-          echo "🎉 Deployment completed successfully!"
-          echo ""
-          echo "📊 Deployment details:"
-          echo "   - Commit: ${{ github.sha }}"
-          echo "   - Branch: ${{ github.ref_name }}"
-          echo "   - Type: ${{ needs.check-deployment-status.outputs.first_deployment == 'true' && 'Initial deployment' || 'Update deployment' }}"
-          echo "   - Database setup: ${{ needs.check-deployment-status.outputs.needs_db_setup == 'true' && 'Performed' || 'Skipped' }}"
-          echo "   - Application URL: http://${{ secrets.EC2_HOST }}"
-          echo "   - Database: ${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}"
+  #     - name: Deployment summary
+  #       run: |
+  #         echo "🎉 Deployment completed successfully!"
+  #         echo ""
+  #         echo "📊 Deployment details:"
+  #         echo "   - Commit: ${{ github.sha }}"
+  #         echo "   - Branch: ${{ github.ref_name }}"
+  #         echo "   - Type: ${{ needs.check-deployment-status.outputs.first_deployment == 'true' && 'Initial deployment' || 'Update deployment' }}"
+  #         echo "   - Database setup: ${{ needs.check-deployment-status.outputs.needs_db_setup == 'true' && 'Performed' || 'Skipped' }}"
+  #         echo "   - Application URL: http://${{ secrets.EC2_HOST }}"
+  #         echo "   - Database: ${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}"
