@@ -2,7 +2,10 @@ name: Main Deployment Pipeline
 
 on:
   push:
-    branches: [main] 
+    branches: [main]
+  pull_request:
+    types: [closed]
+    branches: [main]
   workflow_dispatch: {}
       
 jobs:
