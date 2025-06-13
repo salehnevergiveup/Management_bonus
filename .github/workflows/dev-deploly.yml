@@ -33,7 +33,7 @@ jobs:
             echo "📊 Database setup will be skipped"
           else
             echo "first_deployment=true" >> $GITHUB_OUTPUT
-            echo "needs_db_setup=true" >> $GITHUB_OUTPUT
+            echo "needs_db_setup=true" >> $GITHUB_OUTPUT 
             echo "🆕 First deployment detected"
             echo "📊 Database setup will be performed"
           fi
