@@ -407,7 +407,7 @@ jobs:
             echo "WorkingDirectory=${{ secrets.DEV.APP_DIR }}" | sudo tee -a /etc/systemd/system/${{ secrets.DEV.SERVICE_NAME }}.service
             echo "ExecStart=/usr/bin/npm start" | sudo tee -a /etc/systemd/system/${{ secrets.DEV.SERVICE_NAME }}.service
             echo "Restart=always" | sudo tee -a /etc/systemd/system/${{ secrets.DEV.SERVICE_NAME }}.service
-            echo "Environment=NODE_ENV=production" | sudo tee -a /etc/systemd/system/${{ secrets.DEV.SERVICE_NAME }}.service
+            echo "Environment=NODE_ENV=development" | sudo tee -a /etc/systemd/system/${{ secrets.DEV.SERVICE_NAME }}.service
             echo "EnvironmentFile=${{ secrets.DEV.APP_DIR }}/.env" | sudo tee -a /etc/systemd/system/${{ secrets.DEV.SERVICE_NAME }}.service
             echo "StandardOutput=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.DEV.SERVICE_NAME }}.service
             echo "StandardError=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.DEV.SERVICE_NAME }}.service
