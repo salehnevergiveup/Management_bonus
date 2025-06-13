@@ -92,7 +92,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
           </Button>
         )}
       </SidebarHeader>
-      <SidebarContent className="overflow-y-auto overflow-x-hidden bg-red-500">
+      <SidebarContent className="overflow-y-auto overflow-x-hidden">
         {/* Dashboard */}
         <SidebarGroup>
           <SidebarGroupContent>
