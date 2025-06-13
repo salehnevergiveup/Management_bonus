@@ -1,5 +1,4 @@
 name: Dev Deployment Pipeline
-
 on:
   push:
     branches: [dev] 
@@ -32,8 +31,9 @@ jobs:
             echo "🔄 Existing deployment detected"
             echo "📊 Database setup will be skipped"
           else
-            echo "first_deployment=true" >> $GITHUB_OUTPUT
+            echo "first_deployment=true" >> $GITHUB_OUTP
             echo "needs_db_setup=true" >> $GITHUB_OUTPUT
+
             echo "🆕 First deployment detected"
             echo "📊 Database setup will be performed"
           fi
@@ -63,7 +63,7 @@ jobs:
           echo "${{ secrets.DEV_DB_EC2_SSH_KEY }}" > ~/.ssh/db_rsa
           chmod 600 ~/.ssh/id_rsa ~/.ssh/db_rsa
           ssh-keyscan -H ${{ secrets.DEV_EC2_HOST }} >> ~/.ssh/known_hosts
-          
+
           # Create SSH config for cleaner connections 
           cat >> ~/.ssh/config << EOF
           Host bastion
@@ -407,7 +407,9 @@ jobs:
             echo "WorkingDirectory=${{ secrets.DEV_APP_DIR }}" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "ExecStart=/usr/bin/npm start" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "Restart=always" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
+
             echo "Environment=NODE_ENV=production" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
+
             echo "EnvironmentFile=${{ secrets.DEV_APP_DIR }}/.env" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "StandardOutput=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "StandardError=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
@@ -473,6 +475,7 @@ jobs:
             fi
             
             echo "✅ Services started/restarted successfully"
+
           '   
       
       - name: Cleanup SSH key
