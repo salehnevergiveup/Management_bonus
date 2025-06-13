@@ -407,7 +407,7 @@ jobs:
             echo "WorkingDirectory=${{ secrets.DEV_APP_DIR }}" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "ExecStart=/usr/bin/npm start" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "Restart=always" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
-            echo "Environment=NODE_ENV=production" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
+            echo "Environment=NODE_ENV=development" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "EnvironmentFile=${{ secrets.DEV_APP_DIR }}/.env" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "StandardOutput=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "StandardError=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
@@ -490,3 +490,537 @@ jobs:
           echo "   - Database setup: ${{ needs.check-deployment-status.outputs.needs_db_setup == 'true' && 'Performed' || 'Skipped' }}"
           echo "   - Application URL: http://${{ secrets.DEV_EC2_HOST }}"
           echo "   - Database: ${{ secrets.DEV_DB_EC2_HOST }}:3306/${{ secrets.DEV_DB_NAME }}"
+name: Main Deployment Pipeline
+
+on:
+  push:
+    branches: [main] 
+  workflow_dispatch: {}
+      
+jobs:
+  check-deployment-status:
+    runs-on: ubuntu-latest
+    outputs:
+      needs_db_setup: ${{ steps.check.outputs.needs_db_setup }}
+      first_deployment: ${{ steps.check.outputs.first_deployment }}
+    
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Check deployment status
+        id: check
+        run: |
+          set -e
+          
+          # Check if application is already deployed
+          if ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "test -f ${{ secrets.APP_DIR }}/DEPLOYED"; then
+            echo "first_deployment=false" >> $GITHUB_OUTPUT
+            echo "needs_db_setup=false" >> $GITHUB_OUTPUT
+            echo "🔄 Existing deployment detected"
+            echo "📊 Database setup will be skipped"
+          else
+            echo "first_deployment=true" >> $GITHUB_OUTPUT
+            echo "needs_db_setup=true" >> $GITHUB_OUTPUT
+            echo "🆕 First deployment detected"
+            echo "📊 Database setup will be performed"
+          fi
+          
+          # Debug output
+          echo "Debug: first_deployment=$(grep 'first_deployment=' $GITHUB_OUTPUT | cut -d'=' -f2)"
+          echo "Debug: needs_db_setup=$(grep 'needs_db_setup=' $GITHUB_OUTPUT | cut -d'=' -f2)"
+      
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_rsa
+ 
+  database-setup:
+    needs: check-deployment-status
+    if: needs.check-deployment-status.outputs.needs_db_setup == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup SSH keys
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.DB_EC2_SSH_KEY }}" > ~/.ssh/db_rsa
+          chmod 600 ~/.ssh/id_rsa ~/.ssh/db_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          
+          # Create SSH config for cleaner connections
+          cat >> ~/.ssh/config << EOF
+          Host bastion
+              HostName ${{ secrets.EC2_HOST }}
+              User ${{ secrets.EC2_USER }}
+              IdentityFile ~/.ssh/id_rsa
+              StrictHostKeyChecking no
+          
+          Host database
+              HostName ${{ secrets.DB_EC2_HOST }}
+              User ${{ secrets.DB_EC2_USER }}
+              IdentityFile ~/.ssh/db_rsa
+              ProxyJump bastion
+              StrictHostKeyChecking no
+          EOF
+      
+      - name: Copy database SSH key to bastion
+        run: |
+          set -e
+          scp -i ~/.ssh/id_rsa ~/.ssh/db_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/.ssh/
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "chmod 600 ~/.ssh/db_rsa"
+      
+      - name: Check if MySQL is already installed
+        id: mysql-check
+        run: |
+          set -e
+          if ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "ssh -i ~/.ssh/db_rsa -o StrictHostKeyChecking=no ${{ secrets.DB_EC2_USER }}@${{ secrets.DB_EC2_HOST }} 'systemctl is-active --quiet mysql || systemctl is-active --quiet mysqld'"; then
+            echo "mysql_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ MySQL is already installed"
+          else
+            echo "mysql_exists=false" >> $GITHUB_OUTPUT
+            echo "📦 MySQL needs to be installed"
+          fi
+      
+      - name: Install MySQL on database instance
+        if: steps.mysql-check.outputs.mysql_exists == 'false'
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            ssh -i ~/.ssh/db_rsa -o StrictHostKeyChecking=no ${{ secrets.DB_EC2_USER }}@${{ secrets.DB_EC2_HOST }} "
+              set -e
+              echo '\''🔄 Updating system packages...'\''
+              sudo apt update && sudo apt upgrade -y
+              
+              echo '\''📦 Installing MySQL server...'\''
+              sudo apt install mysql-server -y
+              
+              echo '\''🚀 Starting and enabling MySQL...'\''
+              sudo systemctl start mysql
+              sudo systemctl enable mysql
+              
+              echo '\''⏳ Waiting for MySQL to be ready...'\''
+              sleep 10
+              
+              echo '\''✅ MySQL installation completed'\''
+            "
+          '
+      
+      - name: Configure MySQL security and create database user
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            ssh -i ~/.ssh/db_rsa -o StrictHostKeyChecking=no ${{ secrets.DB_EC2_USER }}@${{ secrets.DB_EC2_HOST }} "
+              set -e
+              echo '\''🔐 Setting up MySQL security...'\''
+              
+              sudo mysql -e \"ALTER USER '\''root'\''@'\''localhost'\'' IDENTIFIED WITH mysql_native_password BY '\''${{ secrets.DB_PASSWORD }}'\''; FLUSH PRIVILEGES;\"
+              
+              echo '\''👤 Creating database user with global privileges...'\''
+              
+              mysql -u root -p${{ secrets.DB_PASSWORD }} -e \"
+                CREATE USER IF NOT EXISTS '\''${{ secrets.DB_USER_NAME }}'\''@'\''%'\'' IDENTIFIED BY '\''${{ secrets.DB_PASSWORD }}'\'';
+                GRANT ALL PRIVILEGES ON *.* TO '\''${{ secrets.DB_USER_NAME }}'\''@'\''%'\'' WITH GRANT OPTION;
+                CREATE USER IF NOT EXISTS '\''${{ secrets.DB_USER_NAME }}'\''@'\''localhost'\'' IDENTIFIED BY '\''${{ secrets.DB_PASSWORD }}'\'';
+                GRANT ALL PRIVILEGES ON *.* TO '\''${{ secrets.DB_USER_NAME }}'\''@'\''localhost'\'' WITH GRANT OPTION;
+                FLUSH PRIVILEGES;
+              \"
+              
+              echo '\''✅ Database user created with global privileges'\''
+            "
+          '
+      
+      - name: Configure MySQL for VPC network access
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            ssh -i ~/.ssh/db_rsa -o StrictHostKeyChecking=no ${{ secrets.DB_EC2_USER }}@${{ secrets.DB_EC2_HOST }} "
+              set -e
+              echo '\''⚙️ Configuring MySQL for VPC network access...'\''
+              
+              sudo sed -i \"s/bind-address.*/bind-address = 0.0.0.0/\" /etc/mysql/mysql.conf.d/mysqld.cnf
+              
+              echo '\''📁 Creating MySQL log directory...'\''
+              sudo mkdir -p /var/log/mysql
+              sudo chown mysql:mysql /var/log/mysql
+              
+              echo '\''🔄 Restarting MySQL to apply configuration...'\''
+              sudo systemctl restart mysql
+              
+              echo '\''⏳ Waiting for MySQL restart...'\''
+              sleep 5
+              
+              echo '\''✅ MySQL configuration completed'\''
+            "
+          '
+      
+      - name: Setup automated backups
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            ssh -i ~/.ssh/db_rsa -o StrictHostKeyChecking=no ${{ secrets.DB_EC2_USER }}@${{ secrets.DB_EC2_HOST }} "
+              set -e
+              echo '\''💾 Setting up automated database backups...'\''
+              
+              sudo mkdir -p /opt/mysql-backups
+              sudo chown ${{ secrets.DB_EC2_USER }}:${{ secrets.DB_EC2_USER }} /opt/mysql-backups
+              
+              echo '\''#!/bin/bash'\'' > /opt/mysql-backups/backup.sh
+              echo '\''BACKUP_DIR=\"/opt/mysql-backups\"'\'' >> /opt/mysql-backups/backup.sh
+              echo '\''DATE=\$(date +%Y%m%d_%H%M%S)'\'' >> /opt/mysql-backups/backup.sh
+              echo '\''MYSQL_USER=\"${{ secrets.DB_USER_NAME }}\"'\'' >> /opt/mysql-backups/backup.sh
+              echo '\''MYSQL_PASS=\"${{ secrets.DB_PASSWORD }}\"'\'' >> /opt/mysql-backups/backup.sh
+              echo '\''echo \"Starting backup at: \$DATE\"'\'' >> /opt/mysql-backups/backup.sh
+              echo '\''mysqldump -u \$MYSQL_USER -p\$MYSQL_PASS --all-databases --single-transaction --routines --triggers | gzip > \$BACKUP_DIR/all_databases_\${DATE}.sql.gz'\'' >> /opt/mysql-backups/backup.sh
+              echo '\''find \$BACKUP_DIR -name \"*.sql.gz\" -mtime +7 -delete'\'' >> /opt/mysql-backups/backup.sh
+              echo '\''echo \"Backup completed: \$DATE\"'\'' >> /opt/mysql-backups/backup.sh
+              
+              chmod +x /opt/mysql-backups/backup.sh
+              
+              (crontab -l 2>/dev/null; echo \"0 2 * * * /opt/mysql-backups/backup.sh >> /var/log/mysql_backup.log 2>&1\") | crontab -
+              
+              echo '\''✅ Automated backups configured'\''
+            "
+          '
+      
+      - name: Verify database setup and create application database
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "🔍 Testing VPC database connection from bastion..."
+            
+            if ! command -v mysql &> /dev/null; then
+              echo "📦 Installing MySQL client on bastion..."
+              sudo apt update && sudo apt install mysql-client -y
+            fi
+            
+            echo "🌐 Testing database connection..."
+            mysql -h ${{ secrets.DB_EC2_HOST }} -u ${{ secrets.DB_USER_NAME }} -p${{ secrets.DB_PASSWORD }} -e "SELECT VERSION(); SHOW DATABASES;"
+            
+            echo "🗄️ Creating application database: ${{ secrets.DB_NAME }}"
+            mysql -h ${{ secrets.DB_EC2_HOST }} -u ${{ secrets.DB_USER_NAME }} -p${{ secrets.DB_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.DB_NAME }} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+            
+            echo "✅ Database setup completed successfully!"
+          '
+      
+      - name: Cleanup SSH keys
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa ~/.ssh/db_rsa ~/.ssh/config
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "rm -f ~/.ssh/db_rsa" 2>/dev/null || true
+
+  application-deployment:
+    needs: [check-deployment-status, database-setup]
+    if: always() && (needs.database-setup.result == 'success' || needs.database-setup.result == 'skipped')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Debug job dependencies
+        run: |
+          echo "🔍 Job status check:"
+          echo "  check-deployment-status result: ${{ needs.check-deployment-status.result }}"
+          echo "  database-setup result: ${{ needs.database-setup.result }}"
+          echo "  first_deployment: ${{ needs.check-deployment-status.outputs.first_deployment }}"
+          echo "  needs_db_setup: ${{ needs.check-deployment-status.outputs.needs_db_setup }}"
+      
+      - name: Setup SSH key
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Initial system setup
+        if: needs.check-deployment-status.outputs.first_deployment == 'true'
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "🔄 Updating system packages..."
+            sudo apt update && sudo apt upgrade -y
+            
+            echo "📦 Installing Node.js 18 LTS..."
+            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+            
+            echo "📦 Installing Nginx..."
+            sudo apt install nginx -y
+            sudo systemctl enable nginx
+            
+            echo "📦 Installing Git..."
+            sudo apt install git -y
+            
+            echo "📦 Installing MySQL client..."
+            sudo apt install mysql-client -y
+            
+            echo "📁 Creating application directory..."
+            sudo mkdir -p ${{ secrets.APP_DIR }}
+            sudo chown ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} ${{ secrets.APP_DIR }}
+            
+            echo "✅ Initial system setup completed"
+          '
+      
+      - name: Clone or update repository
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            cd ${{ secrets.APP_DIR }}
+            
+            if [ ! -d ".git" ]; then
+              echo "📥 Cloning repository directly into ${{ secrets.APP_DIR }}..."
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              echo "🔄 Updating repository..."
+              git fetch origin
+              git reset --hard origin/main
+            fi
+            
+            echo "🔄 Checking out commit: ${{ github.sha }}"
+            git checkout ${{ github.sha }}
+            
+            echo "✅ Repository updated successfully"
+          '
+      
+      - name: Setup environment variables
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            cd ${{ secrets.APP_DIR }}
+            
+            echo "⚙️ Setting up environment variables..."
+            
+            echo "NODE_ENV=${{ secrets.NODE_ENV }}" > .env 
+            echo "PORT=${{ secrets.PORT }}" >> .env
+            echo "DATABASE_URL=mysql://${{ secrets.DB_USER_NAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}" >> .env
+            echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env
+            echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env
+            echo "EMAIL_SERVER_HOST=${{ secrets.EMAIL_SERVER_HOST }}" >> .env
+            echo "EMAIL_SERVER_PORT=${{ secrets.EMAIL_SERVER_PORT }}" >> .env
+            echo "EMAIL_SERVER_USER=${{ secrets.EMAIL_SERVER_USER }}" >> .env
+            echo "EMAIL_SERVER_PASSWORD=${{ secrets.EMAIL_SERVER_PASSWORD }}" >> .env
+            echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
+            echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+            echo "SHARED_SECRET=${{ secrets.SHARED_SECRET }}" >> .env
+            echo "EXTERNAL_APP_URL=${{ secrets.EXTERNAL_APP_URL }}" >> .env
+            
+            chmod 600 .env
+            chown ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} .env
+            
+            echo "✅ Environment variables configured"
+          '
+      
+      - name: Install dependencies
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            cd ${{ secrets.APP_DIR }}
+            
+            echo "📦 Installing dependencies..."
+            npm ci
+            
+            echo "✅ Dependencies installed"
+          '
+      
+      - name: Database operations
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            cd ${{ secrets.APP_DIR }}
+            
+            echo "🔗 Testing database connection..."
+            mysql -h ${{ secrets.DB_EC2_HOST }} -u ${{ secrets.DB_USER_NAME }} -p${{ secrets.DB_PASSWORD }} -e "SELECT '\''Database connection successful'\'' as status;"
+            
+            if [ -f "package.json" ] && grep -q "migrate:deploy" package.json; then
+              echo "🔄 Running database migrations..."
+              npm run migrate:deploy
+            fi
+            
+            if [ -f "package.json" ] && grep -q "db:generate" package.json; then
+              echo "🔧 Running db:generate..."
+              npm run db:generate
+            fi
+            
+            if [ "${{ needs.check-deployment-status.outputs.first_deployment }}" == "true" ]; then
+              if [ -f "package.json" ] && grep -q "db:seed" package.json; then
+                echo "🌱 Seeding database (first deployment only)..."
+                npm run db:seed
+              fi
+            fi
+            
+            echo "✅ Database operations completed"
+          '
+      
+      - name: Build application
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            cd ${{ secrets.APP_DIR }}
+            
+            echo "🏗️ Building Next.js application..."
+            npm run build
+            
+            # Create deployment marker
+            echo "Deployment completed at: $(date)" > DEPLOYED
+            echo "Commit: ${{ github.sha }}" >> DEPLOYED
+            echo "Branch: ${{ github.ref_name }}" >> DEPLOYED
+            
+            echo "✅ Application built successfully"
+          '
+      
+      - name: Configure systemctl service
+        if: needs.check-deployment-status.outputs.first_deployment == 'true'
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "⚙️ Configuring systemctl service..."
+            
+            echo "[Unit]" | sudo tee /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "Description=Next.js Application" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "After=network.target multi-user.target" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "[Service]" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "User=${{ secrets.EC2_USER }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "WorkingDirectory=${{ secrets.APP_DIR }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "ExecStart=/usr/bin/npm start" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "Restart=always" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "Environment=NODE_ENV=production" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "EnvironmentFile=${{ secrets.APP_DIR }}/.env" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "StandardOutput=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "StandardError=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "SyslogIdentifier=${{ secrets.SERVICE_NAME }}" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "[Install]" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            echo "WantedBy=multi-user.target" | sudo tee -a /etc/systemd/system/${{ secrets.SERVICE_NAME }}.service
+            
+            sudo systemctl daemon-reload
+            sudo systemctl enable ${{ secrets.SERVICE_NAME }}.service
+            
+            echo "✅ Systemctl service configured"
+          '
+      
+      - name: Configure nginx reverse proxy
+        if: needs.check-deployment-status.outputs.first_deployment == 'true'
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "🌐 Configuring Nginx reverse proxy..."
+            
+            echo "server {" | sudo tee /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "    listen 80;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "    server_name ${{ secrets.DOMAIN_NAME || '_' }};" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "    location / {" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_pass http://localhost:${{ secrets.PORT }};" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_http_version 1.1;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_set_header Upgrade \$http_upgrade;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_set_header Connection \"upgrade\";" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_set_header Host \$host;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_cache_bypass \$http_upgrade;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_set_header X-Real-IP \$remote_addr;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "        proxy_set_header X-Forwarded-Proto \$scheme;" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "    }" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            echo "}" | sudo tee -a /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }}
+            
+            sudo ln -sf /etc/nginx/sites-available/${{ secrets.SERVICE_NAME }} /etc/nginx/sites-enabled/
+            sudo rm -f /etc/nginx/sites-enabled/default
+            
+            sudo nginx -t
+            
+            echo "✅ Nginx configured successfully"
+          '
+      
+      - name: Start or restart services
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            cd ${{ secrets.APP_DIR }}
+            
+            if [ "${{ needs.check-deployment-status.outputs.first_deployment }}" == "true" ]; then
+              echo "🚀 Starting services for first deployment..."
+              sudo systemctl start ${{ secrets.SERVICE_NAME }}
+              sudo systemctl start nginx
+            else
+              echo "🔄 Restarting services for update..."
+              sudo systemctl restart ${{ secrets.SERVICE_NAME }}
+              sudo systemctl reload nginx
+            fi
+            
+            echo "✅ Services started/restarted successfully"
+          '
+      - name: Install and configure SSL certificate
+        if: needs.check-deployment-status.outputs.first_deployment == 'true'
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "🔐 Installing Certbot and SSL certificate..."
+            
+            # Install Certbot
+            echo "📦 Installing Certbot..."
+            sudo apt update
+            sudo apt install certbot python3-certbot-nginx -y
+            
+            # Check if we have a domain name configured
+            if [ -n "${{ secrets.DOMAIN_NAME }}" ] && [ "${{ secrets.DOMAIN_NAME }}" != "_" ]; then
+              echo "🌐 Issuing SSL certificate for domain: ${{ secrets.DOMAIN_NAME }}"
+              
+              # Issue certificate non-interactively
+              sudo certbot --nginx \
+                --non-interactive \
+                --agree-tos \
+                --email ${{ secrets.EMAIL_FROM || 'admin@example.com' }} \
+                --domains ${{ secrets.DOMAIN_NAME }} \
+                --redirect
+              
+              echo "✅ SSL certificate issued successfully"
+              
+              # Enable auto-renewal
+              echo "⚙️ Configuring auto-renewal..."
+              sudo systemctl enable certbot.timer
+              sudo systemctl start certbot.timer
+              
+              # Test renewal
+              echo "🧪 Testing certificate renewal..."
+              sudo certbot renew --dry-run
+              
+              echo "✅ SSL certificate auto-renewal configured"
+            else
+              echo "⚠️ No domain name configured, skipping SSL certificate"
+              echo "   To enable SSL, set DOMAIN_NAME secret with your domain"
+            fi
+          '    
+      
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_rsa
+      
+      - name: Deployment summary
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          echo ""
+          echo "📊 Deployment details:"
+          echo "   - Commit: ${{ github.sha }}"
+          echo "   - Branch: ${{ github.ref_name }}"
+          echo "   - Type: ${{ needs.check-deployment-status.outputs.first_deployment == 'true' && 'Initial deployment' || 'Update deployment' }}"
+          echo "   - Database setup: ${{ needs.check-deployment-status.outputs.needs_db_setup == 'true' && 'Performed' || 'Skipped' }}"
+          echo "   - Application URL: http://${{ secrets.EC2_HOST }}"
+          echo "   - Database: ${{ secrets.DB_EC2_HOST }}:3306/${{ secrets.DB_NAME }}"
