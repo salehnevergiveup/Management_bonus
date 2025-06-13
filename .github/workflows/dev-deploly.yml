@@ -1,4 +1,4 @@
-name: Main Deployment Pipeline
+name: Dev Deployment Pipeline
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
             echo "📊 Database setup will be skipped"
           else
             echo "first_deployment=true" >> $GITHUB_OUTPUT
-            echo "needs_db_setup=true" >> $GITHUB_OUTPUT 
+            echo "needs_db_setup=true" >> $GITHUB_OUTPUT
             echo "🆕 First deployment detected"
             echo "📊 Database setup will be performed"
           fi
@@ -64,7 +64,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa ~/.ssh/db_rsa
           ssh-keyscan -H ${{ secrets.DEV_EC2_HOST }} >> ~/.ssh/known_hosts
           
-          # Create SSH config for cleaner connections
+          # Create SSH config for cleaner connections       
           cat >> ~/.ssh/config << EOF
           Host bastion
               HostName ${{ secrets.DEV_EC2_HOST }}
@@ -105,7 +105,7 @@ jobs:
           ssh -i ~/.ssh/id_rsa ${{ secrets.DEV_EC2_USER }}@${{ secrets.DEV_EC2_HOST }} '
             ssh -i ~/.ssh/db_rsa -o StrictHostKeyChecking=no ${{ secrets.DEV_DB_EC2_USER }}@${{ secrets.DEV_DB_EC2_HOST }} "
               set -e
-              echo '\''🔄 Updating system packages...'\'' 
+              echo '\''🔄 Updating system packages...'\''
               sudo apt update && sudo apt upgrade -y
               
               echo '\''📦 Installing MySQL server...'\''
@@ -407,7 +407,7 @@ jobs:
             echo "WorkingDirectory=${{ secrets.DEV_APP_DIR }}" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "ExecStart=/usr/bin/npm start" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "Restart=always" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
-            echo "Environment=NODE_ENV=development" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
+            echo "Environment=NODE_ENV=production" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "EnvironmentFile=${{ secrets.DEV_APP_DIR }}/.env" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "StandardOutput=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
             echo "StandardError=syslog" | sudo tee -a /etc/systemd/system/${{ secrets.DEV_SERVICE_NAME }}.service
@@ -473,7 +473,8 @@ jobs:
             fi
             
             echo "✅ Services started/restarted successfully"
-
+          '   
+      
       - name: Cleanup SSH key
         if: always()
         run: rm -f ~/.ssh/id_rsa
