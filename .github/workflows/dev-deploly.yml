@@ -64,7 +64,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa ~/.ssh/db_rsa
           ssh-keyscan -H ${{ secrets.DEV_EC2_HOST }} >> ~/.ssh/known_hosts
           
-          # Create SSH config for cleaner connections
+          # Create SSH config for cleaner connections       
           cat >> ~/.ssh/config << EOF
           Host bastion
               HostName ${{ secrets.DEV_EC2_HOST }}
