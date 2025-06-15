@@ -89,7 +89,7 @@ For complete production deployment instructions, see our comprehensive guides:
 | Resource | Description |
 |----------|-------------|
 | [📖 **Deployment Guide**](./docs/deployment/deployment.md) | Complete step-by-step deployment documentation |
-| [🖥️ **Interactive Guide**](./docs/deployment/document.html) | Visual deployment interface with clickable steps |
+| [🖥️ **Interactive Guide**](https://managementdoc.netlify.app/document.html) | Visual deployment interface with clickable steps |
 
 ### Quick Deploy
 
