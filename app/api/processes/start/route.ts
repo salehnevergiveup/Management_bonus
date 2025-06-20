@@ -234,10 +234,7 @@ async function startProcess(auth: any, fromDate: Date, toDate: Date, accounts: a
       processId,  
       auth.role
     );
-    
-    console.log(`[Process ${processId}] Request data prepared`);
-    console.log(`[Process ${processId}] Calling external service with prepared headers`);
-    
+
     // making request to selenium to start the process  
     console.log(`${process.env.EXTERNAL_APP_URL}start-process`);
     const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}start-process`, {
