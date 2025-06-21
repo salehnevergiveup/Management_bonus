@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     }
     
     const userId = verification.userId;
-    const processId = "b0689856-e5be-46f1-bfa9-cad94272c44f";
+    const processId = verification.processId ?? "";
     const body = await request.json();
     
     insertTurnoverData(processId, body); 
@@ -59,7 +59,7 @@ async function insertTurnoverData(processId: string, body: any) {
         if (!processId) {
           throw new Error("Missing process ID");
         }
-        
+        console.log("this is the process id " + processId);
         if (agentData.accounts && agentData.accounts.data) {
           for (const username in agentData.accounts.data) {
             const turnovers = agentData.accounts.data[username];
@@ -130,7 +130,7 @@ async function insertTurnoverData(processId: string, body: any) {
 
       await tx.userProcess.update({
         where: { id: processId },
-        data: { status: ProcessStatus.PROCESSING }
+        data: { status: ProcessStatus.PENDING}
       });
 
       if (exchangeRatePromises.length > 0) {
