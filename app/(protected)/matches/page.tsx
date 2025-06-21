@@ -588,6 +588,8 @@ const updateSingleMatch = (data: any) => {
       switch (action) {
         case 'resume':
           endpoint = `/api/processes/${match.process_id}/resume`;
+          console.log("=".repeat(20));  
+
           if (selectedMatches.length > 0) {
             // Get full match data for selected matches
             const selectedMatchData: any[] = matches
@@ -605,8 +607,10 @@ const updateSingleMatch = (data: any) => {
                 currency: m.currency,
                 bonus_id: m.bonus_id
               }));
+
               
-            if (selectedMatchData.length !== 0) {
+              
+            if (selectedMatchData.length == 0) {
               toast.error("No valid matches selected for resume action");
               return;
             }
