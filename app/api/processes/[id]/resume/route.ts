@@ -75,7 +75,7 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
     await prisma.userProcess.update({
       where: {id: processId},
       data: {
-        status: ProcessStatus.PROCESSING //change it later
+        status: ProcessStatus.PENDING //change it later
       }
     });
     
