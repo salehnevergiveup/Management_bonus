@@ -171,7 +171,7 @@ export default function AccountTurnoverPage() {
   
       const data = await response.json();
       setAccountTurnovers(data.data.accountTurnovers);
-      setExchangeRates(data.data.exchangeRates)
+      setExchangeRates(data.data.exchangeRates);
       
     } catch (error) {
       console.error("Error fetching account turnovers:", error);
