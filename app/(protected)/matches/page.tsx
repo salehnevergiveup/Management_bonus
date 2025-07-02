@@ -588,7 +588,6 @@ const updateSingleMatch = (data: any) => {
       switch (action) {
         case 'resume':
           endpoint = `/api/processes/${match.process_id}/resume`;
-          console.log("=".repeat(20));  
 
           if (selectedMatches.length > 0) {
             // Get full match data for selected matches
