@@ -37,8 +37,6 @@ export async function GET(request: Request,  { params }: { params: Promise<{ id:
       where.status = statusFilter
     }
 
-    console.log("Fetching matches with where clause:", JSON.stringify(where, null, 2))
-
     // Fetch matches for the process
     const matches = await prisma.match.findMany({
       where,
@@ -54,8 +52,6 @@ export async function GET(request: Request,  { params }: { params: Promise<{ id:
         created_at: "desc",
       },
     })
-
-    console.log(`Found ${matches.length} matches for process ${processId}`)
 
     return NextResponse.json({
       success: true,

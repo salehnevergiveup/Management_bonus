@@ -4,10 +4,8 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(request: Request) {
   try {
-    console.log("Batch export API called")
 
     const auth = await SessionValidation()
-    console.log("Auth result:", !!auth)
 
     if (!auth) {
       return NextResponse.json({ error: "Unauthenticated request" }, { status: 401 })
@@ -16,11 +14,6 @@ export async function POST(request: Request) {
     let body
     try {
       body = await request.json()
-      console.log("Request body received:", {
-        processIdsCount: body.processIds?.length,
-        format: body.format,
-        filename: body.filename,
-      })
     } catch (parseError) {
       console.error("Error parsing request body:", parseError)
       return NextResponse.json({ error: "Invalid request body format" }, { status: 400 })
@@ -32,8 +25,6 @@ export async function POST(request: Request) {
       console.error("Invalid processIds:", processIds)
       return NextResponse.json({ error: "No process IDs provided or invalid format" }, { status: 400 })
     }
-
-    console.log(`Processing ${processIds.length} processes for ${format} export`)
 
     // Fetch all processes
     const processes = await prisma.userProcess.findMany({
@@ -49,8 +40,6 @@ export async function POST(request: Request) {
         },
       },
     })
-
-    console.log(`Found ${processes.length} processes`)
 
     if (processes.length === 0) {
       return NextResponse.json({ error: "No processes found with the provided IDs" }, { status: 404 })
@@ -83,8 +72,6 @@ export async function POST(request: Request) {
       },
       orderBy: [{ process_id: "asc" }, { created_at: "desc" }],
     })
-
-    console.log(`Found ${matches.length} matches`)
 
     if (matches.length === 0) {
       return NextResponse.json({ error: "No successful matches found for the selected processes" }, { status: 404 })

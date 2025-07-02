@@ -41,8 +41,7 @@ interface VerificationMethodFormProps {
 const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFormProps) => {
   const [verificationMethod, setVerificationMethod] = useState("")
   const { lang } = useLanguage()
-  console.log(data);  
-  console.log(data.data)
+ 
   // Validate required properties at runtime
   useEffect(() => {
     if (!data.data.options) {
@@ -85,7 +84,7 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
         throw new Error(t("failed_submit_verification_method", lang))
       }
       const result = await res.json()
-      console.log(t("verification_method_submitted_successfully", lang), result)
+
       onClose()
     } catch (error) {
       console.error(t("error_submitting_verification_method", lang), error)
@@ -112,7 +111,6 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
         throw new Error(t("failed_submit_verification_method", lang))
       }
       const result = await res.json()
-      console.log(t("verification_method_submitted_successfully", lang), result)
       onClose()
     } catch (error) {
       console.error(t("error_submitting_verification_method", lang), error)
@@ -120,7 +118,6 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
   }
 
   const handleTimeout = () => {
-    console.log(t("verification_method_form_timed_out", lang), data.threadId ?? data.data.thread_id)
     onClose()
   }
 

@@ -15,7 +15,6 @@ const Timer = ({ seconds, onTimeout }: { seconds: number; onTimeout: () => void 
   const { lang } = useLanguage()
 
   useEffect(() => {
-    console.log("Timer initialized with seconds:", seconds)
 
     if (timeLeft <= 0) {
       onTimeout()
@@ -94,8 +93,6 @@ const ConfirmTransferDialog = ({
   const [showInfoDialog, setShowInfoDialog] = useState(false)
   const { lang, setLang } = useLanguage()
 
-  console.log("ConfirmTransferDialog rendering with data:", data)
-
   // Handle both data formats - direct props and nested data
   const threadId = data.threadId || data.data?.thread_id
   const processId = data.processId || data.process_id || data.data?.process_id
@@ -119,25 +116,20 @@ const ConfirmTransferDialog = ({
   if (data.data?.timeout !== undefined) {
     // Use directly without dividing by 1000
     timeout = Number(data.data.timeout)
-    console.log("Using timeout from data.data:", timeout)
   } else if (data.timeout !== undefined) {
     // Use directly without dividing by 1000
     timeout = Number(data.timeout)
-    console.log("Using timeout directly from data:", timeout)
   }
 
   // If no timeout specified or invalid (0 or NaN), use a default
   if (!timeout || isNaN(timeout) || timeout <= 0) {
     timeout = 120 // Default 2 minutes
-    console.log("Using default timeout:", timeout)
   }
 
   const title = data.data?.title || data.title || t("confirm_action", lang)
 
   const handleConfirm = async () => {
-    console.log("Confirm button clicked")
     setIsSubmitting(true)
-    console.log("p".repeat(200), id)
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -165,7 +157,6 @@ const ConfirmTransferDialog = ({
   }
 
   const handleReject = async () => {
-    console.log("Reject button clicked")
     setIsSubmitting(true)
     try {
       const response = await fetch(endpoint, {
@@ -194,23 +185,12 @@ const ConfirmTransferDialog = ({
   }
 
   const handleTimeout = () => {
-    console.log(t("confirmation_dialog_timed_out", lang), threadId)
     onClose()
   }
 
   if (!isOpen) {
-    console.log(t("dialog_not_open", lang))
     return null
   }
-
-  console.log(
-    t("rendering_dialog", lang),
-    title,
-    t("message_preview", lang),
-    messagePreview,
-    t("timeout", lang),
-    timeout,
-  )
 
   return (
     <>

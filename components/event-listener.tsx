@@ -141,7 +141,7 @@ const SSEListener = () => {
     });
 
     eventSource.onerror = (error) => {
-      console.log('EventSource failed:', error);
+      console.error('EventSource failed:', error);
     };
 
     return () => {

@@ -85,7 +85,6 @@ export default function EditUserPage() {
   const handleSubmit = async (formData: any) => {
     setLoading(true)
     try {
-      console.log(formData); 
       const res = await fetch(`/api/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

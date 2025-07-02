@@ -59,7 +59,6 @@ async function insertTurnoverData(processId: string, body: any) {
         if (!processId) {
           throw new Error("Missing process ID");
         }
-        console.log("this is the process id " + processId);
         if (agentData.accounts && agentData.accounts.data) {
           for (const username in agentData.accounts.data) {
             const turnovers = agentData.accounts.data[username];
@@ -79,9 +78,7 @@ async function insertTurnoverData(processId: string, body: any) {
               }
             }
           }
-        } else {
-          console.log(`Warning: Agent ${agentKey} missing accounts.data structure`);
-        }
+        } 
       }
       
       await Promise.all(agentAccountPromises);
@@ -105,7 +102,6 @@ async function insertTurnoverData(processId: string, body: any) {
             });
             
             if (existingRate) {
-              console.log(`💱 Updating Exchange Rate | ${fromCurrency} ➡ ${toCurrency}: ${rateValue}`);
               exchangeRatePromises.push(
                 tx.exchangeRate.update({
                   where: { id: existingRate.id },
@@ -113,7 +109,6 @@ async function insertTurnoverData(processId: string, body: any) {
                 })
               );
             } else {
-              console.log(`💱 Creating Exchange Rate | ${fromCurrency} ➡ ${toCurrency}: ${rateValue}`);
               exchangeRatePromises.push(
                 tx.exchangeRate.create({
                   data: {
@@ -138,7 +133,6 @@ async function insertTurnoverData(processId: string, body: any) {
       }
 
       if (accountTurnoverData.length > 0) {
-        console.log(`Inserting ${accountTurnoverData.length} account turnover records...`);
         
         const chunkSize = 1000;
         for (let i = 0; i < accountTurnoverData.length; i += chunkSize) {
@@ -146,14 +140,12 @@ async function insertTurnoverData(processId: string, body: any) {
           await tx.accountTurnover.createMany({
             data: chunk,
           });
-          console.log(`Inserted chunk ${Math.floor(i/chunkSize) + 1}/${Math.ceil(accountTurnoverData.length/chunkSize)}`);
         }
       }
     }, {
       timeout: 60000, 
     });
      
-    console.log('Account turnover and exchange rate processing completed successfully');
   } catch (error) {
     console.error('Error in background processing:', error);
     throw error;

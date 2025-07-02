@@ -23,7 +23,6 @@ export async function PUT(request: Request){
         {status: 202} 
     )
  }catch(error) {  
-    console.log(error); 
     return NextResponse.json( 
         {
             Success: false,

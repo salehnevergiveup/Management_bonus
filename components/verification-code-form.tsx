@@ -59,12 +59,10 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
       })
       if (!res.ok) {
         const error = await res.json()
-        console.log(error)
         throw new Error(t("failed_submit_verification_code", lang))
       }
 
       const result = await res.json()
-      console.log(t("verification_code_submitted_successfully", lang), result)
       onClose()
     } catch (error) {
       console.error(t("error_submitting_verification_code", lang), error)
@@ -88,7 +86,6 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
       })
       if (!res.ok) {
         const error = await res.json()
-        console.log(error)
         throw new Error(t("failed_submit_verification_code", lang))
       }
 
@@ -100,7 +97,6 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
   }
 
   const handleTimeout = () => {
-    console.log(t("verification_form_timed_out", lang), data.threadId ?? data.data.thread_id)
     onClose()
   }
 

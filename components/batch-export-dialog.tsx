@@ -107,10 +107,6 @@ export function BatchExportDialog({ open, onOpenChange, processes, onExportSucce
       const filename = generateFilename()
       setExportedFilename(filename)
 
-      console.log("Starting export with processIds:", selectedProcesses)
-      console.log("Export format:", exportFormat)
-      console.log("Filename:", filename)
-
       try {
         const response = await fetch(`/api/history/processes/batch-export`, {
           method: "POST",
@@ -124,14 +120,12 @@ export function BatchExportDialog({ open, onOpenChange, processes, onExportSucce
           }),
         })
 
-        console.log("Response status:", response.status)
-        console.log("Response status text:", response.statusText)
+
 
         // Try to get more details from the response
         let responseText = ""
         try {
           responseText = await response.text()
-          console.log("Response body:", responseText.substring(0, 500)) // Log first 500 chars to avoid huge logs
         } catch (textError) {
           console.error("Error reading response text:", textError)
         }

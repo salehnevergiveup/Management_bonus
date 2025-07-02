@@ -289,8 +289,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
             }
           });
           
-        } else {
-          console.log(`Transfer account ${player.transfer_account_id} already connected to process ${processId} with currency ${currency}`);
         }
       });
       
@@ -380,7 +378,6 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
           }
         } else {
           failCount++;
-          console.log(`No player found for username: ${match.username} or missing currency`);
         }
       }
   

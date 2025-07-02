@@ -153,7 +153,6 @@ const VerificationMethodForm = ({ data, onClose }: { data: any; onClose: () => v
         throw new Error(t("failed_submit_verification_method", lang))
       }
       const result = await res.json()
-      console.log(t("verification_method_submitted", lang), result)
       onClose()
     } catch (error) {
       console.error(t("error_submitting_verification_method", lang), error)
@@ -193,7 +192,6 @@ const VerificationMethodForm = ({ data, onClose }: { data: any; onClose: () => v
 const VerificationForm = ({ data, onClose }: { data: any; onClose: () => void }) => {
   const { lang } = useLanguage()
   const [code, setCode] = useState("")
-  console.log(t("form_data_received", lang), data)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -212,7 +210,6 @@ const VerificationForm = ({ data, onClose }: { data: any; onClose: () => void })
         throw new Error(t("failed_submit_verification_code", lang))
       }
       const result = await res.json()
-      console.log(t("verification_code_submitted", lang), result)
       onClose()
     } catch (error) {
       console.error(t("error_submitting_verification_code", lang), error)
@@ -255,7 +252,6 @@ const EventForm = ({ data, isOpen, onClose }: EventFormProps) => {
   const { lang } = useLanguage()
 
   const handleTimeout = () => {
-    console.log(t("form_timed_out", lang), data.thread_id)
     onClose()
   }
 

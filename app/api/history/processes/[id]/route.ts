@@ -31,37 +31,31 @@ export async function DELETE(request: Request,  { params }: { params: Promise<{ 
     const deletedTurnovers = await prisma.accountTurnover.deleteMany({
       where: { process_id: processId },
     })
-    console.log(`Deleted ${deletedTurnovers.count} account turnovers`)
 
     // 2. Delete matches
     const deletedMatches = await prisma.match.deleteMany({
       where: { process_id: processId },
     })
-    console.log(`Deleted ${deletedMatches.count} matches`)
 
     // 3. Delete process transfer accounts
     const deletedTransferAccounts = await prisma.userProcess_TransferAccount.deleteMany({
       where: { user_process_id: processId },
     })
-    console.log(`Deleted ${deletedTransferAccounts.count} process transfer accounts`)
 
     // 4. Delete process progress logs
     const deletedProgressLogs = await prisma.processProgress.deleteMany({
       where: { process_id: processId },
     })
-    console.log(`Deleted ${deletedProgressLogs.count} process progress logs`)
 
     // 5. Delete agent accounts
     const deletedAgentAccounts = await prisma.agentAccount.deleteMany({
       where: { process_id: processId },
     })
-    console.log(`Deleted ${deletedAgentAccounts.count} agent accounts`)
 
     // 6. Finally delete the process itself
     const deletedProcess = await prisma.userProcess.delete({
       where: { id: processId },
     })
-    console.log(`Deleted process: ${deletedProcess.id}`)
 
     return NextResponse.json({
       success: true,

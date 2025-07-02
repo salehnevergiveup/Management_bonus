@@ -28,10 +28,6 @@ export async function GET(request: Request) {
       distinct: ["status"],
     })
 
-    console.log(
-      "Available status values in database:",
-      distinctStatuses.map((s) => s.status),
-    )
 
     // Build the where clause - IMPORTANT: We're not filtering by status initially
     // to see what data is actually in the database
@@ -49,11 +45,8 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log("Initial where clause (no status filter):", JSON.stringify(where, null, 2))
-
     // Count total records for pagination without status filter
     const totalWithoutStatusFilter = await prisma.userProcess.count({ where })
-    console.log("Total processes without status filter:", totalWithoutStatusFilter)
 
     // Fetch a sample of processes to see what's in the database
     const sampleProcesses = await prisma.userProcess.findMany({
@@ -67,8 +60,6 @@ export async function GET(request: Request) {
         process_name: true,
       },
     })
-
-    console.log("Sample processes in database:", sampleProcesses)
 
     // Now let's try to filter by status
     // We'll try both uppercase and lowercase versions of common status values
@@ -104,11 +95,8 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log("Final where clause with status filter:", JSON.stringify(where, null, 2))
-
     // Count total records for pagination with status filter
     const total = await prisma.userProcess.count({ where })
-    console.log("Total processes with status filter:", total)
 
     // Fetch processes with user data
     const processes = await prisma.userProcess.findMany({
@@ -135,7 +123,6 @@ export async function GET(request: Request) {
       take: limit,
     })
 
-    console.log(`Found ${processes.length} processes with status filter`)
     if (processes.length > 0) {
       console.log("Sample process:", {
         id: processes[0].id,
@@ -154,11 +141,6 @@ export async function GET(request: Request) {
       },
       distinct: ["status"],
     })
-
-    console.log(
-      "Available match status values:",
-      matchStatuses.map((s) => s.status),
-    )
 
     // Try to find success matches with various possible status values
     const possibleMatchStatusValues = ["success", "SUCCESS", "Success"]

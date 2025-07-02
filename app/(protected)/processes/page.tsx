@@ -190,7 +190,6 @@ export default function ProcessManagementPage() {
       if (!response.ok) throw new Error("Failed to fetch agent accounts");
       
       const data = await response.json();
-      console.log(data.data)
       setAgentAccounts(data.data);
     } catch (error) {
       console.error(error);

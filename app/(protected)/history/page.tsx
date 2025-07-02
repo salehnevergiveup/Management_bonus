@@ -92,7 +92,6 @@ export default function HistoryDataPage() {
       queryParams.append("status", statusFilter !== "all" ? statusFilter : "")
       queryParams.append("search", searchTerm)
 
-      console.log("Fetching with params:", queryParams.toString())
       const response = await fetch(`/api/history/processes?${queryParams.toString()}`)
 
       if (!response.ok) {
@@ -100,8 +99,6 @@ export default function HistoryDataPage() {
       }
 
       const data = await response.json()
-      console.log("Fetched data:", data)
-
       if (data.success) {
         setProcesses(data.data)
         setFilteredProcesses(data.data)

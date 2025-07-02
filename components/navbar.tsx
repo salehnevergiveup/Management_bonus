@@ -42,7 +42,6 @@ const { lang, setLang } = useLanguage()
             throw new Error("Failed to fetch notifications");
           } 
           const data  = await res.json();
-          console.log(data); 
           if(!data?.count ==  undefined) {  
             throw new Error("Failed to fetch the count");
           }

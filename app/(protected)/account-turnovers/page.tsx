@@ -171,12 +171,8 @@ export default function AccountTurnoverPage() {
   
       const data = await response.json();
       setAccountTurnovers(data.data.accountTurnovers);
-      setExchangeRates(data.data.exchangeRates);
+      setExchangeRates(data.data.exchangeRates)
       
-      // Log process IDs for debugging
-      if (data.data.accountTurnovers && data.data.accountTurnovers.length > 0) {
-        console.log("Process IDs:", data.data.accountTurnovers.map((t: any) => t.process_id));
-      }
     } catch (error) {
       console.error("Error fetching account turnovers:", error);
       toast.error("Failed to fetch account turnovers");

@@ -173,7 +173,6 @@ export default function RequestManagementPage() {
     if (request.model_name === "Match" && request.action === "create") {
       try {
         const message = request.message;
-        console.log("Checking if create match request, message:", message);
         
         // Check for various patterns that indicate match data
         if (message.includes('matches') && 
@@ -202,7 +201,6 @@ export default function RequestManagementPage() {
 
   // Parse create match request data
   const parseCreateMatchRequest = (message: string): CreateMatchRequestData | null => {
-    console.log("Raw message:", message);
     
     try {
       // First, try direct parse
@@ -212,7 +210,7 @@ export default function RequestManagementPage() {
       }
     } catch (e) {
       // Parsing failed, continue with other methods
-      console.log("Direct parse failed, trying other methods");
+      console.error("Direct parse failed, trying other methods");
     }
 
     // If the message appears to be a stringified JSON
@@ -229,14 +227,13 @@ export default function RequestManagementPage() {
           .replace(/\\r/g, '\r')
           .replace(/\\t/g, '\t');
         
-        console.log("Cleaned message:", cleaned);
         
         const data = JSON.parse(cleaned);
         if (data.matches && Array.isArray(data.matches)) {
           return data;
         }
       } catch (e) {
-        console.log("Stringified JSON parse failed:", e);
+        console.error("Stringified JSON parse failed:", e);
       }
     }
 
@@ -253,7 +250,7 @@ export default function RequestManagementPage() {
         }
       }
     } catch (e) {
-      console.log("JSON extraction failed:", e);
+      console.error("JSON extraction failed:", e);
     }
 
     // Final attempt: Create a test object to see if the message has the right structure
@@ -284,13 +281,13 @@ export default function RequestManagementPage() {
                 reason: reason
               };
             } catch (e) {
-              console.log("Manual construction failed:", e);
+              console.error("Manual construction failed:", e);
             }
           }
         }
       }
     } catch (e) {
-      console.log("Final parsing attempt failed:", e);
+      console.error("Final parsing attempt failed:", e);
     }
 
     return null;
@@ -298,10 +295,8 @@ export default function RequestManagementPage() {
 
   // Handle create match request acceptance
   const handleCreateMatchAcceptance = async (request: Request) => {
-    console.log("Handling create match acceptance for request:", request);
     
     const matchData = parseCreateMatchRequest(request.message);
-    console.log("Parsed match data:", matchData);
     
     if (!matchData || !matchData.matches || matchData.matches.length === 0) {
       toast.error("Invalid match data in request");
@@ -325,8 +320,6 @@ export default function RequestManagementPage() {
       }
 
       // Then, create the matches
-      console.log("Sending matches to create:", matchData.matches);
-      
       const createResponse = await fetch(`/api/matches/create-matches`, {
         method: "POST",
         headers: {
@@ -924,21 +917,12 @@ export default function RequestManagementPage() {
                 <div>
                   <Label className="text-sm text-muted-foreground">{t("message", lang)}</Label>
                   {(() => {
-                    console.log("=== Debug Info ===")
-                    console.log("Request Model Name:", selectedRequest.model_name)
-                    console.log("Request Action:", selectedRequest.action)
-                    console.log("Request Model ID:", selectedRequest.model_id)
-                    console.log("Message type:", typeof selectedRequest.message)
-                    console.log("Message content:", selectedRequest.message)
-                    console.log("Is Create Match Request:", isCreateMatchRequest(selectedRequest))
-
                     // Try different approaches to parse the message
                     let parsedData = null
 
                     // Approach 1: Direct parse attempt
                     if (isCreateMatchRequest(selectedRequest)) {
                       parsedData = parseCreateMatchRequest(selectedRequest.message)
-                      console.log("Parse result:", parsedData)
                     }
 
                     // Approach 2: If parsing failed, try manual extraction
@@ -949,13 +933,12 @@ export default function RequestManagementPage() {
                         const matchesMatch = messageStr.match(/\{"matches":\[(.*?)\],"reason":"(.*?)"\}/)
 
                         if (matchesMatch) {
-                          console.log("Found matches via regex")
                           // Try to create a clean JSON string and parse it
                           const cleanJson = matchesMatch[0].replace(/\\"/g, '"')
                           parsedData = JSON.parse(cleanJson)
                         }
                       } catch (e) {
-                        console.log("Manual extraction failed:", e)
+                        console.error("Manual extraction failed:", e)
                       }
                     }
 
