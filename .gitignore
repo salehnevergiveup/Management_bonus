@@ -41,4 +41,4 @@ yarn-error.log*
 next-env.d.ts
 
 # Ignore the entire data folder
-prisma/seeders/data/
+# prisma/seeders/data/
