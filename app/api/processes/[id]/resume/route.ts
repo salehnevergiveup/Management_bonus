@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 // Simple in-memory rate limiter
 const rateLimiter = {
   lastRequestTime: 0,
-  minInterval: 10000, // 10 seconds in milliseconds
+  minInterval: 300000, // 10 seconds in milliseconds
   
   canMakeRequest(): boolean {
     const now = Date.now();
