@@ -120,7 +120,6 @@ const [newStatus, setNewStatus] = useState("");
         throw new Error("Failed to fetch matches");
       }
       const data = await response.json();
-      console.log(data.data);
       setMatches(data.data);
       
       // Extract unique bonuses from matches
@@ -196,10 +195,7 @@ useEffect(() => {
   // Listen for match status updates
   eventSourceRef.current.addEventListener(Events.MATCHES_STATUS, (event) => {
     try {
-      console.log("Event received from SSE");
-      const data = JSON.parse(event.data);
-      console.log("Status update data:", data);
-      
+      const data = JSON.parse(event.data);      
       // Handle match updates - note we're using data.id not data.matchId
       if (data.id) {
         updateSingleMatch(data);
@@ -223,11 +219,9 @@ useEffect(() => {
 // Update a single match when receiving real-time update
 const updateSingleMatch = (data: any) => {
   if (!data || !data.id) {
-    console.log("Invalid update data received:", data);
     return;
   }
   
-  console.log(`Attempting to update match ID: ${data.id}`);
   
   setMatches(prevMatches => {
     // Find the match index
@@ -235,12 +229,8 @@ const updateSingleMatch = (data: any) => {
     
     // If match not found, return unchanged state
     if (matchIndex === -1) {
-      console.log(`No match found with ID: ${data.id}`);
       return prevMatches;
     }
-    
-    // Log the update details
-    console.log(`Updating match ${data.id} status from ${prevMatches[matchIndex].status} to ${data.status || prevMatches[matchIndex].status}`);
     
     // Create a copy of the matches array
     const newMatches = [...prevMatches];
@@ -461,7 +451,6 @@ const updateSingleMatch = (data: any) => {
                             
     if (needsPermission && !hasPermission(permissionsMap, process.id, action)) {
       // Open request permission dialog
-      console.log("admin");
       setRequestAction(action);
       setRequestProcessId(process.id);
       setRequestMessage("");
@@ -588,6 +577,7 @@ const updateSingleMatch = (data: any) => {
       switch (action) {
         case 'resume':
           endpoint = `/api/processes/${match.process_id}/resume`;
+
           if (selectedMatches.length > 0) {
             // Get full match data for selected matches
             const selectedMatchData: any[] = matches
@@ -605,8 +595,10 @@ const updateSingleMatch = (data: any) => {
                 currency: m.currency,
                 bonus_id: m.bonus_id
               }));
+
               
-            if (selectedMatchData.length !== 0) {
+              
+            if (selectedMatchData.length == 0) {
               toast.error("No valid matches selected for resume action");
               return;
             }
@@ -738,8 +730,6 @@ const updateMatch = async () => {
     status: newStatus
   };
 
-  console.log("status is " + newStatus);
-  
   try {
     const response = await fetch(`/api/matches/${matchToEdit.id}`, {
       method: "PUT",

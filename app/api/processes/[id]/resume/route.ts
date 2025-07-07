@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 // Simple in-memory rate limiter
 const rateLimiter = {
   lastRequestTime: 0,
-  minInterval: 10000, // 10 seconds in milliseconds
+  minInterval: 300000, // 10 seconds in milliseconds
   
   canMakeRequest(): boolean {
     const now = Date.now();
@@ -75,7 +75,7 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
     await prisma.userProcess.update({
       where: {id: processId},
       data: {
-        status: ProcessStatus.PROCESSING //change it later
+        status: ProcessStatus.PENDING //change it later
       }
     });
     
@@ -102,7 +102,6 @@ async function sendDataToResume(authId: string, authRole: string, processId: str
   
   try {
     const data = await ProcessCommand["resume"](authId, processId, matches);
-    console.log(data);
     
     const headers = await preparePythonBackendHeaders(
       authId,

@@ -168,8 +168,6 @@ export async function POST(request: Request) {
           }
       });  
       
-      console.log(newRequest);
-      
       return NextResponse.json({
           data: newRequest,
           success: true,

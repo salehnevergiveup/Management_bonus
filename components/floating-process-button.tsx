@@ -41,7 +41,6 @@ export default function FloatingProcessButton({ position = "right" }: FloatingPr
 
   // Debug function to help track when fetches occur
   const logFetch = (reason: any) => {
-    console.log(`Fetching process count: ${reason}`, new Date().toISOString())
     fetchProcessCount()
   }
 
@@ -54,13 +53,11 @@ export default function FloatingProcessButton({ position = "right" }: FloatingPr
     
     // Event handler for process tracker events
     eventSource.addEventListener(Events.PROGRESS_TRACKER, (event) => {
-      console.log("Progress tracker event received:", event)
       logFetch('progress tracker event')
     })
     
     // Listen for general progress updates
     eventSource.addEventListener('progress', (event) => {
-      console.log("Progress event received:", event)
       logFetch('progress event')
     })
     

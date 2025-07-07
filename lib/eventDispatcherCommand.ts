@@ -136,7 +136,6 @@ const dispatchVerificationCode = async (dispatchData: DispatchDto) => {
 
 const dispatchMatchStatus  = async(dispatchData: DispatchDto ) =>  {  
   try {  
-    console.log("testing matches status event  ")
     const {status, data, eventName}  = dispatchData;
 
     if(!status || !data) {  
@@ -172,8 +171,6 @@ const dispatchMatchStatus  = async(dispatchData: DispatchDto ) =>  {
 
 const dispatchTransferStatus = async (dispatchData: DispatchDto) =>  {  
    try {  
-    console.log("testing transfer account status event  ")
-
          const { data, eventName, processId, status} = dispatchData;
      
          if (!data || !eventName || !status) {
@@ -254,7 +251,6 @@ export const dispatch = async (
       await command[eventKey](dispatchData)
 
     }catch(error) {  
-      console.log("=".repeat(100), eventName)
       ProcessCommand["notify all"](userId, `unable to dispatch the event: ${error}`, NotificationType.ERROR)
     }
 }

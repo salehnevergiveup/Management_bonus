@@ -28,7 +28,6 @@ export async function GET(request: Request) {
       };
         
       sendEvent('connected', { message: 'SSE connection established' });
-      console.log('Registering listener for user:', auth.id);
       const removeListener = eventEmitter.addListener(auth.id, sendEvent);
       const intervalId = setInterval(() => {
         sendEvent('heartbeat', { time: new Date().toISOString() });

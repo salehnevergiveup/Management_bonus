@@ -68,7 +68,6 @@ export function UserForm({
         profile_img: user.profile_img,
       })
       setIsInitialized(true)
-      console.log("Initialized with role_id:", user.role_id)
     }
   }, [user, roles])
 
@@ -78,7 +77,6 @@ export function UserForm({
   }
 
   const handleRoleChange = (value: string) => {
-    console.log("Role changed to:", value)
     setFormData((prev) => ({ ...prev, role_id: value }))
   }
 
@@ -128,8 +126,7 @@ export function UserForm({
   
   // Check if the role_id exists in the roles array
   const roleExists = roles.some(role => role.id === formData.role_id)
-  console.log("Current role_id:", formData.role_id)
-  console.log("Role exists in options:", roleExists)
+
 
   // Don't render the form until it's initialized
   if (isEditMode && !isInitialized) {

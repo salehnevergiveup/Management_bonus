@@ -106,7 +106,6 @@ export async function POST(request: Request) {
       }
     });
     
-    console.log("Found agent accounts:", accounts.length); 
     
     // Check if all requested agent accounts exist
     const foundUsernames = accounts.map(account => account.username);
@@ -131,7 +130,6 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log("active process:", activeProcess)
     if (activeProcess.length !== 0) {
       return NextResponse.json(
         { 
@@ -173,8 +171,6 @@ export async function POST(request: Request) {
         updated_at: new Date()
       }
     });
-    
-    console.log(`Updated ${accountIds.length} agent accounts with process ID ${processId}`);
     
     // Fire and forget: Start the process in the background
     startProcess(auth, fromDate, toDate, accounts, processId).catch(error => {
@@ -234,12 +230,8 @@ async function startProcess(auth: any, fromDate: Date, toDate: Date, accounts: a
       processId,  
       auth.role
     );
-    
-    console.log(`[Process ${processId}] Request data prepared`);
-    console.log(`[Process ${processId}] Calling external service with prepared headers`);
-    
+
     // making request to selenium to start the process  
-    console.log(`${process.env.EXTERNAL_APP_URL}start-process`);
     const externalResponse = await fetch(`${process.env.EXTERNAL_APP_URL}start-process`, {
       method: 'POST',
       headers,
@@ -262,7 +254,6 @@ async function startProcess(auth: any, fromDate: Date, toDate: Date, accounts: a
     }
 
     const responseData = await externalResponse.json();
-    console.log(`[Process ${processId}] External service response:`, responseData);
     
     // Update process status to PROCESSING
     await prisma.userProcess.update({
@@ -270,7 +261,6 @@ async function startProcess(auth: any, fromDate: Date, toDate: Date, accounts: a
       data: { status: ProcessStatus.PROCESSING }
     });
     
-    console.log(`[Process ${processId}] Updated process status to PROCESSING`);
     
     await ProcessCommand["notify all"](auth.id,'Process start successfully!' , NotificationType.ERROR);
     return true;
@@ -282,7 +272,6 @@ async function startProcess(auth: any, fromDate: Date, toDate: Date, accounts: a
     
     try {
       await cleanupProcess(processId);
-      console.log(`[Process ${processId}] Cleanup completed after background process error`);
     } catch (cleanupError) {
       console.error(`[Process ${processId}] Failed to clean up after background process error:`, cleanupError);
     }
@@ -292,13 +281,11 @@ async function startProcess(auth: any, fromDate: Date, toDate: Date, accounts: a
 }
 
 async function cleanupProcess(processId: string) {
-  console.log(`Starting cleanup for process ${processId}`);
   let successFlag = true;
   
   // Step 1: Update agent accounts to remove process - retry up to 3 times
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      console.log(`Attempt ${attempt}: Updating agent accounts for process ${processId}`);
       
       // First update the agent accounts to remove process
       await prisma.agentAccount.updateMany({
@@ -313,7 +300,6 @@ async function cleanupProcess(processId: string) {
         }
       });
       
-      console.log(`Successfully updated agent accounts for process ${processId}`);
       break; 
     } catch (error) {
       console.error(`Attempt ${attempt} failed to update agent accounts:`, error);
@@ -333,7 +319,6 @@ async function cleanupProcess(processId: string) {
   // Even if updating accounts failed, we still try to delete the process
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      console.log(`Attempt ${attempt}: Deleting process ${processId}`);
       
       await prisma.userProcess.delete({
         where: {
@@ -341,7 +326,6 @@ async function cleanupProcess(processId: string) {
         }
       });
       
-      console.log(`Successfully deleted process ${processId}`);
       break; // Success, exit retry loop
     } catch (error) {
       console.error(`Attempt ${attempt} failed to delete process:`, error);
@@ -360,8 +344,6 @@ async function cleanupProcess(processId: string) {
   // Step 3: If process deletion failed, try to update its status instead
   if (!successFlag) {
     try {
-      console.log(`Attempting to mark process ${processId} as failed since deletion failed`);
-      
       await prisma.userProcess.update({
         where: {
           id: processId
@@ -372,14 +354,12 @@ async function cleanupProcess(processId: string) {
         }
       });
       
-      console.log(`Marked process ${processId} as failed`);
     } catch (finalError) {
       console.error(`Failed to even mark process as failed:`, finalError);
     }
     
     // Final verification - double check agent accounts
     try {
-      console.log(`Final verification: Checking if any agent accounts still reference process ${processId}`);
       
       const remainingAccounts = await prisma.agentAccount.findMany({
         where: {
@@ -392,7 +372,6 @@ async function cleanupProcess(processId: string) {
       });
       
       if (remainingAccounts.length > 0) {
-        console.log(`Found ${remainingAccounts.length} accounts still referencing the process, forcing cleanup`);
         
         // Force cleanup one last time
         await prisma.agentAccount.updateMany({
@@ -412,6 +391,5 @@ async function cleanupProcess(processId: string) {
     }
   }
   
-  console.log(`Cleanup process for ${processId} completed with${successFlag ? '' : ' partial'} success`);
   return successFlag;
 }

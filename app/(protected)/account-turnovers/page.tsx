@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Search, DollarSign, RefreshCw } from "lucide-react";
+import { Plus, Search, DollarSign, RefreshCw, Download, FileText } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import toast from "react-hot-toast";
 import { useLanguage } from "@app/contexts/LanguageContext";
 import { t } from "@app/lib/i18n";
-
 
 interface AccountTurnover {
   id: string;
@@ -42,6 +43,16 @@ interface Bonus {
   description: string;
 }
 
+interface ExportBatch {
+  batchNumber: number;
+  startIndex: number;
+  endIndex: number;
+  exported: boolean;
+  exportedAt?: string;
+}
+
+const EXPORT_LIMIT = 100;
+
 export default function AccountTurnoverPage() {
   const { auth, isLoading } = useUser();
   const [accountTurnovers, setAccountTurnovers] = useState<AccountTurnover[]>([]);
@@ -53,11 +64,15 @@ export default function AccountTurnoverPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [exchangeRatesDialogOpen, setExchangeRatesDialogOpen] = useState(false);
   const [createMatchDialogOpen, setCreateMatchDialogOpen] = useState(false);
+  const [csvExportDialogOpen, setCsvExportDialogOpen] = useState(false);
   const [selectedBonus, setSelectedBonus] = useState("");
   const [bonusDetailsDialogOpen, setBonusDetailsDialogOpen] = useState(false);
   const [selectedBonusDetails, setSelectedBonusDetails] = useState<Bonus | null>(null);
+  const [exportBatches, setExportBatches] = useState<ExportBatch[]>([]);
+  const [selectedBatchForExport, setSelectedBatchForExport] = useState<number | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const router = useRouter();
-  const { lang, setLang } = useLanguage()
+  const { lang, setLang } = useLanguage();
 
   // Form state for edit
   const [formUsername, setFormUsername] = useState("");
@@ -74,6 +89,38 @@ export default function AccountTurnoverPage() {
       turnover.currency.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [accountTurnovers, searchTerm]);
+
+  // Calculate export batches based on filtered data
+  const calculateExportBatches = useMemo(() => {
+    const totalRecords = filteredTurnovers.length;
+    const batches: ExportBatch[] = [];
+    
+    for (let i = 0; i < totalRecords; i += EXPORT_LIMIT) {
+      const batchNumber = Math.floor(i / EXPORT_LIMIT) + 1;
+      const startIndex = i;
+      const endIndex = Math.min(i + EXPORT_LIMIT - 1, totalRecords - 1);
+      
+      batches.push({
+        batchNumber,
+        startIndex,
+        endIndex,
+        exported: false
+      });
+    }
+    
+    return batches;
+  }, [filteredTurnovers]);
+
+  // Update export batches when calculated batches change
+  useEffect(() => {
+    setExportBatches(prev => {
+      const newBatches = calculateExportBatches.map(newBatch => {
+        const existingBatch = prev.find(b => b.batchNumber === newBatch.batchNumber);
+        return existingBatch || newBatch;
+      });
+      return newBatches;
+    });
+  }, [calculateExportBatches]);
 
   // Calculate pagination
   const paginatedTurnovers = useMemo(() => {
@@ -126,10 +173,6 @@ export default function AccountTurnoverPage() {
       setAccountTurnovers(data.data.accountTurnovers);
       setExchangeRates(data.data.exchangeRates);
       
-      // Log process IDs for debugging
-      if (data.data.accountTurnovers && data.data.accountTurnovers.length > 0) {
-        console.log("Process IDs:", data.data.accountTurnovers.map((t: any) => t.process_id));
-      }
     } catch (error) {
       console.error("Error fetching account turnovers:", error);
       toast.error("Failed to fetch account turnovers");
@@ -232,6 +275,89 @@ export default function AccountTurnoverPage() {
     }
   };
 
+  // CSV Export Functions
+  const convertToCSV = (data: AccountTurnover[]): string => {
+    const headers = ['ID', 'Username', 'Game', 'Currency', 'Turnover', 'Process ID', 'Created At'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(turnover => [
+        turnover.id,
+        `"${turnover.username}"`,
+        `"${turnover.game}"`,
+        turnover.currency,
+        turnover.turnover,
+        turnover.process_id,
+        new Date(turnover.createdAt).toISOString()
+      ].join(','))
+    ].join('\n');
+    
+    return csvContent;
+  };
+
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportBatch = async (batchNumber: number) => {
+    const batch = exportBatches.find(b => b.batchNumber === batchNumber);
+    if (!batch) {
+      toast.error("Batch not found");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const batchData = filteredTurnovers.slice(batch.startIndex, batch.endIndex + 1);
+      const csvContent = convertToCSV(batchData);
+      const filename = `account_turnovers_batch_${batchNumber}_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      downloadCSV(csvContent, filename);
+      
+      // Mark batch as exported
+      setExportBatches(prev => prev.map(b => 
+        b.batchNumber === batchNumber 
+          ? { ...b, exported: true, exportedAt: new Date().toISOString() }
+          : b
+      ));
+      
+      toast.success(`Batch ${batchNumber} exported successfully (${batchData.length} records)`);
+    } catch (error) {
+      console.error("Error exporting batch:", error);
+      toast.error("Failed to export batch");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportAll = async () => {
+    if (filteredTurnovers.length > 1000) {
+      toast.error("Too many records to export at once. Please use batch export.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const csvContent = convertToCSV(filteredTurnovers);
+      const filename = `account_turnovers_all_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      downloadCSV(csvContent, filename);
+      toast.success(`All ${filteredTurnovers.length} records exported successfully`);
+    } catch (error) {
+      console.error("Error exporting all data:", error);
+      toast.error("Failed to export data");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleViewExchangeRates = () => {
     setExchangeRatesDialogOpen(true);
   };
@@ -244,6 +370,10 @@ export default function AccountTurnoverPage() {
   const handleViewBonusDetails = (bonus: Bonus) => {
     setSelectedBonusDetails(bonus);
     setBonusDetailsDialogOpen(true);
+  };
+
+  const handleOpenCsvExport = () => {
+    setCsvExportDialogOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -284,6 +414,15 @@ export default function AccountTurnoverPage() {
               {t("view_exchange_rates", lang)}
             </Button>
             <Button 
+              onClick={handleOpenCsvExport} 
+              className="w-full sm:w-auto"
+              variant="outline"
+              disabled={filteredTurnovers.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t("export_csv", lang)}
+            </Button>
+            <Button 
               onClick={handleCreateMatch} 
               className="w-full sm:w-auto"
             >
@@ -306,10 +445,11 @@ export default function AccountTurnoverPage() {
                 <SelectValue placeholder="Rows per page" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5  {t("row", lang)}</SelectItem>
-                <SelectItem value="10">10  {t("row", lang)}</SelectItem>
-                <SelectItem value="20">20  {t("row", lang)}</SelectItem>
-                <SelectItem value="50">50  {t("row", lang)}</SelectItem>
+                <SelectItem value="5">5 {t("row", lang)}</SelectItem>
+                <SelectItem value="10">10 {t("row", lang)}</SelectItem>
+                <SelectItem value="20">20 {t("row", lang)}</SelectItem>
+                <SelectItem value="50">50 {t("row", lang)}</SelectItem>
+                <SelectItem value="100">100 {t("row", lang)}</SelectItem>
                 <SelectItem value="all">Show All</SelectItem>
               </SelectContent>
             </Select>
@@ -328,6 +468,12 @@ export default function AccountTurnoverPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            
+            {filteredTurnovers.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                {t("total_records", lang)}: <span className="font-medium">{filteredTurnovers.length}</span>
+              </div>
+            )}
           </div>
 
           <div className="rounded-md border overflow-x-auto">
@@ -345,13 +491,13 @@ export default function AccountTurnoverPage() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                    {t("loading_turnovers", lang)}
+                      {t("loading_turnovers", lang)}
                     </TableCell>
                   </TableRow>
                 ) : paginatedTurnovers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                    {t("no_turnovers", lang)}
+                      {t("no_turnovers", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -376,7 +522,7 @@ export default function AccountTurnoverPage() {
                   <>{t("showing_all", lang)} <span className="font-medium">{filteredTurnovers.length}</span> {t("account_turnovers", lang)}</>
                 ) : (
                   <>
-                     {t("showing", lang)}  <span className="font-medium">{startItem}</span> {t("to", lang)}{" "}{" "}
+                    {t("showing", lang)} <span className="font-medium">{startItem}</span> {t("to", lang)}{" "}
                     <span className="font-medium">{endItem}</span>{" "}
                     {t("of", lang)} <span className="font-medium">{filteredTurnovers.length}</span> {t("account_turnovers", lang)}
                   </>
@@ -404,7 +550,7 @@ export default function AccountTurnoverPage() {
                     {t("previous", lang)}
                   </Button>
                   <span className="px-2 text-sm">
-                  {t("page", lang)}{currentPage} {t("of", lang)} {totalPages}
+                    {t("page", lang)} {currentPage} {t("of", lang)} {totalPages}
                   </span>
                   <Button 
                     variant="outline" 
@@ -431,7 +577,108 @@ export default function AccountTurnoverPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog components remain the same */}
+      {/* CSV Export Dialog */}
+      <Dialog open={csvExportDialogOpen} onOpenChange={setCsvExportDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] w-[95vw] max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {t("export_csv", lang)}
+            </DialogTitle>
+            <DialogDescription>
+              {t("export_description", lang)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {filteredTurnovers.length > EXPORT_LIMIT && (
+              <Alert>
+                <AlertDescription>
+                  {t("large_dataset_warning", lang)} {filteredTurnovers.length} {t("records_found", lang)}. 
+                  {t("batch_export_recommended", lang)} {EXPORT_LIMIT} {t("records_per_batch", lang)}.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Quick Export */}
+              <div className="space-y-3">
+                <h3 className="font-medium">{t("quick_export", lang)}</h3>
+                <div className="space-y-2">
+                  <Button 
+                    onClick={handleExportAll}
+                    disabled={isExporting || filteredTurnovers.length > 1000}
+                    className="w-full"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    {t("export_all_records", lang)} ({filteredTurnovers.length})
+                  </Button>
+                  {filteredTurnovers.length > 1000 && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("too_many_records_use_batch", lang)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Batch Export */}
+              <div className="space-y-3">
+                <h3 className="font-medium">{t("batch_export", lang)}</h3>
+                <ScrollArea className="h-[300px] pr-4">
+                  <div className="space-y-2">
+                    {exportBatches.map((batch) => (
+                      <div 
+                        key={batch.batchNumber} 
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              {t("batch", lang)} {batch.batchNumber}
+                            </span>
+                            {batch.exported && (
+                              <Badge color="success" text={t("exported", lang)} />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {t("records", lang)} {batch.startIndex + 1} - {batch.endIndex + 1} 
+                            ({batch.endIndex - batch.startIndex + 1} {t("items", lang)})
+                          </p>
+                          {batch.exported && batch.exportedAt && (
+                            <p className="text-xs text-muted-foreground">
+                              {t("exported_on", lang)} {formatDate(batch.exportedAt)}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleExportBatch(batch.batchNumber)}
+                          disabled={isExporting}
+                          variant={batch.exported ? "outline" : "default"}
+                        >
+                          <Download className="mr-1 h-3 w-3" />
+                          {batch.exported ? t("re_export", lang) : t("export", lang)}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setCsvExportDialogOpen(false)}
+            >
+              {t("close", lang)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing dialogs remain the same */}
       {/* Exchange Rates Dialog */}
       <Dialog open={exchangeRatesDialogOpen} onOpenChange={setExchangeRatesDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
@@ -453,7 +700,7 @@ export default function AccountTurnoverPage() {
                   {exchangeRates.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="h-24 text-center">
-                      {t("no_exchange_rates", lang)}
+                        {t("no_exchange_rates", lang)}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -519,7 +766,7 @@ export default function AccountTurnoverPage() {
                       {bonuses.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={3} className="h-24 text-center">
-                          {t("no_bonus_methods", lang)}
+                            {t("no_bonus_methods", lang)}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -540,7 +787,7 @@ export default function AccountTurnoverPage() {
                                 className="h-8 px-2"
                                 onClick={() => handleViewBonusDetails(bonus)}
                               >
-                                 {t("details", lang)}
+                                {t("details", lang)}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -554,7 +801,7 @@ export default function AccountTurnoverPage() {
           </div>
           <DialogFooter className="mt-4 sm:mt-6">
             <Button type="button" variant="outline" onClick={() => setCreateMatchDialogOpen(false)}>
-            {t("cancel", lang)}
+              {t("cancel", lang)}
             </Button>
             <Button onClick={createMatch} disabled={!selectedBonus}>{t("confirm", lang)}</Button>
           </DialogFooter>

@@ -44,7 +44,6 @@ export async function PUT(request: Request, {params}: {params: Promise<{id: stri
     )
     
  }catch(error) { 
-  console.log(error); 
    return  NextResponse.json(
     {error: "Unable to rematch the user"} ,  
     {status: 500} 

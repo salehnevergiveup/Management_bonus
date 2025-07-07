@@ -206,7 +206,6 @@ export default function CreateBonusPage() {
         router.push('/bonuses');
       }, 2000);
     } catch (error) {
-      console.log(error);
       toast.error("Unable to create new bonus");
       setIsSubmitting(false);
     }

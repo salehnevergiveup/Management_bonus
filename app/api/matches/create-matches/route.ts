@@ -53,7 +53,6 @@ export async function POST(request: Request) {
     );
 
   } catch (error) {
-    console.log(error);
     return NextResponse.json(
       {
         success: false,

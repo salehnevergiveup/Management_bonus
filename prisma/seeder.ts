@@ -10,6 +10,8 @@ import { AutomationApiKey } from "./seeders/api_key";
 import SeedAgentAccounts from "./seeders/agent_accounts";
 import TruncateSeeder from "./seeders/truncate";
 import SeedBonuses from "./seeders/bonuses";
+import SeedExchangeRate from "./seeders/exchange_rate";
+import SeedUserMatch from "./seeders/user_match";
 
 const seedProduction = async () => {
   console.log("🏭 Running Production Seeders (minimal data)...");
@@ -38,12 +40,14 @@ const seedDevelopment = async () => {
     await SeedAdminUser();
     await SeedManagementUsers();
     await SeedNotifications();
+    await SeedExchangeRate();
     await SeedProcesses();
     await SeedAgentAccounts();
     await SeedTransferAccounts();
     await SeedPlayers();
     await SeedRequests();
     await SeedBonuses();
+    await SeedUserMatch();
     console.log("✅ Development/UAT seeders executed successfully.");
   } catch (error) {
     console.error("❌ Development seeding error:", error);
