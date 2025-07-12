@@ -810,6 +810,7 @@ const updateMatch = async () => {
 
   const canShowProcessAction = (processStatus: string, action: string) => {
     switch (processStatus) {
+      case  ProcessStatus.FAILED:
       case ProcessStatus.PENDING:
         return (action === 'resume' || action === 'rematch' || 
                 action === 'refilter' || action === 'mark-success' || action === 'mark-onhold');
@@ -857,7 +858,7 @@ const updateMatch = async () => {
 
             <Select
               value={pageSize.toString()}
-              onValueChange={(val) => {
+              onValueChange={(val: any) => {
                 setPageSize(Number(val))
                 setCurrentPage(1)
               }}

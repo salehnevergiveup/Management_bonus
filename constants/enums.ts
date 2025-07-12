@@ -19,7 +19,8 @@ export enum Events {
     VERIFICATION_CODE =  "verification_code",
     PROGRESS_TRACKER = "process_tracker",
     MATCHES_STATUS = "matches_status",  
-    TRANSFER_STATUS = "transfer_status"
+    TRANSFER_STATUS = "transfer_status",
+    PROCESS_STATUS = "process_status"
 }
 
 export enum FormType {

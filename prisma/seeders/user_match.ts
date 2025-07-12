@@ -65,7 +65,7 @@ export const SeedUserMatch = async () => {
     });
 
     const transferAccountMap = new Map(
-      transferAccounts.map(account => [account.username, account.id])
+      transferAccounts.map((account: any) => [account.username, account.id])
     );
 
     console.log(`Found ${transferAccounts.length} transfer accounts for mapping`);
