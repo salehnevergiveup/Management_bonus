@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     where: {
       process: {
         status: {
-          in: [ProcessStatus.PENDING]
+          in: [ProcessStatus.PENDING, ProcessStatus.PROCESSING]
         }
       }
     },

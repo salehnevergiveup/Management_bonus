@@ -21,6 +21,8 @@ const seedProduction = async () => {
     await SeedPermissions();
     await SeedRoles();
     await SeedAdminUser();
+    await SeedTransferAccounts();
+    await SeedPlayers();
     await SeedBonuses();
     console.log("✅ Production seeders executed successfully.");
   } catch (error) {

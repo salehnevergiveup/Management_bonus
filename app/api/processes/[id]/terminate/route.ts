@@ -52,28 +52,15 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
     
     const terminateResult = await sendDataToTerminate(auth.id, auth.role, processId);
     
-    if (terminateResult && terminateResult.success) {
-      await prisma.userProcess.update({where:{id: processId}, data: {status:ProcessStatus.PENDING }})
-      return NextResponse.json(
-        {
-          success: true,
-          message: terminateResult.message || "Process terminated successfully",
-          processId: processId,
-          terminatedCount: terminateResult.terminated_count || 0
-        },
-        { status: 200 }
-      );
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          message: terminateResult?.message || "Failed to terminate process",
-          processId: processId
-        },
-        { status: 400 }
-      );
-    }
-    
+    return  NextResponse.json(
+      {
+        success: true,
+        message: "Request has been sent to terminate the process",
+      },
+      {
+      }
+    );  
+
   } catch(error) {
     console.error("Error terminating process:", error);
     
@@ -101,46 +88,39 @@ async function sendDataToTerminate(authId: string, authRole: string, processId: 
     });
     
     if(!externalResponse.ok) {
-      const error = await externalResponse.json().catch(() => ({ message: 'Unknown error' }));
-      
+     
+      if(externalResponse.status  == 409) {  
+        await notificationFunction(authId, "Request is already being processed. Please wait.", NotificationType.ERROR);  
+        return;  
+      }
+ 
+      const error = await externalResponse.json().catch(() => ({ message: 'Unknown error' })); 
+
+      await prisma.userProcess.update({where:{id: processId}, data: {status:ProcessStatus.PROCESSING }}); 
+
       await notificationFunction(
         authId, 
         `Failed to terminate process: ${error.message || error.detail || 'Unknown error'}`, 
-        NotificationType.ERROR
-      );
-      
-      return {
-        success: false,
-        message: error.message || error.detail || 'Failed to terminate process'
-      };
+        NotificationType.ERROR 
+      ); 
+
+      return;  
     }
     
-    const res = await externalResponse.json();
-    
-    
+  
     await notificationFunction(
       authId, 
-      `Process terminated successfully. ${res.terminated_count ? `Terminated ${res.terminated_count} tasks.` : ''}`, 
+      'Process terminated successfully', 
       NotificationType.SUCCESS
     );
     
-    return {
-      success: true,
-      ...res
-    };
-    
+      await prisma.userProcess.update({where:{id: processId}, data: {status:ProcessStatus.PENDING}}); 
   } catch(error) {
-    console.error('Error calling terminate endpoint:', error);
     
     await notificationFunction(
       authId, 
       `Error terminating process: ${error instanceof Error ? error.message : 'Unknown error'}`, 
       NotificationType.ERROR
     );
-    
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error'
-    };
   }
 }

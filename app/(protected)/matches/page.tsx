@@ -811,12 +811,12 @@ const updateMatch = async () => {
   const canShowProcessAction = (processStatus: string, action: string) => {
     switch (processStatus) {
       case ProcessStatus.PENDING:
-        return (action === 'resume' || action === 'rematch' || action === 'terminate' || 
+        return (action === 'resume' || action === 'rematch' || 
                 action === 'refilter' || action === 'mark-success' || action === 'mark-onhold');
       case ProcessStatus.SUCCESS:
-        return (action === 'rematch' || action === 'terminate' || action === 'refilter');
+        return (action === 'rematch' || action === 'refilter');
       case ProcessStatus.PROCESSING:
-        return (action === 'terminate' || action === 'mark-onhold'); 
+        return (action === 'terminate'); 
       default:
         return false;
     }
@@ -1439,26 +1439,26 @@ const updateMatch = async () => {
                           </Tooltip>
                         )}
 
-                        {/* Updated Terminate button with improved tooltip */}
-                        {canShowProcessAction(process.status, "terminate") && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-red-500 hover:text-red-700"
-                                onClick={() => handleProcessAction(process, "terminate")}
-                              >
-                                <Square className="h-4 w-4 mr-1" />
-                                {t("terminate", lang)}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t("terminate_tooltip", lang)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
                       </>
+                    )}
+                    {/* Updated Terminate button with improved tooltip */}
+                    {canShowProcessAction(process.status, "terminate") && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => handleProcessAction(process, "terminate")}
+                          >
+                            <Square className="h-4 w-4 mr-1" />
+                            {t("terminate", lang)}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t("terminate_tooltip", lang)}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </TooltipProvider>
                 </div>
