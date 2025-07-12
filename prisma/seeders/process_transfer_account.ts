@@ -63,7 +63,7 @@ export const SeedTransferProcesses = async () => {
     });
 
     // Sort to prioritize admin's processes first
-    pendingProcesses.sort((a, b) => {
+    pendingProcesses.sort((a: any, b: any) => {
       if (a.user_id === adminUser.id && b.user_id !== adminUser.id) return -1;
       if (a.user_id !== adminUser.id && b.user_id === adminUser.id) return 1;
       return 0;
