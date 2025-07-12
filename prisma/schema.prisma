@@ -244,7 +244,7 @@ model Notification {
   id        String   @id @default(uuid())
   user_id   String?
   user      User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  message   String
+  message   String   @db.Text
   status    String   @default("unread")
   type      String   @default("info")
   createdAt DateTime @default(now())

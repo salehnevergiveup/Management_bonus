@@ -214,6 +214,33 @@ const dispatchTransferStatus = async (dispatchData: DispatchDto) =>  {
   }
 }
 
+ const dispatchProcessStatus = async(dispatchData: DispatchDto ) =>  {  
+  try {  
+    const {status, processId}  = dispatchData;
+
+    if(!status || !processId) {  
+      throw new Error("Missing status or data for the process status")
+    }
+    
+    if(!processId) {  
+      throw new Error("Missing id of the account")
+    }
+    
+    await prisma.userProcess.update({
+      where:{  
+        id: processId
+      },  
+      data:  {  
+        status: status, 
+        updated_at: new Date()
+      }
+    })
+    
+  }catch(error) {  
+    throw new Error(`[dispatchProcessStatus] ${String(error)}`)
+  }
+}
+
 export const dispatch = async (
     processId: string,
     userId: string,
@@ -242,7 +269,8 @@ export const dispatch = async (
       [Events.CONFIRMATION_DIALOG]:async(dispatchData: any) => await dispatchConfirmation(dispatchData),
       [Events.PROGRESS_TRACKER]: async (dispatchData:any) => await dispatchProgress(dispatchData),
       [Events.MATCHES_STATUS]: async (dispatchData: any) => await dispatchMatchStatus(dispatchData),  
-      [Events.TRANSFER_STATUS]: async (dispatchData: any) => await dispatchTransferStatus(dispatchData)
+      [Events.TRANSFER_STATUS]: async (dispatchData: any) => await dispatchTransferStatus(dispatchData),  
+      [Events.PROCESS_STATUS]: async (dispatchData: any) => await dispatchProcessStatus(dispatchData), 
     };
     
     try {  

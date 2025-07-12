@@ -40,7 +40,7 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
     const auth = await SessionValidation();
     if(!auth) {
       return NextResponse.json(
-        {message: "unauthenticated request"},
+        {message: "Unauthenticated request"},
         {status: 401}
       )
     }
@@ -50,39 +50,32 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
     
     if(!processId) {
       return NextResponse.json(
-        {error: "Invalid process id"},
+        {error: "Invalid process ID"},
         {status: 402}
       )
     }
     
     if(!body) {
       return NextResponse.json(
-        {error: "Empty request body"},
+        {error: "Request body is empty"},
         {status: 400}
       )
     }
     
     if(!body.matches) {
       return NextResponse.json(
-        {error: "Matches not found"},
+        {error: "No matches found in request"},
         {status: 400}
       )
     }
     
     sendDataToResume(auth.id, auth.role, processId, body.matches);
     
-    //make sure to immediately to update the process status
-    await prisma.userProcess.update({
-      where: {id: processId},
-      data: {
-        status: ProcessStatus.PENDING //change it later
-      }
-    });
-    
+   
     return NextResponse.json(
       {
         success: true,
-        message: "Process B started",
+        message: "Request has been sent to start the process",
       },
       {
       }
@@ -116,27 +109,38 @@ async function sendDataToResume(authId: string, authRole: string, processId: str
     })
     
     if(!externalResponse.ok) {
-      await prisma.userProcess.update({
-        where: { id: processId },
-        data: { status: ProcessStatus.PENDING }
-      });
       
-      try {
-        const error = await externalResponse.json();
-        await notificationFunction(authId, error, NotificationType.ERROR);
-      } catch {
-        await notificationFunction(authId, "Unknown error from external service", NotificationType.ERROR);
+      const error = await externalResponse.json();  
+
+      if(externalResponse.status === 409) { 
+        await notificationFunction(authId, "Request is already being processed. Please wait.", NotificationType.ERROR);  
+        return;  
       }
+
+      try {
+        await notificationFunction(authId, error.message || error.detail || "External service error", NotificationType.ERROR);
+      } catch {
+        await notificationFunction(authId, "An unknown error occurred with the external service", NotificationType.ERROR);
+      }
+
       return;
     }
     
-    await notificationFunction(authId, "Process data send successfully to automation app", NotificationType.SUCCESS);
+    await notificationFunction(authId, "Process data sent successfully to automation app", NotificationType.SUCCESS);
+
+    await prisma.userProcess.update({
+      where: {id: processId},
+      data: {
+        status: ProcessStatus.PROCESSING
+      }
+    });
+
   } catch(error) {
     await prisma.userProcess.update({
       where: { id: processId },
       data: { status: ProcessStatus.PENDING }
     });
     
-    await notificationFunction(authId, "Unknown error from external service", NotificationType.ERROR);
+    await notificationFunction(authId, "An unknown error occurred with the external service", NotificationType.ERROR);
   }
 }

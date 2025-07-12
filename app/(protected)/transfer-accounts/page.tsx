@@ -495,7 +495,7 @@ export default function TransferAccountManagementPage() {
             </Button>
             <Select
               value={pageSize.toString()}
-              onValueChange={(val) => {
+              onValueChange={(val: any) => {
                 setPageSize(Number(val))
                 setCurrentPage(1)
               }}
@@ -706,7 +706,7 @@ export default function TransferAccountManagementPage() {
               <Label htmlFor="account_type">{t("account_type", lang)}</Label>
               <Select
                 value={formType}
-                onValueChange={(value) => {
+                onValueChange={(value: any) => {
                   setFormType(value)
                   // Reset parent ID when switching to main account
                   if (value === "main_account") {
@@ -817,7 +817,7 @@ export default function TransferAccountManagementPage() {
               <Label htmlFor="edit_account_type">{t("account_type", lang)}</Label>
               <Select
                 value={formType}
-                onValueChange={(value) => {
+                onValueChange={(value: any) => {
                   setFormType(value)
                   // Reset parent ID when switching to main account
                   if (value === "main_account") {
