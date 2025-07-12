@@ -71,14 +71,7 @@ export async function POST(request: Request, {params} : { params: Promise<{ id: 
     
     sendDataToResume(auth.id, auth.role, processId, body.matches);
     
-    //make sure to immediately to update the process status
-    await prisma.userProcess.update({
-      where: {id: processId},
-      data: {
-        status: ProcessStatus.PENDING //change it later
-      }
-    });
-    
+   
     return NextResponse.json(
       {
         success: true,
