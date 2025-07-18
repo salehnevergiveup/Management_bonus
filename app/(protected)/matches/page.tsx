@@ -584,7 +584,7 @@ const updateSingleMatch = (data: any) => {
               .filter(m => 
                 selectedMatches.includes(m.id) && 
                 m.transfer_account_id !== null && 
-                m.status.toLowerCase() == "pending"
+                 (m.status.toLowerCase() == "pending" || m.status.toLowerCase() == "failed")
               )
               .map(m => ({
                 id: m.id,
