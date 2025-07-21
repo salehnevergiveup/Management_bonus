@@ -573,9 +573,12 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
             
             currencies.forEach(currency => {
               // Calculate total amount for this currency
-              const totalAmount = subAccountMatches
-                .filter(match => match.currency === currency)
-                .reduce((sum, match) => sum + match.amount, 0);
+              const totalAmount = parseFloat(
+                                    subAccountMatches
+                                      .filter(match => match.currency === currency)
+                                      .reduce((sum, match) => sum + match.amount, 0)
+                                      .toFixed(2)
+                                  );
               
               if (!walletsByCurrency[currency]) {
                 walletsByCurrency[currency] = [];
@@ -641,7 +644,7 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
                 // Each match becomes its own transfer with its own ID
                 walletsByCurrency[currency].push({
                   account: match.username,
-                  amount: match.amount,
+                  amount:  parseFloat(match.amount.toFixed(2)),
                   id: match.id 
                 });
               });
