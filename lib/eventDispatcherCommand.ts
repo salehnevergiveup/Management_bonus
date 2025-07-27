@@ -3,7 +3,6 @@ import { DispatchDto } from "@/types/dispatch.type"
 import {prisma} from "@/lib/prisma";
 import { eventEmitter } from "./eventemitter";
 import ProcessCommand from "./processCommand";
-import { stat } from "fs";
 
 const saveToDatabase =  async (dispatchData: DispatchDto) => {
   const {id} = await prisma.processProgress.create({  
@@ -143,6 +142,11 @@ const dispatchMatchStatus  = async(dispatchData: DispatchDto ) =>  {
     }
     
     const id = data.id
+    let commit = null;  
+
+    if(data["commit"]){  
+      commit = data["commit"]
+    }
 
     if(!id) {  
       throw new Error("Missing id of the account")
@@ -154,6 +158,7 @@ const dispatchMatchStatus  = async(dispatchData: DispatchDto ) =>  {
       },  
       data:  {  
         status: status, 
+        commit: commit,  
         updated_at: new Date()
       }
     })
