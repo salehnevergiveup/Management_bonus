@@ -32,6 +32,12 @@ import {
 import toast from "react-hot-toast";
 import CreateMatchDialog from "@components/create-match-dialog";
 
+// Import new components
+import SearchFilters from "@/components/matches/search-filters";
+import SelectionControls from "@/components/matches/selection-controls";
+import PaginationControls from "@/components/matches/pagination-controls";
+import MatchesTabs from "@/components/matches/matches-tabs";
+
 interface TransferAccount {
   id: string;
   username: string;
@@ -69,14 +75,16 @@ interface Match {
 export default function MatchManagementPage() {
   const { auth, isLoading } = useUser();
   const [matches, setMatches] = useState<Match[]>([]);
-  const [filteredMatches, setFilteredMatches] = useState<Match[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [bonusFilter, setBonusFilter] = useState("all");
   const [availableBonuses, setAvailableBonuses] = useState<Bonus[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalMatches, setTotalMatches] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [bonusFilter, setBonusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
+  const [loading, setLoading] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<null | { match: Match; action: string }>(null);
   const router = useRouter();
@@ -109,22 +117,48 @@ const [newStatus, setNewStatus] = useState("");
   const [completePermission, setCompletePermission] = useState<{modelId: string, action: string} | null>(null);
   const { lang, setLang } = useLanguage()
 
-  const fetchMatches = async () => {
+  // Add state for Resume All
+  const [resumeAllLoading, setResumeAllLoading] = useState(false);
+  const [resumeAllDialogOpen, setResumeAllDialogOpen] = useState(false);
+  const [resumeAllMatches, setResumeAllMatches] = useState<Match[]>([]);
+  const [resumeAllProcessId, setResumeAllProcessId] = useState<string>("");
+  const [resumeAllConfirmationOpen, setResumeAllConfirmationOpen] = useState(false);
+  const [resumeAllFilterNotFound, setResumeAllFilterNotFound] = useState(false);
+  
+  // Maximum records limit
+  const MAX_RECORDS_LIMIT = 5000;
+
+  // Update fetchMatches to include activeTab filtering
+  const fetchMatches = async (page = currentPage, size = pageSize, search = searchTerm, status = statusFilter) => {
     if (auth) {
       if (!auth.canAccess("matches")) {
         router.push("/dashboard");
         return;
       }
     }
+    setLoading(true);
     try {
-      const response = await fetch("/api/matches?all=true");
-
+      const params = new URLSearchParams();
+      params.append("page", String(page));
+      params.append("pageSize", String(size));
+      if (search) params.append("search", search);
+      if (status && status !== "all") params.append("status", status);
+      // Add activeTab filtering
+      if (activeTab === "matched") {
+        params.append("hasTransferAccount", "true");
+      } else if (activeTab === "unmatched") {
+        params.append("hasTransferAccount", "false");
+      }
+      const response = await fetch(`/api/matches?${params.toString()}`);
       if (!response.ok) {
         throw new Error("Failed to fetch matches");
       }
       const data = await response.json();
       setMatches(data.data);
-      
+      setTotalMatches(data.pagination.total);
+      setTotalPages(data.pagination.totalPages);
+      setCurrentPage(data.pagination.page);
+      setPageSize(data.pagination.limit);
       // Extract unique bonuses from matches
       const bonuses = new Map<string, Bonus>();
       data.data.forEach((match: Match) => {
@@ -136,6 +170,8 @@ const [newStatus, setNewStatus] = useState("");
     } catch (error) {
       console.error("Error fetching matches:", error);
       toast.error("Failed to fetch matches");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -183,36 +219,53 @@ const [newStatus, setNewStatus] = useState("");
   };
 
 // Setup SSE for real-time updates
-// Setup SSE for real-time updates
 useEffect(() => {
   // Close any existing connection
   if (eventSourceRef.current) {
     eventSourceRef.current.close();
   }
 
-  
-
   // Initialize SSE connection
   eventSourceRef.current = new EventSource('/api/events');
+  
+  // Connection opened
+  eventSourceRef.current.onopen = () => {
+    console.log('SSE connection established');
+  };
+  
+  // Connection error
+  eventSourceRef.current.onerror = (error) => {
+    console.error('SSE connection error:', error);
+  };
   
   // Listen for match status updates
   eventSourceRef.current.addEventListener(Events.MATCHES_STATUS, (event) => {
     try {
+      console.log('Received SSE update:', event.data);
       const data = JSON.parse(event.data);      
       // Handle match updates - note we're using data.id not data.matchId
       if (data.id) {
+        console.log('Updating match:', data);
         updateSingleMatch(data);
       }
-      
-
     } catch (error) {
       console.error("Error handling status update:", error);
     }
   });
   
+  // Listen for general connection events
+  eventSourceRef.current.addEventListener('open', () => {
+    console.log('SSE connection opened');
+  });
+  
+  eventSourceRef.current.addEventListener('error', (event) => {
+    console.error('SSE connection error:', event);
+  });
+  
   // Clean up function
   return () => {
     if (eventSourceRef.current) {
+      console.log('Closing SSE connection');
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
@@ -222,9 +275,11 @@ useEffect(() => {
 // Update a single match when receiving real-time update
 const updateSingleMatch = (data: any) => {
   if (!data || !data.id) {
+    console.log('Invalid update data:', data);
     return;
   }
   
+  console.log('Processing match update:', data);
   
   setMatches(prevMatches => {
     // Find the match index
@@ -232,21 +287,31 @@ const updateSingleMatch = (data: any) => {
     
     // If match not found, return unchanged state
     if (matchIndex === -1) {
+      console.log('Match not found in current list:', data.id);
       return prevMatches;
     }
+    
+    console.log('Updating match at index:', matchIndex);
     
     // Create a copy of the matches array
     const newMatches = [...prevMatches];
     
-    // Update the specific match
+    // Update the specific match with all possible fields
     newMatches[matchIndex] = {
       ...newMatches[matchIndex],
       status: data.status !== undefined ? data.status : newMatches[matchIndex].status,
-      transfer_account: data.transferAccount !== undefined ? data.transferAccount : newMatches[matchIndex].transfer_account,
-      transfer_account_id: data.transferAccount?.id !== undefined ? data.transferAccount.id : newMatches[matchIndex].transfer_account_id,
-      updated_at: data.updated_at || new Date().toISOString()
+      transfer_account: data.transferAccount !== undefined ? data.transferAccount : 
+                      data.transfer_account !== undefined ? data.transfer_account : 
+                      newMatches[matchIndex].transfer_account,
+      transfer_account_id: data.transferAccount?.id !== undefined ? data.transferAccount.id :
+                          data.transfer_account?.id !== undefined ? data.transfer_account.id :
+                          data.transfer_account_id !== undefined ? data.transfer_account_id :
+                          newMatches[matchIndex].transfer_account_id,
+      comment: data.comment !== undefined ? data.comment : newMatches[matchIndex].comment,
+      updated_at: data.updated_at || data.updatedAt || new Date().toISOString()
     };
     
+    console.log('Updated match:', newMatches[matchIndex]);
     return newMatches;
   });
 };
@@ -257,6 +322,13 @@ const updateSingleMatch = (data: any) => {
       loadPermissions();
     }
   }, [isLoading, auth, router]);
+
+  // Refetch on filter/search/page change
+  useEffect(() => {
+    fetchMatches(currentPage, pageSize, searchTerm, statusFilter);
+  }, [currentPage, pageSize, statusFilter, activeTab]);
+
+  // Remove the searchTerm from the useEffect dependencies to prevent auto-search
 
   // Handle permission completion
   useEffect(() => {
@@ -271,65 +343,22 @@ const updateSingleMatch = (data: any) => {
     }
   }, [completePermission]);
 
+  // Handle tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   // Reset selections when tab changes
   useEffect(() => {
     setSelectedMatches([]);
     setSelectAllChecked(false);
   }, [activeTab, bonusFilter]);
 
-  // Filter matches based on search term, status, bonus and tab
-  useEffect(() => {
-    let result = [...matches];
-
-    // Filter by search term
-   if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(match => 
-        match.username.toLowerCase().includes(term) || 
-        match.id.toLowerCase().includes(term) ||
-        match.transfer_account?.username?.toLowerCase().includes(term) ||
-        match.bonus?.name?.toLowerCase().includes(term) ||
-        match.currency.toLowerCase().includes(term) || 
-       (match.comment && match.comment.toLowerCase().includes(term)) 
-      );
-    }
-
-    // Filter by match status
-    if (statusFilter !== "all") {
-      result = result.filter(match => match.status === statusFilter);
-    }
-
-    // Filter by bonus
-    if (bonusFilter !== "all") {
-      result = result.filter(match => match.bonus_id === bonusFilter);
-    }
-
-    // Filter by tab - using transfer_account_id instead of player_id
-    if (activeTab === "matched") {
-      result = result.filter(match => match.transfer_account_id !== null);
-    } else if (activeTab === "unmatched") {
-      result = result.filter(match => match.transfer_account_id === null);
-    }
-    // "all" tab doesn't need filtering as it shows everything
-
-    setFilteredMatches(result);
-    setCurrentPage(1); // Reset to first page when filters change
-  }, [matches, searchTerm, statusFilter, bonusFilter, activeTab]);
-
-  // Paginate the matches
-  const paginatedMatches = useMemo(() => {
-    if (pageSize === -1) { // Show all matches
-      return filteredMatches;
-    }
-    const startIndex = (currentPage - 1) * pageSize;
-    return filteredMatches.slice(startIndex, startIndex + pageSize);
-  }, [filteredMatches, currentPage, pageSize]);
-
-  // Group matches by process for display purposes
+  // Remove all client-side filtering and pagination logic (filteredMatches, paginatedMatches, etc.)
+  // Update groupedByProcess to use matches directly
   const groupedByProcess = useMemo(() => {
     const processMap = new Map();
-    
-    paginatedMatches.forEach(match => {
+    matches.forEach(match => {
       if (!processMap.has(match.process_id)) {
         processMap.set(match.process_id, {
           id: match.process_id,
@@ -337,378 +366,13 @@ const updateSingleMatch = (data: any) => {
           matches: []
         });
       }
-      
       const processGroup = processMap.get(match.process_id);
       processGroup.matches.push(match);
     });
-    
     return Array.from(processMap.values());
-  }, [paginatedMatches]);
+  }, [matches]);
 
-  // Calculate pagination details
-  const totalPages = Math.ceil(filteredMatches.length / pageSize);
-  const hasNextPage = currentPage < totalPages;
-  const hasPreviousPage = currentPage > 1;
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleString();
-  };
-
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: currency 
-    }).format(amount);
-  };
-
-  const getProcessStatusColor = (status: string) => {
-    switch (status) {
-      case ProcessStatus.PROCESSING:
-        return AppColor.INFO;
-      case ProcessStatus.SUCCESS:
-        return AppColor.SUCCESS;
-      case ProcessStatus.FAILED:
-        return AppColor.ERROR;
-      case ProcessStatus.PENDING:
-        return AppColor.WARNING;
-      default:
-        return AppColor.INFO;
-    }
-  };
-
-  const getMatchStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "success":
-        return AppColor.SUCCESS;
-      case "fail":
-      case "failed":
-        return AppColor.ERROR;
-      case "pending":
-        return AppColor.WARNING;
-      default:
-        return AppColor.INFO;
-    }
-  };
-  
-  // Update the handleProcessAction function to include the new actions
-  const handleProcessAction = (process: { id: string, status: string }, action: string) => {
-    if (action === 'mark-success') {
-      if (!isAllMatchesSuccess(process.id)) {
-        toast.error("All matches must have 'success' status to mark the process as success");
-        return;
-      }
-      
-      const matchForProcess = matches.find(m => m.process_id === process.id);
-      if (matchForProcess) {
-        setSelectedAction({ 
-          match: matchForProcess, 
-          action: 'mark-success' 
-        });
-        setConfirmDialogOpen(true);
-      }
-      return;
-    }
-    
-    // Add this section for the mark-onhold action
-    if (action === 'mark-onhold') {
-      const matchForProcess = matches.find(m => m.process_id === process.id);
-      if (matchForProcess) {
-        setSelectedAction({ 
-          match: matchForProcess, 
-          action: 'mark-onhold' 
-        });
-        setConfirmDialogOpen(true);
-      }
-      return;
-    }
-
-    // Add this section for refiltering (already in your code, included for completeness)
-    if (action === 'refilter-process') {
-      // Get all non-success matches for this process
-      const nonSuccessMatches = matches.filter(m => 
-        m.process_id === process.id && m.status.toLowerCase() !== "success"
-      );
-      
-      if (nonSuccessMatches.length === 0) {
-        toast.error("No eligible matches found for refiltering");
-        return;
-      }
-      
-      // Use the first match of the process as a reference
-      const matchForProcess = nonSuccessMatches[0];
-      if (matchForProcess) {
-        setSelectedAction({ 
-          match: matchForProcess, 
-          action: 'refilter-process' 
-        });
-        setSelectedBonusId(""); // Reset selected bonus
-        setRefilterDialogOpen(true);
-      }
-      return;
-    }
-    
-    // Check if user has permission for restricted actions (terminate) If user not admin
-    const needsPermission = (action === 'terminate') && 
-                            auth?.role !== Roles.Admin;
-
-                            
-    if (needsPermission && !hasPermission(permissionsMap, process.id, action)) {
-      // Open request permission dialog
-      setRequestAction(action);
-      setRequestProcessId(process.id);
-      setRequestMessage("");
-      setRequestDialogOpen(true);
-      return;
-    } else if (action === 'terminate') {
-      const matchForProcess = matches.find(m => m.process_id === process.id);
-      if (matchForProcess) {
-        setSelectedAction({ 
-          match: matchForProcess, 
-          action: 'terminate' 
-        });
-        setConfirmDialogOpen(true);
-      }
-      return;
-    }
-
-    // If resume action with selected matches
-    if (action === 'resume') {
-      if (selectedMatches.length > 0) {
-        setResumeDialogOpen(true);
-      } else {
-        toast.error("Please select at least one match to resume");
-      }
-      return;
-    }
-    
-    // If rematch process action
-    if (action === 'rematch-process') {
-      // Get all unmatched players for this process
-      const unmatchedMatches = matches.filter(m => 
-        m.process_id === process.id && m.transfer_account_id === null
-      );
-      
-      if (unmatchedMatches.length === 0) {
-        toast.error("No unmatched players found for this process");
-        return;
-      }
-      
-      // Use the first match of the process as a reference
-      const matchForProcess = matches.find(m => m.process_id === process.id);
-      if (matchForProcess) {
-        setSelectedAction({ 
-          match: matchForProcess, 
-          action: 'rematch-process' 
-        });
-        setConfirmDialogOpen(true);
-      }
-      return;
-    }
-  };
-  const handleSingleMatchAction = (match: Match, action: string) => {
-    setSelectedAction({ match, action });
-    setConfirmDialogOpen(true);
-  };
-
-  // Handle checkbox selection
-  const toggleMatchSelection = (matchId: string) => {
-    const match = matches.find(m => m.id === matchId);
-    
-    if (match && (match.status.toLowerCase() === "success" || match.transfer_account_id === null)) {
-      return;
-    }
-    
-    setSelectedMatches(prevSelected => {
-      if (prevSelected.includes(matchId)) {
-        return prevSelected.filter(id => id !== matchId);
-      } else {
-        return [...prevSelected, matchId];
-      }
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectAllChecked) {
-      setSelectedMatches([]);
-    } else {
-      const validMatches = paginatedMatches
-        .filter(match => 
-          match.status.toLowerCase() !== "success" && 
-          match.transfer_account_id !== null
-        )
-        .map(match => match.id);
-      
-      setSelectedMatches(validMatches);
-    }
-    setSelectAllChecked(!selectAllChecked);
-  };
-
-  // Submit permission request
-  const submitPermissionRequest = async () => {
-    if (!auth || requestMessage.length < 10) return;
-    
-    try {
-      const result = await createRequest(
-        "Process",
-        requestProcessId,
-        requestAction,
-        requestMessage,
-        auth.id
-      );
-      
-      if (result.success) {
-        toast.success("Permission request submitted successfully");
-        setRequestDialogOpen(false);
-      } else {
-        toast.error(result.error || "Failed to submit request");
-      }
-    } catch (error) {
-      console.error("Error submitting permission request:", error);
-      toast.error("Failed to submit permission request");
-    }
-  };
-
-  const truncateComment = (comment: string | null, maxWords: number = 5) => {
-      if (!comment) return t("no_comment", lang);
-      
-      const words = comment.split(' ');
-      if (words.length <= maxWords) return comment;
-      
-      return words.slice(0, maxWords).join(' ') + '...';
-    };
-
-    // Handle comment click
-    const handleCommentClick = (comment: string | null) => {
-      setSelectedComment(comment || t("no_comment", lang));
-      setCommentDialogOpen(true);
-  };
-
-  const executeAction = async () => {
-    if (!selectedAction) return;
-  
-    const { match, action } = selectedAction;
-    try {
-      let endpoint = '';
-      let method = '';
-      let body = {};
-  
-      switch (action) {
-        case 'resume':
-          endpoint = `/api/processes/${match.process_id}/resume`;
-
-          if (selectedMatches.length > 0) {
-            // Get full match data for selected matches
-            const selectedMatchData: any[] = matches
-              .filter(m => 
-                selectedMatches.includes(m.id) && 
-                m.transfer_account_id !== null && 
-                 (m.status.toLowerCase() == "pending" || m.status.toLowerCase() == "failed")
-              )
-              .map(m => ({
-                id: m.id,
-                username: m.username,
-                transfer_account_id: m.transfer_account_id,
-                transfer_account: m.transfer_account,
-                amount: m.amount,
-                currency: m.currency,
-                bonus_id: m.bonus_id
-              }));
-
-              
-              
-            if (selectedMatchData.length == 0) {
-              toast.error("No valid matches selected for resume action");
-              return;
-            }
-            body = { matches: selectedMatchData };
-            method = 'POST';
-          } else {
-            toast.error("No matches selected for resume action");
-            return;
-          }
-          break;
-
-        case 'mark-success':
-          endpoint = `/api/processes/${match.process_id}/success`;
-          method = 'PUT';
-          break;
-
-        case 'mark-onhold':
-          endpoint = `/api/processes/${match.process_id}/on-hold`;
-          method = 'PUT';
-          break;
-
-        case 'refilter-single':
-          endpoint = `/api/matches/refilter/${match.id}`;
-          method = 'PUT';
-          body = { bonus_id: match.bonus_id}; 
-          break;
-
-        case 'refilter-process':
-          endpoint = `/api/matches/refilter`;
-          method = 'PUT';
-          body = { bonus_id: selectedBonusId}; 
-          break;
-
-        case 'rematch-process':
-          endpoint = `/api/matches/rematch`;
-          method = 'PUT';
-          break;
-          
-        case 'rematch-single':
-          endpoint = `/api/matches/rematch/${match.id}`;
-          method = 'PUT';
-          break;
-          
-        case 'terminate':
-          endpoint = `/api/processes/${match.process_id}/terminate`;
-          method = 'POST';
-          break;
-      }
-      
-      if (!endpoint || !method) {
-        console.error("Invalid action configuration:", { action, endpoint, method });
-        return;
-      }
-      
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-  
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} match`);
-      }
-  
-      // If this was a permission-based action, mark it as complete
-      const needsPermission = (action === 'terminate');
-      if (needsPermission && auth?.role !== Roles.Admin) {
-        setCompletePermission({
-          modelId: match.process_id,
-          action: action.split('-')[0] // Extract base action name
-        });
-      }
-  
-      toast.success(`Successfully performed ${action.replace('-', ' ')} action`);
-      fetchMatches(); // Refresh the data
-      setSelectedMatches([]); // Clear selections
-      setSelectAllChecked(false);
-    } catch (error) {
-      console.error(`Error during ${action}:`, error);
-      toast.error(`Failed to perform ${action.replace('-', ' ')} action`);
-    } finally {
-    setConfirmDialogOpen(false);
-    setRefilterDialogOpen(false);
-    setResumeDialogOpen(false);
-    setSelectedAction(null);
-    setSelectedBonusId("");
-    }
-  };
-
+  // Update pagination controls to use backend pagination
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
@@ -841,173 +505,478 @@ const updateMatch = async () => {
         return false;
     }
   };
+
+  // Restore the original executeAction function above the return statement
+  const executeAction = async () => {
+    if (!selectedAction) return;
+
+    const { match, action } = selectedAction;
+    try {
+      let endpoint = '';
+      let method = '';
+      let body = {};
+
+      switch (action) {
+        case 'resume':
+          endpoint = `/api/processes/${match.process_id}/resume`;
+          if (selectedMatches.length > 0) {
+            const selectedMatchData: any[] = matches
+              .filter(m => 
+                selectedMatches.includes(m.id) && 
+                m.transfer_account_id !== null && 
+                 (m.status.toLowerCase() == "pending" || m.status.toLowerCase() == "failed")
+              )
+              .map(m => ({
+                id: m.id,
+                username: m.username,
+                transfer_account_id: m.transfer_account_id,
+                transfer_account: m.transfer_account,
+                amount: m.amount,
+                currency: m.currency,
+                bonus_id: m.bonus_id
+              }));
+            if (selectedMatchData.length == 0) {
+              toast.error("No valid matches selected for resume action");
+              return;
+            }
+            if (selectedMatchData.length > MAX_RECORDS_LIMIT) {
+              toast.error(`Cannot process more than ${MAX_RECORDS_LIMIT} records. Selected ${selectedMatchData.length} matches.`);
+              return;
+            }
+            if (selectedMatchData.length > MAX_RECORDS_LIMIT * 0.8) {
+              toast.error(`Warning: Processing ${selectedMatchData.length} records (${Math.round(selectedMatchData.length / MAX_RECORDS_LIMIT * 100)}% of limit)`);
+            }
+            body = { matches: selectedMatchData };
+            method = 'POST';
+          } else {
+            toast.error("No matches selected for resume action");
+            return;
+          }
+          break;
+        case 'mark-success':
+          endpoint = `/api/processes/${match.process_id}/success`;
+          method = 'PUT';
+          break;
+        case 'mark-onhold':
+          endpoint = `/api/processes/${match.process_id}/on-hold`;
+          method = 'PUT';
+          break;
+        case 'refilter-single':
+          endpoint = `/api/matches/refilter/${match.id}`;
+          method = 'PUT';
+          body = { bonus_id: match.bonus_id}; 
+          break;
+        case 'refilter-process':
+          endpoint = `/api/matches/refilter`;
+          method = 'PUT';
+          body = { bonus_id: selectedBonusId}; 
+          break;
+        case 'rematch-process':
+          endpoint = `/api/matches/rematch`;
+          method = 'PUT';
+          break;
+        case 'rematch-single':
+          endpoint = `/api/matches/rematch/${match.id}`;
+          method = 'PUT';
+          break;
+        case 'terminate':
+          endpoint = `/api/processes/${match.process_id}/terminate`;
+          method = 'POST';
+          break;
+      }
+      if (!endpoint || !method) {
+        console.error("Invalid action configuration:", { action, endpoint, method });
+        return;
+      }
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} match`);
+      }
+      const needsPermission = (action === 'terminate');
+      if (needsPermission && auth?.role !== Roles.Admin) {
+        setCompletePermission({
+          modelId: match.process_id,
+          action: action.split('-')[0]
+        });
+      }
+      toast.success(`Successfully performed ${action.replace('-', ' ')} action`);
+      fetchMatches();
+      setSelectedMatches([]);
+      setSelectAllChecked(false);
+    } catch (error) {
+      console.error(`Error during ${selectedAction.action}:`, error);
+      toast.error(`Failed to perform ${selectedAction.action.replace('-', ' ')} action`);
+    } finally {
+      setConfirmDialogOpen(false);
+      setRefilterDialogOpen(false);
+      setResumeDialogOpen(false);
+      setSelectedAction(null);
+      setSelectedBonusId("");
+    }
+  };
+
+  // Handler for Resume All
+  const handleResumeAll = async (processId: string) => {
+    setResumeAllConfirmationOpen(true);
+    setResumeAllProcessId(processId);
+  };
+
+  // Handler to confirm Resume All with filtering option
+  const confirmResumeAllWithFilter = async (filterNotFound: boolean) => {
+    setResumeAllConfirmationOpen(false);
+    setResumeAllFilterNotFound(filterNotFound);
+    setResumeAllLoading(true);
+    
+    try {
+      const response = await fetch(`/api/matches?all=true&status=pending,failed`);
+      if (!response.ok) throw new Error("Failed to fetch matches");
+      const data = await response.json();
+      
+      // Filter for the current process only
+      let processMatches = data.data.filter((m: Match) => m.process_id === resumeAllProcessId && m.transfer_account_id !== null);
+      
+      // If user chose to filter out not found players, remove them
+      if (filterNotFound) {
+        processMatches = processMatches.filter((m: Match) => 
+          !(m.status.toLowerCase() === "failed" && m.comment === "unable to find the player")
+        );
+      }
+      
+      // Check if we exceed the maximum records limit
+      if (processMatches.length > MAX_RECORDS_LIMIT) {
+        toast.error(`Cannot process more than ${MAX_RECORDS_LIMIT} records. Found ${processMatches.length} matches.`);
+        setResumeAllLoading(false);
+        return;
+      }
+      
+      // Show warning if approaching the limit
+      if (processMatches.length > MAX_RECORDS_LIMIT * 0.8) {
+        toast.error(`Warning: Processing ${processMatches.length} records (${Math.round(processMatches.length / MAX_RECORDS_LIMIT * 100)}% of limit)`);
+      }
+      
+      setResumeAllMatches(processMatches);
+      setResumeAllDialogOpen(true);
+    } catch (error) {
+      toast.error("Failed to fetch all pending/failed matches");
+    } finally {
+      setResumeAllLoading(false);
+    }
+  };
+
+  // Handler to confirm Resume All
+  const confirmResumeAll = async () => {
+    if (!resumeAllProcessId || resumeAllMatches.length === 0) {
+      toast.error("No matches to resume");
+      setResumeAllDialogOpen(false);
+      return;
+    }
+    setResumeAllLoading(true);
+    try {
+      const payload = {
+        matches: resumeAllMatches.map(m => ({
+          id: m.id,
+          username: m.username,
+          transfer_account_id: m.transfer_account_id,
+          transfer_account: m.transfer_account,
+          amount: m.amount,
+          currency: m.currency,
+          bonus_id: m.bonus_id
+        }))
+      };
+      const response = await fetch(`/api/processes/${resumeAllProcessId}/resume`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error("Failed to resume all matches");
+      toast.success("Resume All request sent successfully");
+      setResumeAllDialogOpen(false);
+      fetchMatches();
+    } catch (error) {
+      toast.error("Failed to resume all matches");
+    } finally {
+      setResumeAllLoading(false);
+    }
+  };
+
+  // Utility: formatCurrency
+  const formatCurrency = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+  };
+
+  // Utility: submitPermissionRequest
+  const submitPermissionRequest = async () => {
+    if (!auth || requestMessage.length < 10) return;
+    try {
+      const result = await createRequest(
+        "Process",
+        requestProcessId,
+        requestAction,
+        requestMessage,
+        auth.id
+      );
+      if (result.success) {
+        toast.success("Permission request submitted successfully");
+        setRequestDialogOpen(false);
+      } else {
+        toast.error(result.error || "Failed to submit request");
+      }
+    } catch (error) {
+      console.error("Error submitting permission request:", error);
+      toast.error("Failed to submit permission request");
+    }
+  };
+
+  // Utility: getProcessStatusColor
+  const getProcessStatusColor = (status: string) => {
+    switch (status) {
+      case ProcessStatus.PROCESSING:
+        return AppColor.INFO;
+      case ProcessStatus.SUCCESS:
+        return AppColor.SUCCESS;
+      case ProcessStatus.FAILED:
+        return AppColor.ERROR;
+      case ProcessStatus.PENDING:
+        return AppColor.WARNING;
+      default:
+        return AppColor.INFO;
+    }
+  };
+
+  // Utility: getMatchStatusColor
+  const getMatchStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "success":
+        return AppColor.SUCCESS;
+      case "fail":
+      case "failed":
+        return AppColor.ERROR;
+      case "pending":
+        return AppColor.WARNING;
+      default:
+        return AppColor.INFO;
+    }
+  };
+
+  // Utility: handleProcessAction
+  const handleProcessAction = (process: { id: string, status: string }, action: string) => {
+    setSelectedAction({ match: matches.find(m => m.process_id === process.id)!, action });
+    setConfirmDialogOpen(true);
+  };
+
+  // Utility: handleSingleMatchAction
+  const handleSingleMatchAction = (match: Match, action: string) => {
+    setSelectedAction({ match, action });
+    setConfirmDialogOpen(true);
+  };
+
+  // Utility: toggleSelectAll
+  const toggleSelectAll = () => {
+    if (selectAllChecked) {
+      setSelectedMatches([]);
+    } else {
+      const validMatches = matches
+        .filter(match =>
+          match.status.toLowerCase() !== "success" &&
+          match.transfer_account_id !== null
+        )
+        .map(match => match.id);
+      setSelectedMatches(validMatches);
+    }
+    setSelectAllChecked(!selectAllChecked);
+  };
+
+  // Utility: toggleMatchSelection
+  const toggleMatchSelection = (matchId: string) => {
+    const match = matches.find(m => m.id === matchId);
+    if (match && (match.status.toLowerCase() === "success" || match.transfer_account_id === null)) {
+      return;
+    }
+    setSelectedMatches(prevSelected => {
+      if (prevSelected.includes(matchId)) {
+        return prevSelected.filter(id => id !== matchId);
+      } else {
+        return [...prevSelected, matchId];
+      }
+    });
+  };
+
+  // Function to unselect not found players from selected matches
+  const unselectNotFoundPlayers = () => {
+    const notFoundPlayerIds = matches
+      .filter(match => 
+        match.status.toLowerCase() === "failed" && 
+        match.comment === "unable to find the player"
+      )
+      .map(match => match.id);
+    
+    setSelectedMatches(prevSelected => 
+      prevSelected.filter(id => !notFoundPlayerIds.includes(id))
+    );
+  };
+
+  // Function to clear not found filter (unselect not found players)
+  const clearNotFoundFilter = () => {
+    const notFoundPlayerIds = matches
+      .filter(match => 
+        match.status.toLowerCase() === "failed" && 
+        match.comment === "unable to find the player"
+      )
+      .map(match => match.id);
+    
+    setSelectedMatches(prevSelected => 
+      prevSelected.filter(id => !notFoundPlayerIds.includes(id))
+    );
+  };
+
+  // Check if any selected matches are not found players
+  const hasSelectedNotFoundPlayers = useMemo(() => {
+    return selectedMatches.some(matchId => {
+      const match = matches.find(m => m.id === matchId);
+      return match && 
+        match.status.toLowerCase() === "failed" && 
+        match.comment === "unable to find the player";
+    });
+  }, [selectedMatches, matches]);
+
+  // Check if there are active filters
+  const hasActiveFilters = useMemo(() => {
+    return searchTerm.trim() !== "" || 
+           statusFilter !== "all" || 
+           bonusFilter !== "all" || 
+           activeTab !== "all";
+  }, [searchTerm, statusFilter, bonusFilter, activeTab]);
+
+  // Function to select all filtered matches
+  const selectAllFiltered = async () => {
+    if (!hasActiveFilters) return;
+    
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("all", "true"); // Fetch all records
+      if (searchTerm.trim()) params.append("search", searchTerm.trim());
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      if (bonusFilter !== "all") params.append("bonus_id", bonusFilter);
+      
+      // Add activeTab filtering
+      if (activeTab === "matched") {
+        params.append("hasTransferAccount", "true");
+      } else if (activeTab === "unmatched") {
+        params.append("hasTransferAccount", "false");
+      } else if (activeTab === "not_found") {
+        params.append("notFoundPlayers", "true");
+      }
+      
+      const response = await fetch(`/api/matches?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch all filtered matches");
+      const data = await response.json();
+      
+      // Select all filtered matches
+      const allFilteredMatchIds = data.data.map((match: Match) => match.id);
+      setSelectedMatches(allFilteredMatchIds);
+      setSelectAllChecked(true);
+      
+      toast.success(`Selected ${allFilteredMatchIds.length} matches`);
+    } catch (error) {
+      console.error("Error selecting all filtered matches:", error);
+      toast.error("Failed to select all filtered matches");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get total filtered matches count (for display purposes)
+  const totalFilteredMatches = useMemo(() => {
+    if (!hasActiveFilters) return 0;
+    return totalMatches; // This is the total from the current filtered view
+  }, [hasActiveFilters, totalMatches]);
+
+  // Utility: handleCommentClick
+  const handleCommentClick = (comment: string | null) => {
+    setSelectedComment(comment || t("no_comment", lang));
+    setCommentDialogOpen(true);
+  };
+
+  // Utility: truncateComment
+  const truncateComment = (comment: string | null, maxWords: number = 5) => {
+    if (!comment) return t("no_comment", lang);
+    const words = comment.split(' ');
+    if (words.length <= maxWords) return comment;
+    return words.slice(0, maxWords).join(' ') + '...';
+  };
+
+  // Handle search button click
+  const handleSearch = () => {
+    fetchMatches(1, pageSize, searchTerm, statusFilter); // Reset to page 1 when searching
+  };
+
+  // Handle Enter key press in search input
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: t("match_management", lang) }]} />
+      <Breadcrumb items={[{ label: t("match management", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>{t("match_management", lang)}</CardTitle>
-          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder={t("filter_by_status", lang)} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("all_statuses", lang)}</SelectItem>
-                <SelectItem value="success">{t("success", lang)}</SelectItem>
-                <SelectItem value="failed">{t("failed", lang)}</SelectItem>
-                <SelectItem value="pending">{t("pending", lang)}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={bonusFilter} onValueChange={setBonusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder={t("filter_by_bonus", lang)} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("all_bonuses", lang)}</SelectItem>
-                {availableBonuses.map((bonus) => (
-                  <SelectItem key={bonus.id} value={bonus.id}>
-                    {bonus.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(val: any) => {
-                setPageSize(Number(val))
-                setCurrentPage(1)
-              }}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder={t("rows_per_page", lang)} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10 {t("rows", lang)}</SelectItem>
-                <SelectItem value="20">20 {t("rows", lang)}</SelectItem>
-                <SelectItem value="50">50 {t("rows", lang)}</SelectItem>
-                <SelectItem value="100">100 {t("rows", lang)}</SelectItem>
-                <SelectItem value="-1">{t("all_rows", lang)}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <CardTitle>{t("match management", lang)}</CardTitle>
         </CardHeader>
 
         <CardContent>
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={t("search_matches", lang)}
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+          <SearchFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            handleSearch={handleSearch}
+            handleSearchKeyPress={handleSearchKeyPress}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            bonusFilter={bonusFilter}
+            setBonusFilter={setBonusFilter}
+            availableBonuses={availableBonuses}
+          />
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {selectedMatches.length} {t("match", lang)}
-                {selectedMatches.length !== 1 ? t("es", lang) : ""} {t("selected", lang)}
-              </span>
-              {selectedMatches.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedMatches([])
-                    setSelectAllChecked(false)
-                  }}
-                >
-                  {t("clear_selection", lang)}
-                </Button>
-              )}
-            </div>
-          </div>
+          <SelectionControls
+            selectedMatches={selectedMatches}
+            hasSelectedNotFoundPlayers={hasSelectedNotFoundPlayers}
+            onClearSelection={() => {
+              setSelectedMatches([])
+              setSelectAllChecked(false)
+            }}
+            onUnselectNotFound={unselectNotFoundPlayers}
+            onClearNotFoundFilter={clearNotFoundFilter}
+            onSelectAllFiltered={selectAllFiltered}
+            hasActiveFilters={hasActiveFilters}
+            totalFilteredMatches={totalFilteredMatches}
+            onRefresh={() => {
+              console.log('Manual refresh triggered');
+              fetchMatches();
+            }}
+          />
 
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">{t("all_players", lang)}</TabsTrigger>
-              <TabsTrigger value="matched">{t("matched_players", lang)}</TabsTrigger>
-              <TabsTrigger value="unmatched">{t("unmatched_players", lang)}</TabsTrigger>
-            </TabsList>
+          <MatchesTabs
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            renderTable={renderTable}
+          />
 
-            <TabsContent value="all" className="mt-0">
-              {renderTable()}
-            </TabsContent>
-
-            <TabsContent value="matched" className="mt-0">
-              {renderTable()}
-            </TabsContent>
-
-            <TabsContent value="unmatched" className="mt-0">
-              {renderTable()}
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
-            <div className="text-sm text-muted-foreground">
-              {t("showing", lang)}{" "}
-              <span className="font-medium">{filteredMatches.length > 0 ? 1 + (currentPage - 1) * pageSize : 0}</span>{" "}
-              {t("to", lang)}{" "}
-              <span className="font-medium">
-                {pageSize === -1 ? filteredMatches.length : Math.min(currentPage * pageSize, filteredMatches.length)}
-              </span>{" "}
-              {t("of", lang)} <span className="font-medium">{filteredMatches.length}</span> {t("matches", lang)}
-            </div>
-
-            {totalPages > 1 && pageSize !== -1 && (
-              <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
-                <Button
-                  variant="outline"
-                  onClick={() => goToPage(1)}
-                  disabled={!hasPreviousPage}
-                  size="sm"
-                  className="h-8 px-2"
-                >
-                  {t("first", lang)}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={!hasPreviousPage}
-                  size="sm"
-                  className="h-8 px-2"
-                >
-                  {t("previous", lang)}
-                </Button>
-                <span className="px-2 text-sm">
-                  {t("page", lang)} {currentPage} {t("of", lang)} {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (currentPage < totalPages) {
-                      goToPage(currentPage + 1)
-                    }
-                  }}
-                  disabled={!hasNextPage}
-                  size="sm"
-                  className="h-8 px-2"
-                >
-                  {t("next", lang)}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => goToPage(totalPages)}
-                  disabled={!hasNextPage}
-                  size="sm"
-                  className="h-8 px-2"
-                >
-                  {t("last", lang)}
-                </Button>
-              </div>
-            )}
-          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalMatches={totalMatches}
+            pageSize={pageSize}
+            onGoToPage={goToPage}
+          />
         </CardContent>
       </Card>
 
@@ -1021,50 +990,50 @@ const updateMatch = async () => {
           <>
             {selectedAction?.action === "rematch-process" ? (
               <div className="space-y-3">
-                <p>{t("all_unmatched_users_matched", lang)}</p>
+                <p>{t("all unmatched users matched", lang)}</p>
                 <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-                  <p className="text-sm text-yellow-800">{t("rematch_process_description", lang)}</p>
+                  <p className="text-sm text-yellow-800">{t("rematch process description", lang)}</p>
                 </div>
               </div>
             ) : selectedAction?.action === "terminate" ? (
               <div className="space-y-3">
-                <p>{t("confirm_terminate_process", lang)}</p>
+                <p>{t("confirm terminate process", lang)}</p>
                 <div className="bg-red-50 p-3 rounded border border-red-200">
-                  <p className="text-sm text-red-800">{t("terminate_process_warning", lang)}</p>
+                  <p className="text-sm text-red-800">{t("terminate process warning", lang)}</p>
                 </div>
               </div>
             ) : selectedAction?.action === "mark-success" ? (
               <div className="space-y-3">
-                <p>{t("confirm_mark_success", lang)}</p>
+                <p>{t("confirm mark success", lang)}</p>
                 <div className="bg-green-50 p-3 rounded border border-green-200">
-                  <p className="text-sm text-green-800">{t("mark_success_description", lang)}</p>
+                  <p className="text-sm text-green-800">{t("mark success description", lang)}</p>
                 </div>
               </div>
             ) : selectedAction?.action === "mark-onhold" ? (
               <div className="space-y-3">
-                <p>{t("confirm_put_on_hold", lang)}</p>
+                <p>{t("confirm put on hold", lang)}</p>
                 <div className="bg-amber-50 p-3 rounded border border-amber-200">
-                  <p className="text-sm text-amber-800">{t("mark_onhold_description", lang)}</p>
+                  <p className="text-sm text-amber-800">{t("mark onhold description", lang)}</p>
                 </div>
               </div>
             ) : selectedAction?.action === "refilter-single" ? (
               <div className="space-y-3">
-                <p>{t("confirm_refilter_match", lang)}</p>
+                <p>{t("confirm refilter match", lang)}</p>
                 <div className="bg-blue-50 p-3 rounded border border-blue-200">
                   <p className="text-sm text-blue-800">
-                    {t("refilter_match_description_1", lang) + " "}
+                    {t("refilter match description 1", lang) + " "}
                     <strong>{selectedAction?.match.bonus?.name || t("unknown", lang)}</strong>
-                    {t("refilter_match_description_2", lang)}
+                    {t("refilter match description 2", lang)}
                   </p>
                 </div>
               </div>
             ) : (
               <p>
-                {t("confirm_action_1", lang) +
+                {t("confirm action 1", lang) +
                   " " +
                   (selectedAction?.action?.replace("-", " ") || "") +
                   " " +
-                  t("confirm_action_2", lang) +
+                  t("confirm action 2", lang) +
                   " " +
                   (selectedAction?.action?.includes("process") ? t("process", lang) : t("match", lang)) +
                   "?"}
@@ -1079,13 +1048,19 @@ const updateMatch = async () => {
       <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{t("resume_process_with_selected", lang)}</DialogTitle>
+            <DialogTitle>{t("resume process with selected", lang)}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[400px] overflow-y-auto">
+            {/* Show total count */}
+            <div className="mb-2 text-sm text-muted-foreground">
+              {t("total selected", lang)}: {selectedMatches.length}
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>#</TableHead>
                   <TableHead>{t("username", lang)}</TableHead>
+                  <TableHead>{t("account", lang)}</TableHead>
                   <TableHead>{t("bonus", lang)}</TableHead>
                   <TableHead>{t("amount", lang)}</TableHead>
                 </TableRow>
@@ -1093,17 +1068,19 @@ const updateMatch = async () => {
               <TableBody>
                 {selectedMatches.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
-                      {t("no_matches_selected", lang)}
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      {t("no matches selected", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
                   matches
                     .filter((match) => selectedMatches.includes(match.id))
-                    .map((match) => (
+                    .map((match, idx) => (
                       <TableRow key={match.id}>
+                        <TableCell>{idx + 1}</TableCell>
                         <TableCell>{match.username}</TableCell>
-                        <TableCell>{match.bonus?.name || t("not_available", lang)}</TableCell>
+                        <TableCell>{match.transfer_account?.username || t("not assigned", lang)}</TableCell>
+                        <TableCell>{match.bonus?.name || t("not available", lang)}</TableCell>
                         <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
                       </TableRow>
                     ))
@@ -1126,7 +1103,7 @@ const updateMatch = async () => {
               }}
               disabled={selectedMatches.length === 0}
             >
-              {t("resume_with_selected", lang)}
+              {t("resume with selected", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1146,30 +1123,30 @@ const updateMatch = async () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {t("request_permission_to_1", lang) +
+              {t("request permission to 1", lang) +
                 " " +
                 requestAction.charAt(0).toUpperCase() +
                 requestAction.slice(1) +
                 " " +
-                t("request_permission_to_2", lang)}
+                t("request permission to 2", lang)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>{t("process_id", lang)}</Label>
+              <Label>{t("process id", lang)}</Label>
               <p className="font-medium">{requestProcessId}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="request_message">{t("reason_for_request", lang)}</Label>
+              <Label htmlFor="request_message">{t("reason for request", lang)}</Label>
               <Textarea
                 id="request_message"
-                placeholder={t("explain_permission_need", lang)}
+                placeholder={t("explain permission need", lang)}
                 value={requestMessage}
                 onChange={(e) => setRequestMessage(e.target.value)}
                 rows={4}
               />
               {requestMessage.length < 10 && requestMessage.length > 0 && (
-                <p className="text-sm text-red-500">{t("provide_detailed_explanation", lang)}</p>
+                <p className="text-sm text-red-500">{t("provide detailed explanation", lang)}</p>
               )}
             </div>
           </div>
@@ -1178,7 +1155,7 @@ const updateMatch = async () => {
               {t("cancel", lang)}
             </Button>
             <Button onClick={submitPermissionRequest} disabled={!requestMessage || requestMessage.length < 10}>
-              {t("submit_request", lang)}
+              {t("submit request", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1190,8 +1167,8 @@ const updateMatch = async () => {
           <DialogHeader>
             <DialogTitle>
               {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit")
-                ? t("edit_match_details", lang)
-                : t("request_to_edit_match", lang)}
+                ? t("edit match details", lang)
+                : t("request to edit match", lang)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -1203,7 +1180,7 @@ const updateMatch = async () => {
               <Label htmlFor="new_status">{t("status", lang)}</Label>
               <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("select_status", lang)} />
+                  <SelectValue placeholder={t("select status", lang)} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">{t("pending", lang)}</SelectItem>
@@ -1217,16 +1194,16 @@ const updateMatch = async () => {
               auth?.role !== Roles.Admin &&
               !hasPermission(permissionsMap, matchToEdit?.id || "", "edit") && (
                 <div className="space-y-2">
-                  <Label htmlFor="request_message">{t("reason_for_request", lang)}</Label>
+                  <Label htmlFor="request_message">{t("reason for request", lang)}</Label>
                   <Textarea
                     id="request_message"
-                    placeholder={t("explain_change_need", lang)}
+                    placeholder={t("explain change need", lang)}
                     value={requestMessage}
                     onChange={(e) => setRequestMessage(e.target.value)}
                     rows={4}
                   />
                   {requestMessage.length < 10 && requestMessage.length > 0 && (
-                    <p className="text-sm text-red-500">{t("provide_detailed_explanation", lang)}</p>
+                    <p className="text-sm text-red-500">{t("provide detailed explanation", lang)}</p>
                   )}
                 </div>
               )}
@@ -1242,14 +1219,14 @@ const updateMatch = async () => {
                 onClick={updateMatch}
                 disabled={!newStatus}
               >
-                {t("update_match", lang)}
+                {t("update match", lang)}
               </Button>
             ) : (
               <Button
                 onClick={submitMatchChangeRequest}
                 disabled={!newStatus || requestMessage.length < 10}
               >
-                {t("submit_request", lang)}
+                {t("submit request", lang)}
               </Button>
             )}
         </DialogFooter>
@@ -1260,7 +1237,7 @@ const updateMatch = async () => {
       <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{t("comment_details", lang)}</DialogTitle>
+            <DialogTitle>{t("comment details", lang)}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-md border">
@@ -1285,14 +1262,14 @@ const updateMatch = async () => {
       <Dialog open={refilterDialogOpen} onOpenChange={setRefilterDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{t("refilter_process_with_bonus", lang)}</DialogTitle>
+            <DialogTitle>{t("refilter process with bonus", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="bonus_select">{t("select_bonus", lang)}</Label>
+              <Label htmlFor="bonus_select">{t("select bonus", lang)}</Label>
               <Select value={selectedBonusId} onValueChange={setSelectedBonusId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("select_a_bonus", lang)} />
+                  <SelectValue placeholder={t("select a bonus", lang)} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableBonuses.map((bonus) => (
@@ -1307,9 +1284,9 @@ const updateMatch = async () => {
             {selectedBonusId && (
               <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
                 <p className="text-sm text-yellow-800">
-                  <strong>{t("warning", lang)}:</strong> {t("refilter_warning_1", lang) + " "}
+                  <strong>{t("warning", lang)}:</strong> {t("refilter warning 1", lang) + " "}
                   <strong>{availableBonuses.find((b) => b.id === selectedBonusId)?.name || t("selected", lang)}</strong>
-                  {t("refilter_warning_2", lang)}
+                  {t("refilter warning 2", lang)}
                 </p>
               </div>
             )}
@@ -1326,7 +1303,111 @@ const updateMatch = async () => {
               }}
               disabled={!selectedBonusId}
             >
-              {t("refilter_process", lang)}
+              {t("refilter process", lang)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resume All confirmation dialog */}
+      <Dialog open={resumeAllConfirmationOpen} onOpenChange={setResumeAllConfirmationOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t("resume all confirmation", lang)}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p>{t("resume all question", lang)}</p>
+            <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+              <p className="text-sm text-yellow-800">
+                {t("resume all filter description", lang)}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setResumeAllConfirmationOpen(false)}
+            >
+              {t("cancel", lang)}
+            </Button>
+            <Button 
+              onClick={() => confirmResumeAllWithFilter(false)}
+              disabled={resumeAllLoading}
+            >
+              {resumeAllLoading ? t("loading", lang) : t("resume all with not found", lang)}
+            </Button>
+            <Button 
+              onClick={() => confirmResumeAllWithFilter(true)}
+              disabled={resumeAllLoading}
+              variant="default"
+            >
+              {resumeAllLoading ? t("loading", lang) : t("resume all without not found", lang)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resume All dialog */}
+      <Dialog open={resumeAllDialogOpen} onOpenChange={setResumeAllDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t("resume all confirmation", lang)}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            {/* Show total count */}
+            <div className="mb-2 text-sm text-muted-foreground">
+              {t("total selected", lang)}: {resumeAllMatches.length}
+              {resumeAllMatches.length > MAX_RECORDS_LIMIT * 0.8 && (
+                <span className="ml-2 text-orange-600 font-medium">
+                  ({Math.round(resumeAllMatches.length / MAX_RECORDS_LIMIT * 100)}% of {MAX_RECORDS_LIMIT} limit)
+                </span>
+              )}
+            </div>
+            {resumeAllMatches.length > MAX_RECORDS_LIMIT && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800 font-medium">
+                  ⚠️ Cannot process more than {MAX_RECORDS_LIMIT} records
+                </p>
+              </div>
+            )}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>{t("username", lang)}</TableHead>
+                  <TableHead>{t("account", lang)}</TableHead>
+                  <TableHead>{t("bonus", lang)}</TableHead>
+                  <TableHead>{t("amount", lang)}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {resumeAllMatches.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      {t("no matches found", lang)}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  resumeAllMatches.map((match, idx) => (
+                    <TableRow key={match.id}>
+                      <TableCell>{idx + 1}</TableCell>
+                      <TableCell>{match.username}</TableCell>
+                      <TableCell>{match.transfer_account?.username || t("not assigned", lang)}</TableCell>
+                      <TableCell>{match.bonus?.name || t("not available", lang)}</TableCell>
+                      <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setResumeAllDialogOpen(false)}>
+              {t("cancel", lang)}
+            </Button>
+            <Button onClick={confirmResumeAll} disabled={resumeAllMatches.length === 0 || resumeAllLoading}>
+              {resumeAllLoading ? t("loading", lang) : t("confirm", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1344,7 +1425,7 @@ const updateMatch = async () => {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-medium">
-                    {t("process_id", lang)}: {process.id}
+                    {t("process id", lang)}: {process.id}
                   </h3>
                   <div className="flex items-center mt-1 space-x-2">
                     <Badge color={getProcessStatusColor(process.status)} text={process.status} />
@@ -1383,7 +1464,7 @@ const updateMatch = async () => {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("complete_pending_process", lang)}</p>
+                              <p>{t("complete pending process", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1393,14 +1474,14 @@ const updateMatch = async () => {
                           <TooltipTrigger asChild>
                             <Button size="sm" variant="outline" onClick={() => setCreateMatchDialogOpen(true)}>
                               <PlayCircle className="h-4 w-4 mr-1" />
-                              {t("create_match", lang)}
+                              {t("create match", lang)}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
                               {auth?.role == Roles.Admin
-                                ? t("admin_create_match_tooltip", lang)
-                                : t("user_create_match_tooltip", lang)}
+                                ? t("admin create match tooltip", lang)
+                                : t("user create match tooltip", lang)}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -1415,11 +1496,11 @@ const updateMatch = async () => {
                                 onClick={() => handleProcessAction(process, "rematch-process")}
                               >
                                 <RefreshCw className="h-4 w-4 mr-1" />
-                                {t("rematch_all", lang)}
+                                {t("rematch all", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("update_matched_players", lang)}</p>
+                              <p>{t("update matched players", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1434,11 +1515,31 @@ const updateMatch = async () => {
                                 onClick={() => handleProcessAction(process, "refilter-process")}
                               >
                                 <Filter className="h-4 w-4 mr-1" />
-                                {t("refilter_all", lang)}
+                                {t("refilter all", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("refilter_all_players", lang)}</p>
+                              <p>{t("refilter all players", lang)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        {/* Resume All button */}
+                        {canShowProcessAction(process.status, "rematch") && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleResumeAll(process.id)}
+                                disabled={resumeAllLoading}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-1" />
+                                {resumeAllLoading ? t("loading", lang) : t("resume all", lang)}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("resume all pending failed", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1455,11 +1556,11 @@ const updateMatch = async () => {
                                 disabled={!isAllMatchesSuccess(process.id)}
                               >
                                 <CheckCircle className="h-4 w-4 mr-1" />
-                                {t("mark_success", lang)}
+                                {t("mark success", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("mark_success_tooltip", lang)}</p>
+                              <p>{t("mark success tooltip", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1475,11 +1576,11 @@ const updateMatch = async () => {
                                 onClick={() => handleProcessAction(process, "mark-onhold")}
                               >
                                 <PauseCircle className="h-4 w-4 mr-1" />
-                                {t("on_hold", lang)}
+                                {t("on hold", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("on_hold_tooltip", lang)}</p>
+                              <p>{t("on hold tooltip", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1501,7 +1602,7 @@ const updateMatch = async () => {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{t("terminate_tooltip", lang)}</p>
+                          <p>{t("terminate tooltip", lang)}</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
@@ -1518,15 +1619,15 @@ const updateMatch = async () => {
                         <Checkbox
                           checked={selectAllChecked}
                           onCheckedChange={toggleSelectAll}
-                          aria-label={t("select_all", lang)}
+                          aria-label={t("select all", lang)}
                         />
                       </TableHead>
                     )}
                     <TableHead>{t("username", lang)}</TableHead>
                     <TableHead>{t("bonus", lang)}</TableHead>
                     <TableHead>{t("game", lang)}</TableHead>
-                    <TableHead>{t("transfer_account", lang)}</TableHead>
-                    <TableHead>{t("match_status", lang)}</TableHead>
+                    <TableHead>{t("transfer account", lang)}</TableHead>
+                    <TableHead>{t("match status", lang)}</TableHead>
                     <TableHead>{t("amount", lang)}</TableHead>
                     <TableHead>{t("comment", lang)}</TableHead>
                     <TableHead>{t("status", lang)}</TableHead>
@@ -1542,7 +1643,7 @@ const updateMatch = async () => {
                         colSpan={process.status !== ProcessStatus.PROCESSING ? 11 : 10}
                         className="h-24 text-center"
                       >
-                        {t("no_matches_found", lang)}
+                        {t("no matches found", lang)}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1553,21 +1654,21 @@ const updateMatch = async () => {
                             <Checkbox
                               checked={selectedMatches.includes(match.id)}
                               onCheckedChange={() => toggleMatchSelection(match.id)}
-                              aria-label={t("select_match_id", lang) + " " + match.id}
+                              aria-label={t("select match id", lang) + " " + match.id}
                               disabled={match.transfer_account_id === null || match.status.toLowerCase() === "success"}
                             />
                           </TableCell>
                         )}
                         <TableCell className="font-medium">{match.username}</TableCell>
-                        <TableCell>{match.bonus?.name || t("not_available", lang)}</TableCell>
+                        <TableCell>{match.bonus?.name || t("not available", lang)}</TableCell>
                         <TableCell>{match?.game}</TableCell>
                         <TableCell>
                           {match.transfer_account_id ? (
                             <span className="font-medium">
-                              {match.transfer_account?.username || t("transfer_account", lang)}
+                              {match.transfer_account?.username || t("transfer account", lang)}
                             </span>
                           ) : (
-                            <span className="text-gray-400">{t("not_assigned", lang)}</span>
+                            <span className="text-gray-400">{t("not assigned", lang)}</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -1581,7 +1682,7 @@ const updateMatch = async () => {
                           <button
                             onClick={() => handleCommentClick(match.comment)}
                             className="text-left hover:text-blue-600 hover:underline cursor-pointer max-w-32 truncate"
-                            title={match.comment || t("no_comment", lang)}
+                            title={match.comment || t("no comment", lang)}
                           >
                             {truncateComment(match.comment)}
                           </button>
@@ -1604,7 +1705,7 @@ const updateMatch = async () => {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{t("rematch_individual_player", lang)}</p>
+                                    <p>{t("rematch individual player", lang)}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -1629,10 +1730,10 @@ const updateMatch = async () => {
                                   <TooltipContent>
                                     <p>
                                       {auth?.role === "admin" || auth?.can("matches:edit")
-                                        ? t("edit_match_details", lang)
+                                        ? t("edit match details", lang)
                                         : hasPermission(permissionsMap, match.id, "edit")
-                                          ? t("execute_permitted_edit", lang)
-                                          : t("request_to_edit_match", lang)}
+                                          ? t("execute permitted edit", lang)
+                                          : t("request to edit match", lang)}
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -1651,7 +1752,7 @@ const updateMatch = async () => {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{t("refilter_player", lang)}</p>
+                                    <p>{t("refilter player", lang)}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -1669,7 +1770,7 @@ const updateMatch = async () => {
 
         {groupedByProcess.length === 0 && (
           <div className="text-center py-8">
-            <p>{t("no_matches_found", lang)}</p>
+            <p>{t("no matches found", lang)}</p>
           </div>
         )}
       </div>

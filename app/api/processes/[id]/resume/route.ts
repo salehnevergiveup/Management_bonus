@@ -23,6 +23,7 @@ const rateLimiter = {
 
 export async function POST(request: Request, {params} : { params: Promise<{ id: string }> }){
   try {
+    console.log("resume process route");
     // Check rate limit before processing the request
     if (!rateLimiter.canMakeRequest()) {
       return NextResponse.json(
