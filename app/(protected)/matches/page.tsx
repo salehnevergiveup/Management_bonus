@@ -926,11 +926,11 @@ const updateMatch = async () => {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: t("match_management", lang) }]} />
+      <Breadcrumb items={[{ label: t("match management", lang) }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>{t("match_management", lang)}</CardTitle>
+          <CardTitle>{t("match management", lang)}</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -990,50 +990,50 @@ const updateMatch = async () => {
           <>
             {selectedAction?.action === "rematch-process" ? (
               <div className="space-y-3">
-                <p>{t("all_unmatched_users_matched", lang)}</p>
+                <p>{t("all unmatched users matched", lang)}</p>
                 <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-                  <p className="text-sm text-yellow-800">{t("rematch_process_description", lang)}</p>
+                  <p className="text-sm text-yellow-800">{t("rematch process description", lang)}</p>
                 </div>
               </div>
             ) : selectedAction?.action === "terminate" ? (
               <div className="space-y-3">
-                <p>{t("confirm_terminate_process", lang)}</p>
+                <p>{t("confirm terminate process", lang)}</p>
                 <div className="bg-red-50 p-3 rounded border border-red-200">
-                  <p className="text-sm text-red-800">{t("terminate_process_warning", lang)}</p>
+                  <p className="text-sm text-red-800">{t("terminate process warning", lang)}</p>
                 </div>
               </div>
             ) : selectedAction?.action === "mark-success" ? (
               <div className="space-y-3">
-                <p>{t("confirm_mark_success", lang)}</p>
+                <p>{t("confirm mark success", lang)}</p>
                 <div className="bg-green-50 p-3 rounded border border-green-200">
-                  <p className="text-sm text-green-800">{t("mark_success_description", lang)}</p>
+                  <p className="text-sm text-green-800">{t("mark success description", lang)}</p>
                 </div>
               </div>
             ) : selectedAction?.action === "mark-onhold" ? (
               <div className="space-y-3">
-                <p>{t("confirm_put_on_hold", lang)}</p>
+                <p>{t("confirm put on hold", lang)}</p>
                 <div className="bg-amber-50 p-3 rounded border border-amber-200">
-                  <p className="text-sm text-amber-800">{t("mark_onhold_description", lang)}</p>
+                  <p className="text-sm text-amber-800">{t("mark onhold description", lang)}</p>
                 </div>
               </div>
             ) : selectedAction?.action === "refilter-single" ? (
               <div className="space-y-3">
-                <p>{t("confirm_refilter_match", lang)}</p>
+                <p>{t("confirm refilter match", lang)}</p>
                 <div className="bg-blue-50 p-3 rounded border border-blue-200">
                   <p className="text-sm text-blue-800">
-                    {t("refilter_match_description_1", lang) + " "}
+                    {t("refilter match description 1", lang) + " "}
                     <strong>{selectedAction?.match.bonus?.name || t("unknown", lang)}</strong>
-                    {t("refilter_match_description_2", lang)}
+                    {t("refilter match description 2", lang)}
                   </p>
                 </div>
               </div>
             ) : (
               <p>
-                {t("confirm_action_1", lang) +
+                {t("confirm action 1", lang) +
                   " " +
                   (selectedAction?.action?.replace("-", " ") || "") +
                   " " +
-                  t("confirm_action_2", lang) +
+                  t("confirm action 2", lang) +
                   " " +
                   (selectedAction?.action?.includes("process") ? t("process", lang) : t("match", lang)) +
                   "?"}
@@ -1048,12 +1048,12 @@ const updateMatch = async () => {
       <Dialog open={resumeDialogOpen} onOpenChange={setResumeDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{t("resume_process_with_selected", lang)}</DialogTitle>
+            <DialogTitle>{t("resume process with selected", lang)}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[400px] overflow-y-auto">
             {/* Show total count */}
             <div className="mb-2 text-sm text-muted-foreground">
-              {t("total_selected", lang)}: {selectedMatches.length}
+              {t("total selected", lang)}: {selectedMatches.length}
             </div>
             <Table>
               <TableHeader>
@@ -1069,7 +1069,7 @@ const updateMatch = async () => {
                 {selectedMatches.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      {t("no_matches_selected", lang)}
+                      {t("no matches selected", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1079,8 +1079,8 @@ const updateMatch = async () => {
                       <TableRow key={match.id}>
                         <TableCell>{idx + 1}</TableCell>
                         <TableCell>{match.username}</TableCell>
-                        <TableCell>{match.transfer_account?.username || t("not_assigned", lang)}</TableCell>
-                        <TableCell>{match.bonus?.name || t("not_available", lang)}</TableCell>
+                        <TableCell>{match.transfer_account?.username || t("not assigned", lang)}</TableCell>
+                        <TableCell>{match.bonus?.name || t("not available", lang)}</TableCell>
                         <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
                       </TableRow>
                     ))
@@ -1103,7 +1103,7 @@ const updateMatch = async () => {
               }}
               disabled={selectedMatches.length === 0}
             >
-              {t("resume_with_selected", lang)}
+              {t("resume with selected", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1123,30 +1123,30 @@ const updateMatch = async () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {t("request_permission_to_1", lang) +
+              {t("request permission to 1", lang) +
                 " " +
                 requestAction.charAt(0).toUpperCase() +
                 requestAction.slice(1) +
                 " " +
-                t("request_permission_to_2", lang)}
+                t("request permission to 2", lang)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>{t("process_id", lang)}</Label>
+              <Label>{t("process id", lang)}</Label>
               <p className="font-medium">{requestProcessId}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="request_message">{t("reason_for_request", lang)}</Label>
+              <Label htmlFor="request_message">{t("reason for request", lang)}</Label>
               <Textarea
                 id="request_message"
-                placeholder={t("explain_permission_need", lang)}
+                placeholder={t("explain permission need", lang)}
                 value={requestMessage}
                 onChange={(e) => setRequestMessage(e.target.value)}
                 rows={4}
               />
               {requestMessage.length < 10 && requestMessage.length > 0 && (
-                <p className="text-sm text-red-500">{t("provide_detailed_explanation", lang)}</p>
+                <p className="text-sm text-red-500">{t("provide detailed explanation", lang)}</p>
               )}
             </div>
           </div>
@@ -1155,7 +1155,7 @@ const updateMatch = async () => {
               {t("cancel", lang)}
             </Button>
             <Button onClick={submitPermissionRequest} disabled={!requestMessage || requestMessage.length < 10}>
-              {t("submit_request", lang)}
+              {t("submit request", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1167,8 +1167,8 @@ const updateMatch = async () => {
           <DialogHeader>
             <DialogTitle>
               {auth?.can("matches:edit") || hasPermission(permissionsMap, matchToEdit?.id || "", "edit")
-                ? t("edit_match_details", lang)
-                : t("request_to_edit_match", lang)}
+                ? t("edit match details", lang)
+                : t("request to edit match", lang)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -1180,7 +1180,7 @@ const updateMatch = async () => {
               <Label htmlFor="new_status">{t("status", lang)}</Label>
               <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("select_status", lang)} />
+                  <SelectValue placeholder={t("select status", lang)} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">{t("pending", lang)}</SelectItem>
@@ -1194,16 +1194,16 @@ const updateMatch = async () => {
               auth?.role !== Roles.Admin &&
               !hasPermission(permissionsMap, matchToEdit?.id || "", "edit") && (
                 <div className="space-y-2">
-                  <Label htmlFor="request_message">{t("reason_for_request", lang)}</Label>
+                  <Label htmlFor="request_message">{t("reason for request", lang)}</Label>
                   <Textarea
                     id="request_message"
-                    placeholder={t("explain_change_need", lang)}
+                    placeholder={t("explain change need", lang)}
                     value={requestMessage}
                     onChange={(e) => setRequestMessage(e.target.value)}
                     rows={4}
                   />
                   {requestMessage.length < 10 && requestMessage.length > 0 && (
-                    <p className="text-sm text-red-500">{t("provide_detailed_explanation", lang)}</p>
+                    <p className="text-sm text-red-500">{t("provide detailed explanation", lang)}</p>
                   )}
                 </div>
               )}
@@ -1219,14 +1219,14 @@ const updateMatch = async () => {
                 onClick={updateMatch}
                 disabled={!newStatus}
               >
-                {t("update_match", lang)}
+                {t("update match", lang)}
               </Button>
             ) : (
               <Button
                 onClick={submitMatchChangeRequest}
                 disabled={!newStatus || requestMessage.length < 10}
               >
-                {t("submit_request", lang)}
+                {t("submit request", lang)}
               </Button>
             )}
         </DialogFooter>
@@ -1237,7 +1237,7 @@ const updateMatch = async () => {
       <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{t("comment_details", lang)}</DialogTitle>
+            <DialogTitle>{t("comment details", lang)}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <div className="bg-gray-50 p-4 rounded-md border">
@@ -1262,14 +1262,14 @@ const updateMatch = async () => {
       <Dialog open={refilterDialogOpen} onOpenChange={setRefilterDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{t("refilter_process_with_bonus", lang)}</DialogTitle>
+            <DialogTitle>{t("refilter process with bonus", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="bonus_select">{t("select_bonus", lang)}</Label>
+              <Label htmlFor="bonus_select">{t("select bonus", lang)}</Label>
               <Select value={selectedBonusId} onValueChange={setSelectedBonusId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("select_a_bonus", lang)} />
+                  <SelectValue placeholder={t("select a bonus", lang)} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableBonuses.map((bonus) => (
@@ -1284,9 +1284,9 @@ const updateMatch = async () => {
             {selectedBonusId && (
               <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
                 <p className="text-sm text-yellow-800">
-                  <strong>{t("warning", lang)}:</strong> {t("refilter_warning_1", lang) + " "}
+                  <strong>{t("warning", lang)}:</strong> {t("refilter warning 1", lang) + " "}
                   <strong>{availableBonuses.find((b) => b.id === selectedBonusId)?.name || t("selected", lang)}</strong>
-                  {t("refilter_warning_2", lang)}
+                  {t("refilter warning 2", lang)}
                 </p>
               </div>
             )}
@@ -1303,7 +1303,7 @@ const updateMatch = async () => {
               }}
               disabled={!selectedBonusId}
             >
-              {t("refilter_process", lang)}
+              {t("refilter process", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1313,13 +1313,13 @@ const updateMatch = async () => {
       <Dialog open={resumeAllConfirmationOpen} onOpenChange={setResumeAllConfirmationOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{t("resume_all_confirmation", lang)}</DialogTitle>
+            <DialogTitle>{t("resume all confirmation", lang)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p>{t("resume_all_question", lang)}</p>
+            <p>{t("resume all question", lang)}</p>
             <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
               <p className="text-sm text-yellow-800">
-                {t("resume_all_filter_description", lang)}
+                {t("resume all filter description", lang)}
               </p>
             </div>
           </div>
@@ -1335,14 +1335,14 @@ const updateMatch = async () => {
               onClick={() => confirmResumeAllWithFilter(false)}
               disabled={resumeAllLoading}
             >
-              {resumeAllLoading ? t("loading", lang) : t("resume_all_with_not_found", lang)}
+              {resumeAllLoading ? t("loading", lang) : t("resume all with not found", lang)}
             </Button>
             <Button 
               onClick={() => confirmResumeAllWithFilter(true)}
               disabled={resumeAllLoading}
               variant="default"
             >
-              {resumeAllLoading ? t("loading", lang) : t("resume_all_without_not_found", lang)}
+              {resumeAllLoading ? t("loading", lang) : t("resume all without not found", lang)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1352,12 +1352,12 @@ const updateMatch = async () => {
       <Dialog open={resumeAllDialogOpen} onOpenChange={setResumeAllDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{t("resume_all_confirmation", lang)}</DialogTitle>
+            <DialogTitle>{t("resume all confirmation", lang)}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[400px] overflow-y-auto">
             {/* Show total count */}
             <div className="mb-2 text-sm text-muted-foreground">
-              {t("total_selected", lang)}: {resumeAllMatches.length}
+              {t("total selected", lang)}: {resumeAllMatches.length}
               {resumeAllMatches.length > MAX_RECORDS_LIMIT * 0.8 && (
                 <span className="ml-2 text-orange-600 font-medium">
                   ({Math.round(resumeAllMatches.length / MAX_RECORDS_LIMIT * 100)}% of {MAX_RECORDS_LIMIT} limit)
@@ -1385,7 +1385,7 @@ const updateMatch = async () => {
                 {resumeAllMatches.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      {t("no_matches_found", lang)}
+                      {t("no matches found", lang)}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1393,8 +1393,8 @@ const updateMatch = async () => {
                     <TableRow key={match.id}>
                       <TableCell>{idx + 1}</TableCell>
                       <TableCell>{match.username}</TableCell>
-                      <TableCell>{match.transfer_account?.username || t("not_assigned", lang)}</TableCell>
-                      <TableCell>{match.bonus?.name || t("not_available", lang)}</TableCell>
+                      <TableCell>{match.transfer_account?.username || t("not assigned", lang)}</TableCell>
+                      <TableCell>{match.bonus?.name || t("not available", lang)}</TableCell>
                       <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
                     </TableRow>
                   ))
@@ -1425,7 +1425,7 @@ const updateMatch = async () => {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-medium">
-                    {t("process_id", lang)}: {process.id}
+                    {t("process id", lang)}: {process.id}
                   </h3>
                   <div className="flex items-center mt-1 space-x-2">
                     <Badge color={getProcessStatusColor(process.status)} text={process.status} />
@@ -1464,7 +1464,7 @@ const updateMatch = async () => {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("complete_pending_process", lang)}</p>
+                              <p>{t("complete pending process", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1474,14 +1474,14 @@ const updateMatch = async () => {
                           <TooltipTrigger asChild>
                             <Button size="sm" variant="outline" onClick={() => setCreateMatchDialogOpen(true)}>
                               <PlayCircle className="h-4 w-4 mr-1" />
-                              {t("create_match", lang)}
+                              {t("create match", lang)}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
                               {auth?.role == Roles.Admin
-                                ? t("admin_create_match_tooltip", lang)
-                                : t("user_create_match_tooltip", lang)}
+                                ? t("admin create match tooltip", lang)
+                                : t("user create match tooltip", lang)}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -1496,11 +1496,11 @@ const updateMatch = async () => {
                                 onClick={() => handleProcessAction(process, "rematch-process")}
                               >
                                 <RefreshCw className="h-4 w-4 mr-1" />
-                                {t("rematch_all", lang)}
+                                {t("rematch all", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("update_matched_players", lang)}</p>
+                              <p>{t("update matched players", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1515,11 +1515,11 @@ const updateMatch = async () => {
                                 onClick={() => handleProcessAction(process, "refilter-process")}
                               >
                                 <Filter className="h-4 w-4 mr-1" />
-                                {t("refilter_all", lang)}
+                                {t("refilter all", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("refilter_all_players", lang)}</p>
+                              <p>{t("refilter all players", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1535,11 +1535,11 @@ const updateMatch = async () => {
                                 disabled={resumeAllLoading}
                               >
                                 <RotateCcw className="h-4 w-4 mr-1" />
-                                {resumeAllLoading ? t("loading", lang) : t("resume_all", lang)}
+                                {resumeAllLoading ? t("loading", lang) : t("resume all", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("resume_all_pending_failed", lang)}</p>
+                              <p>{t("resume all pending failed", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1556,11 +1556,11 @@ const updateMatch = async () => {
                                 disabled={!isAllMatchesSuccess(process.id)}
                               >
                                 <CheckCircle className="h-4 w-4 mr-1" />
-                                {t("mark_success", lang)}
+                                {t("mark success", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("mark_success_tooltip", lang)}</p>
+                              <p>{t("mark success tooltip", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1576,11 +1576,11 @@ const updateMatch = async () => {
                                 onClick={() => handleProcessAction(process, "mark-onhold")}
                               >
                                 <PauseCircle className="h-4 w-4 mr-1" />
-                                {t("on_hold", lang)}
+                                {t("on hold", lang)}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("on_hold_tooltip", lang)}</p>
+                              <p>{t("on hold tooltip", lang)}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -1602,7 +1602,7 @@ const updateMatch = async () => {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{t("terminate_tooltip", lang)}</p>
+                          <p>{t("terminate tooltip", lang)}</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
@@ -1619,15 +1619,15 @@ const updateMatch = async () => {
                         <Checkbox
                           checked={selectAllChecked}
                           onCheckedChange={toggleSelectAll}
-                          aria-label={t("select_all", lang)}
+                          aria-label={t("select all", lang)}
                         />
                       </TableHead>
                     )}
                     <TableHead>{t("username", lang)}</TableHead>
                     <TableHead>{t("bonus", lang)}</TableHead>
                     <TableHead>{t("game", lang)}</TableHead>
-                    <TableHead>{t("transfer_account", lang)}</TableHead>
-                    <TableHead>{t("match_status", lang)}</TableHead>
+                    <TableHead>{t("transfer account", lang)}</TableHead>
+                    <TableHead>{t("match status", lang)}</TableHead>
                     <TableHead>{t("amount", lang)}</TableHead>
                     <TableHead>{t("comment", lang)}</TableHead>
                     <TableHead>{t("status", lang)}</TableHead>
@@ -1643,7 +1643,7 @@ const updateMatch = async () => {
                         colSpan={process.status !== ProcessStatus.PROCESSING ? 11 : 10}
                         className="h-24 text-center"
                       >
-                        {t("no_matches_found", lang)}
+                        {t("no matches found", lang)}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1654,21 +1654,21 @@ const updateMatch = async () => {
                             <Checkbox
                               checked={selectedMatches.includes(match.id)}
                               onCheckedChange={() => toggleMatchSelection(match.id)}
-                              aria-label={t("select_match_id", lang) + " " + match.id}
+                              aria-label={t("select match id", lang) + " " + match.id}
                               disabled={match.transfer_account_id === null || match.status.toLowerCase() === "success"}
                             />
                           </TableCell>
                         )}
                         <TableCell className="font-medium">{match.username}</TableCell>
-                        <TableCell>{match.bonus?.name || t("not_available", lang)}</TableCell>
+                        <TableCell>{match.bonus?.name || t("not available", lang)}</TableCell>
                         <TableCell>{match?.game}</TableCell>
                         <TableCell>
                           {match.transfer_account_id ? (
                             <span className="font-medium">
-                              {match.transfer_account?.username || t("transfer_account", lang)}
+                              {match.transfer_account?.username || t("transfer account", lang)}
                             </span>
                           ) : (
-                            <span className="text-gray-400">{t("not_assigned", lang)}</span>
+                            <span className="text-gray-400">{t("not assigned", lang)}</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -1682,7 +1682,7 @@ const updateMatch = async () => {
                           <button
                             onClick={() => handleCommentClick(match.comment)}
                             className="text-left hover:text-blue-600 hover:underline cursor-pointer max-w-32 truncate"
-                            title={match.comment || t("no_comment", lang)}
+                            title={match.comment || t("no comment", lang)}
                           >
                             {truncateComment(match.comment)}
                           </button>
@@ -1705,7 +1705,7 @@ const updateMatch = async () => {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{t("rematch_individual_player", lang)}</p>
+                                    <p>{t("rematch individual player", lang)}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -1730,10 +1730,10 @@ const updateMatch = async () => {
                                   <TooltipContent>
                                     <p>
                                       {auth?.role === "admin" || auth?.can("matches:edit")
-                                        ? t("edit_match_details", lang)
+                                        ? t("edit match details", lang)
                                         : hasPermission(permissionsMap, match.id, "edit")
-                                          ? t("execute_permitted_edit", lang)
-                                          : t("request_to_edit_match", lang)}
+                                          ? t("execute permitted edit", lang)
+                                          : t("request to edit match", lang)}
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -1752,7 +1752,7 @@ const updateMatch = async () => {
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{t("refilter_player", lang)}</p>
+                                    <p>{t("refilter player", lang)}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -1770,7 +1770,7 @@ const updateMatch = async () => {
 
         {groupedByProcess.length === 0 && (
           <div className="text-center py-8">
-            <p>{t("no_matches_found", lang)}</p>
+            <p>{t("no matches found", lang)}</p>
           </div>
         )}
       </div>

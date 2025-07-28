@@ -20,9 +20,9 @@ export default function MatchesTabs({
   return (
     <Tabs defaultValue="all" value={activeTab} onValueChange={onTabChange}>
       <TabsList className="mb-4">
-        <TabsTrigger value="all">{t("all_players", lang)}</TabsTrigger>
-        <TabsTrigger value="matched">{t("matched_players", lang)}</TabsTrigger>
-        <TabsTrigger value="unmatched">{t("unmatched_players", lang)}</TabsTrigger>
+        <TabsTrigger value="all">{t("all players", lang)}</TabsTrigger>
+        <TabsTrigger value="matched">{t("matched players", lang)}</TabsTrigger>
+        <TabsTrigger value="unmatched">{t("unmatched players", lang)}</TabsTrigger>
         <TabsTrigger value="not_found">{t("not found players", lang)}</TabsTrigger>
       </TabsList>
 

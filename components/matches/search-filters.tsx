@@ -65,10 +65,10 @@ export default function SearchFilters({
       <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t("filter_by_status", lang)} />
+            <SelectValue placeholder={t("filter by status", lang)} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t("all_statuses", lang)}</SelectItem>
+            <SelectItem value="all">{t("all statuses", lang)}</SelectItem>
             <SelectItem value="success">{t("success", lang)}</SelectItem>
             <SelectItem value="failed">{t("failed", lang)}</SelectItem>
             <SelectItem value="pending">{t("pending", lang)}</SelectItem>
@@ -77,10 +77,10 @@ export default function SearchFilters({
 
         <Select value={bonusFilter} onValueChange={setBonusFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t("filter_by_bonus", lang)} />
+            <SelectValue placeholder={t("filter by bonus", lang)} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t("all_bonuses", lang)}</SelectItem>
+            <SelectItem value="all">{t("all bonuses", lang)}</SelectItem>
             {availableBonuses.map((bonus) => (
               <SelectItem key={bonus.id} value={bonus.id}>
                 {bonus.name}

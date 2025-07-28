@@ -54,7 +54,7 @@ export default function SelectionControls({
             onClick={onSelectAllFiltered}
             className="text-green-600 hover:text-green-700"
           >
-            {t("select_all_filtered", lang)} ({totalFilteredMatches})
+            {t("select all filtered", lang)} ({totalFilteredMatches})
           </Button>
         )}
         {selectedMatches.length > 0 && (
@@ -63,7 +63,7 @@ export default function SelectionControls({
             variant="outline"
             onClick={onClearSelection}
           >
-            {t("clear_selection", lang)}
+            {t("clear selection", lang)}
           </Button>
         )}
         {hasSelectedNotFoundPlayers && (
@@ -73,7 +73,7 @@ export default function SelectionControls({
             onClick={onUnselectNotFound}
             className="text-orange-600 hover:text-orange-700"
           >
-            {t("unselect_not_found", lang)}
+            {t("unselect not found", lang)}
           </Button>
         )}
         {selectedMatches.length > 0 && (
