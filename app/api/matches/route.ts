@@ -19,36 +19,71 @@ export async function GET(request: Request) {
     );
   }
 
-  const query = {
-    where: {
-      process: {
-        status: {
-          in: [ProcessStatus.PENDING, ProcessStatus.PROCESSING, ProcessStatus.FAILED]
-        }
+  const url = new URL(request.url);
+  const page = parseInt(url.searchParams.get("page") || "1");
+  const limit = parseInt(url.searchParams.get("pageSize") || url.searchParams.get("limit") || "10");
+  const fetchAll = url.searchParams.get("all") === "true";
+  const search = url.searchParams.get("search")?.trim() || "";
+  const statusParam = url.searchParams.get("status");
+  const statusList = statusParam ? statusParam.split(",").map(s => s.trim().toLowerCase()) : null;
+  const hasTransferAccount = url.searchParams.get("hasTransferAccount");
+  const notFoundPlayers = url.searchParams.get("notFoundPlayers") === "true";
+
+  // Build where clause
+  const where: any = {
+    process: {
+      status: {
+        in: [ProcessStatus.PENDING, ProcessStatus.PROCESSING, ProcessStatus.FAILED]
       }
-    },
+    }
+  };
+  if (auth.role !== Roles.Admin) {
+    where.process.user_id = auth.id;
+  }
+  if (statusList && statusList.length > 0) {
+    where.status = { in: statusList };
+  }
+  if (hasTransferAccount === "true") {
+    where.transfer_account_id = { not: null };
+  } else if (hasTransferAccount === "false") {
+    where.transfer_account_id = null;
+  }
+  if (notFoundPlayers) {
+    where.status = "failed";
+    where.comment = "unable to find the player";
+  }
+  if (search) {
+    where.OR = [
+      { username: { contains: search } },
+      { id: { contains: search } },
+      { game: { contains: search } },
+      { currency: { contains: search } },
+      { comment: { contains: search } },
+      { transfer_account: { username: { contains: search } } },
+      { bonus: { name: { contains: search } } },
+    ];
+  }
+
+  const query = {
+    where,
     include: {
       process: true,
       transfer_account: true,  
       bonus: true
     }
   };
-  
-  if (auth.role !== Roles.Admin) {
-    query.where.process = {
-      ...query.where.process,  
-      user_id: auth.id
-    } as any;
-  }
-  const total = await prisma.match.count();
 
+  // Get filtered total
+  const total = await prisma.match.count({ where });
+
+  // Use Pagination utility (it will handle skip/take/all)
   const paginationResult = await Pagination(
     prisma.match,
-    new URL(request.url), 
-    total,  
+    url,
+    total,
     query
   );
-  
+
   const Res : GetResponse = { 
     data: paginationResult.data,  
     pagination:  paginationResult.pagination, 
@@ -57,8 +92,8 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json(
-  Res, 
-  {status: 200});
+    Res, 
+    {status: 200});
 }
 
 // this is to create the turnover data the request made from the selenium 
