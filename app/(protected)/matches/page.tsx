@@ -506,20 +506,48 @@ const updateMatch = async () => {
     }
   };
 
+  // Test API connectivity
+  const testApiConnection = async () => {
+    console.log(`🧪 Testing API connection...`);
+    try {
+      const testResponse = await fetch('/api/matches?page=1&limit=1', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      console.log(`🧪 Test API response:`, { status: testResponse.status, ok: testResponse.ok });
+      return testResponse.ok;
+    } catch (error) {
+      console.error(`🧪 Test API error:`, error);
+      return false;
+    }
+  };
+
   // Restore the original executeAction function above the return statement
   const executeAction = async () => {
     if (!selectedAction) return;
-
+  
     const { match, action } = selectedAction;
+    console.log(`🚀 Starting executeAction for: ${action}`, { matchId: match.id, processId: match.process_id });
+    
+    // Test API connection first
+    const apiWorks = await testApiConnection();
+    console.log(`🧪 API connection test result:`, apiWorks);
+    
     try {
       let endpoint = '';
       let method = '';
       let body = {};
-
+  
       switch (action) {
         case 'resume':
           endpoint = `/api/processes/${match.process_id}/resume`;
+          console.log(`🔍 RESUME DEBUG: Starting resume action`);
+          console.log(`🔍 RESUME DEBUG: Endpoint = ${endpoint}`);
+          console.log(`🔍 RESUME DEBUG: Process ID = ${match.process_id}`);
+          
           if (selectedMatches.length > 0) {
+            console.log(`🔍 RESUME DEBUG: Selected matches count = ${selectedMatches.length}`);
+            
             const selectedMatchData: any[] = matches
               .filter(m => 
                 selectedMatches.includes(m.id) && 
@@ -535,20 +563,23 @@ const updateMatch = async () => {
                 currency: m.currency,
                 bonus_id: m.bonus_id
               }));
+              
+            console.log(`🔍 RESUME DEBUG: Valid matches for resume = ${selectedMatchData.length}`);
+            
             if (selectedMatchData.length == 0) {
+              console.log(`🔍 RESUME DEBUG: No valid matches, returning early`);
               toast.error("No valid matches selected for resume action");
               return;
             }
-            if (selectedMatchData.length > MAX_RECORDS_LIMIT) {
-              toast.error(`Cannot process more than ${MAX_RECORDS_LIMIT} records. Selected ${selectedMatchData.length} matches.`);
-              return;
-            }
-            if (selectedMatchData.length > MAX_RECORDS_LIMIT * 0.8) {
-              toast.error(`Warning: Processing ${selectedMatchData.length} records (${Math.round(selectedMatchData.length / MAX_RECORDS_LIMIT * 100)}% of limit)`);
-            }
+            
+            console.log(`🔍 RESUME DEBUG: Preparing payload...`);
             body = { matches: selectedMatchData };
             method = 'POST';
+            
+            console.log(`🔍 RESUME DEBUG: Payload prepared, method = ${method}`);
+            console.log(`🔍 RESUME DEBUG: About to make fetch request...`);
           } else {
+            console.log(`🔍 RESUME DEBUG: No selected matches, returning early`);
             toast.error("No matches selected for resume action");
             return;
           }
@@ -585,9 +616,14 @@ const updateMatch = async () => {
           break;
       }
       if (!endpoint || !method) {
-        console.error("Invalid action configuration:", { action, endpoint, method });
+        console.error("❌ Invalid action configuration:", { action, endpoint, method });
         return;
       }
+      
+      console.log(`🌐 Making ${method} request to: ${endpoint}`);
+      console.log(`📋 Request body preview:`, JSON.stringify(body).substring(0, 200) + '...');
+      
+      console.log(`🔍 RESUME DEBUG: Starting fetch request...`);
       const response = await fetch(endpoint, {
         method,
         headers: {
@@ -595,9 +631,17 @@ const updateMatch = async () => {
         },
         body: JSON.stringify(body),
       });
+      console.log(`🔍 RESUME DEBUG: Fetch request completed`);
+      
+      console.log(`📥 Response received:`, { status: response.status, ok: response.ok });
+      
       if (!response.ok) {
-        throw new Error(`Failed to ${action} match`);
+        const errorData = await response.json();
+        console.error(`❌ Response error:`, errorData);
+        throw new Error(errorData.message || errorData.error || `Failed to ${action} match`);
       }
+      
+      console.log(`✅ Request successful for action: ${action}`);
       const needsPermission = (action === 'terminate');
       if (needsPermission && auth?.role !== Roles.Admin) {
         setCompletePermission({
@@ -610,8 +654,17 @@ const updateMatch = async () => {
       setSelectedMatches([]);
       setSelectAllChecked(false);
     } catch (error) {
-      console.error(`Error during ${selectedAction.action}:`, error);
-      toast.error(`Failed to perform ${selectedAction.action.replace('-', ' ')} action`);
+      console.error(`🔍 RESUME DEBUG: Error caught in executeAction`);
+      console.error(`🔍 RESUME DEBUG: Error type = ${typeof error}`);
+      console.error(`🔍 RESUME DEBUG: Error message = ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`🔍 RESUME DEBUG: Error stack = ${error instanceof Error ? error.stack : 'No stack trace'}`);
+      console.error(`💥 Error during ${selectedAction.action}:`, error);
+      console.error(`💥 Error details:`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        action: selectedAction.action
+      });
+      toast.error(`${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setConfirmDialogOpen(false);
       setRefilterDialogOpen(false);
@@ -629,9 +682,11 @@ const updateMatch = async () => {
 
   // Handler to confirm Resume All with filtering option
   const confirmResumeAllWithFilter = async (filterNotFound: boolean) => {
+    console.log(`🔍 DEBUG: confirmResumeAllWithFilter called with filterNotFound = ${filterNotFound}`);
     setResumeAllConfirmationOpen(false);
     setResumeAllFilterNotFound(filterNotFound);
     setResumeAllLoading(true);
+    console.log(`🔍 DEBUG: Fetching matches...`);
     
     try {
       const response = await fetch(`/api/matches?all=true&status=pending,failed`);
@@ -652,6 +707,7 @@ const updateMatch = async () => {
       if (processMatches.length > MAX_RECORDS_LIMIT) {
         toast.error(`Cannot process more than ${MAX_RECORDS_LIMIT} records. Found ${processMatches.length} matches.`);
         setResumeAllLoading(false);
+        console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - too many records`);
         return;
       }
       
@@ -662,8 +718,10 @@ const updateMatch = async () => {
       
       setResumeAllMatches(processMatches);
       setResumeAllDialogOpen(true);
+      console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - resume dialog shown with ${processMatches.length} matches`);
     } catch (error) {
       toast.error("Failed to fetch all pending/failed matches");
+      console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - error occurred`);
     } finally {
       setResumeAllLoading(false);
     }
@@ -671,13 +729,25 @@ const updateMatch = async () => {
 
   // Handler to confirm Resume All
   const confirmResumeAll = async () => {
+    console.log(`🚀 Starting confirmResumeAll`);
+    console.log(`📊 Resume All data:`, { 
+      processId: resumeAllProcessId, 
+      matchesCount: resumeAllMatches.length 
+    });
+    
     if (!resumeAllProcessId || resumeAllMatches.length === 0) {
+      console.log(`❌ No matches to resume`);
       toast.error("No matches to resume");
       setResumeAllDialogOpen(false);
       return;
     }
+    
     setResumeAllLoading(true);
+    console.log(`🔍 DEBUG: Full-screen overlay SHOWN - processing resume request...`);
+    
     try {
+      console.log(`📦 Preparing payload for ${resumeAllMatches.length} matches`);
+      
       const payload = {
         matches: resumeAllMatches.map(m => ({
           id: m.id,
@@ -689,19 +759,50 @@ const updateMatch = async () => {
           bonus_id: m.bonus_id
         }))
       };
+      
+      // Check payload size
+      const payloadSize = JSON.stringify(payload).length;
+      const sizeInMB = payloadSize / (1024 * 1024);
+      console.log(`📦 Resume All payload size: ${sizeInMB.toFixed(2)} MB`);
+      
+      if (sizeInMB > 5) { // 5MB limit
+        console.log(`❌ Payload too large: ${sizeInMB.toFixed(2)} MB`);
+        toast.error(`Payload too large (${sizeInMB.toFixed(2)} MB). Please reduce the number of matches.`);
+        setResumeAllLoading(false);
+        console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - payload too large`);
+        return;
+      }
+      
+      console.log(`🌐 Making Resume All request to: /api/processes/${resumeAllProcessId}/resume`);
+      
       const response = await fetch(`/api/processes/${resumeAllProcessId}/resume`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error("Failed to resume all matches");
+      
+      console.log(`📥 Resume All response received:`, { status: response.status, ok: response.ok });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error(`❌ Resume All response error:`, errorData);
+        throw new Error(errorData.message || errorData.error || "Failed to resume all matches");
+      }
+      
+      console.log(`✅ Resume All request successful`);
       toast.success("Resume All request sent successfully");
       setResumeAllDialogOpen(false);
       fetchMatches();
     } catch (error) {
-      toast.error("Failed to resume all matches");
+      console.error(`💥 Resume All error:`, error);
+      console.error(`💥 Resume All error details:`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      toast.error(error instanceof Error ? error.message : "Failed to resume all matches");
     } finally {
       setResumeAllLoading(false);
+      console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - resume process completed`);
     }
   };
 
@@ -926,11 +1027,12 @@ const updateMatch = async () => {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: t("match management", lang) }]} />
+      
+      <Breadcrumb items={[{ label: "TransferFlow Pro - Match Management" }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>{t("match management", lang)}</CardTitle>
+          <CardTitle>TransferFlow Pro - Match Management</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -1311,7 +1413,7 @@ const updateMatch = async () => {
 
       {/* Resume All confirmation dialog */}
       <Dialog open={resumeAllConfirmationOpen} onOpenChange={setResumeAllConfirmationOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>{t("resume all confirmation", lang)}</DialogTitle>
           </DialogHeader>
@@ -1323,26 +1425,59 @@ const updateMatch = async () => {
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-2">
             <Button 
               type="button" 
               variant="outline" 
               onClick={() => setResumeAllConfirmationOpen(false)}
+              className="w-full sm:w-auto"
             >
               {t("cancel", lang)}
             </Button>
             <Button 
-              onClick={() => confirmResumeAllWithFilter(false)}
+              onClick={() => {
+                console.log(`🔍 DEBUG: Resume All with Not Found button clicked`);
+                confirmResumeAllWithFilter(true); // true = filter out not found players
+              }}
               disabled={resumeAllLoading}
+              className="relative w-full sm:w-auto"
             >
-              {resumeAllLoading ? t("loading", lang) : t("resume all with not found", lang)}
+              {resumeAllLoading ? (
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <span className="opacity-0">{t("resume all with not found", lang)}</span>
+                </>
+              ) : (
+                t("resume all with not found", lang)
+              )}
             </Button>
             <Button 
-              onClick={() => confirmResumeAllWithFilter(true)}
+              onClick={() => {
+                console.log(`🔍 DEBUG: Resume All without Not Found button clicked`);
+                confirmResumeAllWithFilter(false); // false = include not found players
+              }}
               disabled={resumeAllLoading}
               variant="default"
+              className="relative w-full sm:w-auto"
             >
-              {resumeAllLoading ? t("loading", lang) : t("resume all without not found", lang)}
+              {resumeAllLoading ? (
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <span className="opacity-0">{t("resume all without not found", lang)}</span>
+                </>
+              ) : (
+                t("resume all without not found", lang)
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1371,6 +1506,29 @@ const updateMatch = async () => {
                 </p>
               </div>
             )}
+            
+            {/* Progress bar for loading state */}
+            {resumeAllLoading && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm font-medium">Processing matches...</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">Please wait</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-black h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground text-center">
+                  This may take up to 2 minutes for large datasets
+                </div>
+              </div>
+            )}
+            
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1406,8 +1564,24 @@ const updateMatch = async () => {
             <Button type="button" variant="outline" onClick={() => setResumeAllDialogOpen(false)}>
               {t("cancel", lang)}
             </Button>
-            <Button onClick={confirmResumeAll} disabled={resumeAllMatches.length === 0 || resumeAllLoading}>
-              {resumeAllLoading ? t("loading", lang) : t("confirm", lang)}
+            <Button 
+              onClick={confirmResumeAll} 
+              disabled={resumeAllMatches.length === 0 || resumeAllLoading}
+              className="relative"
+            >
+              {resumeAllLoading ? (
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <span className="opacity-0">{t("confirm", lang)}</span>
+                </>
+              ) : (
+                t("confirm", lang)
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
