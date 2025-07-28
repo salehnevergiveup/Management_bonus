@@ -682,9 +682,11 @@ const updateMatch = async () => {
 
   // Handler to confirm Resume All with filtering option
   const confirmResumeAllWithFilter = async (filterNotFound: boolean) => {
+    console.log(`🔍 DEBUG: confirmResumeAllWithFilter called with filterNotFound = ${filterNotFound}`);
     setResumeAllConfirmationOpen(false);
     setResumeAllFilterNotFound(filterNotFound);
     setResumeAllLoading(true);
+    console.log(`🔍 DEBUG: Fetching matches...`);
     
     try {
       const response = await fetch(`/api/matches?all=true&status=pending,failed`);
@@ -705,6 +707,7 @@ const updateMatch = async () => {
       if (processMatches.length > MAX_RECORDS_LIMIT) {
         toast.error(`Cannot process more than ${MAX_RECORDS_LIMIT} records. Found ${processMatches.length} matches.`);
         setResumeAllLoading(false);
+        console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - too many records`);
         return;
       }
       
@@ -715,8 +718,10 @@ const updateMatch = async () => {
       
       setResumeAllMatches(processMatches);
       setResumeAllDialogOpen(true);
+      console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - resume dialog shown with ${processMatches.length} matches`);
     } catch (error) {
       toast.error("Failed to fetch all pending/failed matches");
+      console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - error occurred`);
     } finally {
       setResumeAllLoading(false);
     }
@@ -736,7 +741,10 @@ const updateMatch = async () => {
       setResumeAllDialogOpen(false);
       return;
     }
+    
     setResumeAllLoading(true);
+    console.log(`🔍 DEBUG: Full-screen overlay SHOWN - processing resume request...`);
+    
     try {
       console.log(`📦 Preparing payload for ${resumeAllMatches.length} matches`);
       
@@ -761,6 +769,7 @@ const updateMatch = async () => {
         console.log(`❌ Payload too large: ${sizeInMB.toFixed(2)} MB`);
         toast.error(`Payload too large (${sizeInMB.toFixed(2)} MB). Please reduce the number of matches.`);
         setResumeAllLoading(false);
+        console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - payload too large`);
         return;
       }
       
@@ -793,6 +802,7 @@ const updateMatch = async () => {
       toast.error(error instanceof Error ? error.message : "Failed to resume all matches");
     } finally {
       setResumeAllLoading(false);
+      console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - resume process completed`);
     }
   };
 
@@ -1017,11 +1027,12 @@ const updateMatch = async () => {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: t("match management", lang) }]} />
+      
+      <Breadcrumb items={[{ label: "TransferFlow Pro - Match Management" }]} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>{t("match management", lang)}</CardTitle>
+          <CardTitle>TransferFlow Pro - Match Management</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -1402,7 +1413,7 @@ const updateMatch = async () => {
 
       {/* Resume All confirmation dialog */}
       <Dialog open={resumeAllConfirmationOpen} onOpenChange={setResumeAllConfirmationOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>{t("resume all confirmation", lang)}</DialogTitle>
           </DialogHeader>
@@ -1414,26 +1425,59 @@ const updateMatch = async () => {
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-2">
             <Button 
               type="button" 
               variant="outline" 
               onClick={() => setResumeAllConfirmationOpen(false)}
+              className="w-full sm:w-auto"
             >
               {t("cancel", lang)}
             </Button>
             <Button 
-              onClick={() => confirmResumeAllWithFilter(false)}
+              onClick={() => {
+                console.log(`🔍 DEBUG: Resume All with Not Found button clicked`);
+                confirmResumeAllWithFilter(true); // true = filter out not found players
+              }}
               disabled={resumeAllLoading}
+              className="relative w-full sm:w-auto"
             >
-              {resumeAllLoading ? t("loading", lang) : t("resume all with not found", lang)}
+              {resumeAllLoading ? (
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <span className="opacity-0">{t("resume all with not found", lang)}</span>
+                </>
+              ) : (
+                t("resume all with not found", lang)
+              )}
             </Button>
             <Button 
-              onClick={() => confirmResumeAllWithFilter(true)}
+              onClick={() => {
+                console.log(`🔍 DEBUG: Resume All without Not Found button clicked`);
+                confirmResumeAllWithFilter(false); // false = include not found players
+              }}
               disabled={resumeAllLoading}
               variant="default"
+              className="relative w-full sm:w-auto"
             >
-              {resumeAllLoading ? t("loading", lang) : t("resume all without not found", lang)}
+              {resumeAllLoading ? (
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <span className="opacity-0">{t("resume all without not found", lang)}</span>
+                </>
+              ) : (
+                t("resume all without not found", lang)
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1462,6 +1506,29 @@ const updateMatch = async () => {
                 </p>
               </div>
             )}
+            
+            {/* Progress bar for loading state */}
+            {resumeAllLoading && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm font-medium">Processing matches...</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">Please wait</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-black h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground text-center">
+                  This may take up to 2 minutes for large datasets
+                </div>
+              </div>
+            )}
+            
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1497,8 +1564,24 @@ const updateMatch = async () => {
             <Button type="button" variant="outline" onClick={() => setResumeAllDialogOpen(false)}>
               {t("cancel", lang)}
             </Button>
-            <Button onClick={confirmResumeAll} disabled={resumeAllMatches.length === 0 || resumeAllLoading}>
-              {resumeAllLoading ? t("loading", lang) : t("confirm", lang)}
+            <Button 
+              onClick={confirmResumeAll} 
+              disabled={resumeAllMatches.length === 0 || resumeAllLoading}
+              className="relative"
+            >
+              {resumeAllLoading ? (
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <span className="opacity-0">{t("confirm", lang)}</span>
+                </>
+              ) : (
+                t("confirm", lang)
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

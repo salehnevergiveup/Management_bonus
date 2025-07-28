@@ -202,7 +202,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <Breadcrumb items={[{ label: t("dashboard", lang) }]} />
+      <Breadcrumb items={[{ label: "TransferFlow Pro - Dashboard" }]} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* User Profile Card */}
