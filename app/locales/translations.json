@@ -3499,8 +3499,19 @@
   "verification_method_form_timed_out": {
     "eng": "Verification method form timed out for thread:",
     "ch": "验证方法表单超时，线程："
+  },
+  "comment": {
+  "eng": "Comment",
+  "ch": "评论"
+  },
+  "comment_details": {
+    "eng": "Comment Details",
+    "ch": "评论详情"
+  },
+  "no_comment": {
+    "eng": "No comment",
+    "ch": "无评论"
   }
-  
 }
     
   
