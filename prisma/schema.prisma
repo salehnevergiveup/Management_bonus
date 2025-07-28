@@ -202,7 +202,7 @@ model Match {
   status              String   @default("pending") 
   amount              Float
   currency            String // "USD" or "MYR"
-  commit              String? 
+  comment              String? 
   created_at          DateTime @default(now())
   updated_at          DateTime? 
   

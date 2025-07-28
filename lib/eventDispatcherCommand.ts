@@ -140,12 +140,12 @@ const dispatchMatchStatus  = async(dispatchData: DispatchDto ) =>  {
     if(!status || !data) {  
       throw new Error("Missing status or data for the matches status")
     }
-    
-    const id = data.id
-    let commit = null;  
 
-    if(data["commit"]){  
-      commit = data["commit"]
+    const id = data.id
+    let comment = null;  
+
+    if(data["comment"]){  
+      comment = data["comment"]
     }
 
     if(!id) {  
@@ -158,7 +158,7 @@ const dispatchMatchStatus  = async(dispatchData: DispatchDto ) =>  {
       },  
       data:  {  
         status: status, 
-        commit: commit,  
+        comment: comment,  
         updated_at: new Date()
       }
     })

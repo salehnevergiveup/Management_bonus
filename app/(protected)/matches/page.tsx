@@ -56,6 +56,7 @@ interface Match {
   process_id: string;
   bonus_id: string;
   status: string; // pending, failed, success
+  comment: string | null;  // Add this line
   amount: number;
   currency: string;
   created_at: string;
@@ -87,6 +88,8 @@ const [newStatus, setNewStatus] = useState("");
 
   // Added state for real-time updates
   const eventSourceRef = useRef<EventSource | null>(null);
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [selectedComment, setSelectedComment] = useState<string>("");
   
   // Selected matches
   const [selectedMatches, setSelectedMatches] = useState<string[]>([]);
@@ -279,14 +282,15 @@ const updateSingleMatch = (data: any) => {
     let result = [...matches];
 
     // Filter by search term
-    if (searchTerm) {
+   if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(match => 
         match.username.toLowerCase().includes(term) || 
         match.id.toLowerCase().includes(term) ||
         match.transfer_account?.username?.toLowerCase().includes(term) ||
         match.bonus?.name?.toLowerCase().includes(term) ||
-        match.currency.toLowerCase().includes(term)
+        match.currency.toLowerCase().includes(term) || 
+       (match.comment && match.comment.toLowerCase().includes(term)) 
       );
     }
 
@@ -563,6 +567,21 @@ const updateSingleMatch = (data: any) => {
       console.error("Error submitting permission request:", error);
       toast.error("Failed to submit permission request");
     }
+  };
+
+  const truncateComment = (comment: string | null, maxWords: number = 5) => {
+      if (!comment) return t("no_comment", lang);
+      
+      const words = comment.split(' ');
+      if (words.length <= maxWords) return comment;
+      
+      return words.slice(0, maxWords).join(' ') + '...';
+    };
+
+    // Handle comment click
+    const handleCommentClick = (comment: string | null) => {
+      setSelectedComment(comment || t("no_comment", lang));
+      setCommentDialogOpen(true);
   };
 
   const executeAction = async () => {
@@ -1237,6 +1256,31 @@ const updateMatch = async () => {
         </DialogContent>
       </Dialog>
 
+      {/* Comment Dialog */}
+      <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t("comment_details", lang)}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-gray-50 p-4 rounded-md border">
+              <p className="text-sm whitespace-pre-wrap break-words">
+                {selectedComment}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setCommentDialogOpen(false)}
+            >
+              {t("close", lang)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Refilter Dialog for Process */}
       <Dialog open={refilterDialogOpen} onOpenChange={setRefilterDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -1484,6 +1528,7 @@ const updateMatch = async () => {
                     <TableHead>{t("transfer_account", lang)}</TableHead>
                     <TableHead>{t("match_status", lang)}</TableHead>
                     <TableHead>{t("amount", lang)}</TableHead>
+                    <TableHead>{t("comment", lang)}</TableHead>
                     <TableHead>{t("status", lang)}</TableHead>
                     {process.status !== ProcessStatus.PROCESSING && (
                       <TableHead className="text-right">{t("actions", lang)}</TableHead>
@@ -1494,7 +1539,7 @@ const updateMatch = async () => {
                   {process.matches.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={process.status !== ProcessStatus.PROCESSING ? 10 : 9}
+                        colSpan={process.status !== ProcessStatus.PROCESSING ? 11 : 10}
                         className="h-24 text-center"
                       >
                         {t("no_matches_found", lang)}
@@ -1532,6 +1577,15 @@ const updateMatch = async () => {
                           />
                         </TableCell>
                         <TableCell>{formatCurrency(match.amount, match.currency)}</TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => handleCommentClick(match.comment)}
+                            className="text-left hover:text-blue-600 hover:underline cursor-pointer max-w-32 truncate"
+                            title={match.comment || t("no_comment", lang)}
+                          >
+                            {truncateComment(match.comment)}
+                          </button>
+                        </TableCell>
                         <TableCell>
                           <Badge color={getMatchStatusColor(match.status)} text={match.status} />
                         </TableCell>
