@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";  // Added useRef
-import { Search, RotateCcw, PlayCircle, Square, RefreshCw, CheckSquare, Filter, Edit , CheckCircle, PauseCircle } from "lucide-react";
+import { Search, RotateCcw, PlayCircle, Square, RefreshCw, CheckSquare, Filter, Edit , CheckCircle, PauseCircle, Download, Plus, Play } from "lucide-react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -691,43 +691,36 @@ const updateMatch = async () => {
 
 
   // Handler to confirm Resume All with filtering option
-  const confirmResumeAllWithFilter = async (filterNotFound: boolean) => {
+    const confirmResumeAllWithFilter = async (filterNotFound: boolean) => {
     console.log(`🔍 DEBUG: confirmResumeAllWithFilter called with filterNotFound = ${filterNotFound}`);
     setResumeAllConfirmationOpen(false);
     setResumeAllFilterNotFound(filterNotFound);
     setResumeAllLoading(true);
-    console.log(`🔍 DEBUG: Fetching matches...`);
+    console.log(`🔍 DEBUG: Fetching ALL matches for resume all...`);
     
     try {
-      console.log(`🔍 DEBUG: Using current page matches for resume all...`);
+      // ALWAYS fetch ALL matches for the process, not just current page
+      console.log(`🔍 DEBUG: Fetching all matches for process ${resumeAllProcessId}...`);
+      const response = await fetch(`/api/matches?all=true&status=pending,failed`);
+      console.log(`🔍 DEBUG: Response status: ${response.status}`);
       
-      // Use current page matches instead of fetching all
-      let processMatches = matches.filter((m: Match) => 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`🔍 DEBUG: API Error - Status: ${response.status}, Body: ${errorText}`);
+        throw new Error(`Failed to fetch matches: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`🔍 DEBUG: Received ${data.data?.length || 0} matches from API`);
+      
+      // Filter for the current process only and valid matches
+      let processMatches = data.data.filter((m: Match) => 
         m.process_id === resumeAllProcessId && 
         m.transfer_account_id !== null &&
         (m.status.toLowerCase() === "pending" || m.status.toLowerCase() === "failed")
       );
       
-      console.log(`🔍 DEBUG: Found ${processMatches.length} matches on current page for process ${resumeAllProcessId}`);
-      
-      // If we have matches on current page, use them. Otherwise, try to fetch all
-      if (processMatches.length === 0) {
-        console.log(`🔍 DEBUG: No matches on current page, fetching all matches...`);
-        const response = await fetch(`/api/matches?all=true&status=pending,failed`);
-        console.log(`🔍 DEBUG: Response status: ${response.status}`);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`🔍 DEBUG: API Error - Status: ${response.status}, Body: ${errorText}`);
-          throw new Error(`Failed to fetch matches: ${response.status} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        console.log(`🔍 DEBUG: Received ${data.data?.length || 0} matches from API`);
-        
-        // Filter for the current process only
-        processMatches = data.data.filter((m: Match) => m.process_id === resumeAllProcessId && m.transfer_account_id !== null);
-      }
+      console.log(`🔍 DEBUG: Found ${processMatches.length} valid matches for process ${resumeAllProcessId}`);
       
       // If user chose to filter out not found players, remove them
       if (filterNotFound) {
@@ -1152,6 +1145,92 @@ const updateMatch = async () => {
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch();
+    }
+  };
+
+  // CSV Export function
+  const exportFailedMatchesToCSV = async (type: "all" | "selected", processId?: string) => {
+    if (!processId) {
+      toast.error(t("please_select_process", lang));
+      return;
+    }
+    
+    // Show initial loading message
+    toast.loading(t("preparing_export", lang), { id: "export" });
+    
+    try {
+      console.log("Starting export with params:", { type, processId });
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append("type", type);
+      params.append("processId", processId);
+      
+      if (type === "selected") {
+        // Get only selected failed matches for this process
+        const selectedFailedMatches = matches.filter(match => 
+          selectedMatches.includes(match.id) && 
+          match.status.toLowerCase() === "failed" &&
+          match.process_id === processId
+        );
+        
+        console.log("Selected failed matches:", selectedFailedMatches.length);
+        
+        if (selectedFailedMatches.length === 0) {
+          toast.error(t("no_failed_matches_to_export", lang), { id: "export" });
+          return;
+        }
+        
+        params.append("selectedIds", selectedFailedMatches.map(m => m.id).join(","));
+      }
+
+      // Call the backend API
+      const response = await fetch(`/api/matches/export-failed?${params.toString()}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast.error(t("no_failed_matches_to_export", lang), { id: "export" });
+          return;
+        }
+        throw new Error("Failed to export failed matches");
+      }
+
+      // Get the CSV content from response
+      const csvContent = await response.text();
+      
+      // Create and download CSV file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      
+      // Get filename from response headers or create default
+      const contentDisposition = response.headers.get("content-disposition");
+      let filename = `failed_matches_${type}_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Get count from the CSV content (subtract header row)
+      const lineCount = csvContent.split('\n').length - 1;
+      
+      // Show success message with count
+      toast.success(t("failed_matches_exported_successfully", lang).replace("{count}", lineCount.toString()), { id: "export" });
+      
+      console.log(`Export completed: ${lineCount} rows exported`);
+    } catch (error) {
+      console.error("Error exporting failed matches:", error);
+      toast.error(t("failed_to_export_failed_matches", lang), { id: "export" });
     }
   };
 
@@ -1902,6 +1981,38 @@ const updateMatch = async () => {
                         </TooltipContent>
                       </Tooltip>
                     )}
+
+                    {/* Export Failed Matches button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => {
+                            // Show notification that export is starting
+                            toast.loading(t("preparing_export", lang), { id: "export" });
+                            
+                            // Get the current process ID from the first match
+                            const currentProcessId = matches.length > 0 ? matches[0].process_id : null;
+                            
+                            if (!currentProcessId) {
+                              toast.error(t("no_process_found", lang), { id: "export" });
+                              return;
+                            }
+                            
+                            // Export all failed matches for the current process
+                            exportFailedMatchesToCSV("all", currentProcessId);
+                          }}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          {t("export failed", lang)}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t("export_failed_matches_tooltip", lang)}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </TooltipProvider>
                 </div>
               </div>
