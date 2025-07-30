@@ -12,10 +12,21 @@ A comprehensive management application built with Next.js, designed to streamlin
 - **🔐 Authentication & Authorization** - Secure login system with multi-role support
 - **📊 Management Dashboard** - Centralized control panel for business operations
 - **🌐 Multi-language Support** - English and Chinese language support
+- **🌙 Dark/Light Mode** - Theme switching with system preference detection
 - **🔔 Notification System** - Real-time notifications and alerts
 - **📱 Responsive Design** - Works seamlessly across all devices
 
 ## 🚀 Quick Start
+
+### Theme Support
+
+The application includes comprehensive dark/light mode support:
+
+- **🌙 Dark Mode** - Easy on the eyes for low-light environments
+- **☀️ Light Mode** - Traditional bright interface
+- **🖥️ System Mode** - Automatically follows your system preference
+- **🔄 Theme Toggle** - Located in the top navigation bar
+- **💾 Persistent** - Your theme preference is saved across sessions
 
 ### Development Setup
 

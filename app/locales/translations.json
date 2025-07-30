@@ -99,6 +99,22 @@
       "eng": "Enter username",
       "ch": "输入用户名"
     },
+    "light": {
+      "eng": "Light",
+      "ch": "浅色"
+    },
+    "dark": {
+      "eng": "Dark", 
+      "ch": "深色"
+    },
+    "system": {
+      "eng": "System",
+      "ch": "系统"
+    },
+    "toggle_theme": {
+      "eng": "Toggle theme",
+      "ch": "切换主题"
+    },
     "enter_game": {
       "eng": "Enter game",
       "ch": "输入游戏"

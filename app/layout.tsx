@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SessionWrapper from "@components/sessionWrapper";
 import { Toaster } from 'react-hot-toast';
+import { ThemeProvider } from "@/contexts/themecontext";
 
 
 
@@ -35,8 +36,13 @@ export default function RootLayout({
     <SessionWrapper>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          {children}
-          <Toaster position="top-right" />
+          <ThemeProvider
+            defaultTheme="system"
+            storageKey="app-theme"
+          >
+            {children}
+            <Toaster position="top-right" />
+          </ThemeProvider>
         </body>
       </html>
     </SessionWrapper>

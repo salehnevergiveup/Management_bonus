@@ -22,6 +22,7 @@ import {
 } from "@components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar"
 import { error } from "console"
+import { ThemeToggle } from "./theme-toggle"
 
 export function Navbar({ className, ...props }:  {className: any}) {
   const { auth, isLoading } = useUser()
@@ -81,6 +82,7 @@ const { lang, setLang } = useLanguage()
         {!isMobile && <span className="text-lg font-semibold truncate">{t("management_dashboard", lang)}</span>}
       </div>
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
+        <ThemeToggle />
         <Button variant="outline" size="icon" className="relative" onClick={() => setIsNotificationPanelOpen(true)}>
           <Bell className="h-5 w-5" />
           {unreadNotificationCount > 0 && (
