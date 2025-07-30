@@ -1088,6 +1088,58 @@
     "eng": "matches",
     "ch": "匹配"
   },
+  "not_found_players": {
+    "eng": "Not Found Players",
+    "ch": "未找到玩家"
+  },
+  "select_all_filtered": {
+    "eng": "Select All Filtered",
+    "ch": "选择所有筛选结果"
+  },
+  "unselect_not_found": {
+    "eng": "Unselect Not Found",
+    "ch": "取消选择未找到"
+  },
+  "clear_not_found_filter": {
+    "eng": "Clear Not Found Filter",
+    "ch": "清除未找到筛选"
+  },
+  "confirm_resume_selected_matches": {
+    "eng": "Confirm Resume Selected Matches",
+    "ch": "确认恢复选定匹配"
+  },
+  "resume_selected_matches_description": {
+    "eng": "This will resume the selected matches",
+    "ch": "这将恢复选定的匹配"
+  },
+  "resume_all_with_not_found": {
+    "eng": "Resume All with Not Found",
+    "ch": "恢复所有（包含未找到）"
+  },
+  "resume_all_without_not_found": {
+    "eng": "Resume All without Not Found",
+    "ch": "恢复所有（不包含未找到）"
+  },
+  "resume_all_question": {
+    "eng": "Do you want to resume all pending/failed matches?",
+    "ch": "您要恢复所有待处理/失败的匹配吗？"
+  },
+  "resume_all_filter_description": {
+    "eng": "You can choose to include or exclude 'not found' players from the resume process.",
+    "ch": "您可以选择在恢复过程中包含或排除'未找到'玩家。"
+  },
+  "resume_all_confirmation": {
+    "eng": "Resume All Confirmation",
+    "ch": "恢复所有确认"
+  },
+  "total_selected": {
+    "eng": "Total Selected",
+    "ch": "总计选择"
+  },
+  "account": {
+    "eng": "Account",
+    "ch": "账户"
+  },
   "all_unmatched_users_matched": {
     "eng": "All unmatched users will be matched again. Do you want to continue?",
     "ch": "所有未匹配的用户将被重新匹配。您要继续吗？"
@@ -1415,6 +1467,114 @@
   "select_at_least_one_match": {
     "eng": "Please select at least one match to resume",
     "ch": "请至少选择一个匹配来恢复"
+  },
+  "failed_to_select_all_filtered": {
+    "eng": "Failed to select all filtered matches",
+    "ch": "选择所有筛选匹配失败"
+  },
+  "failed_to_fetch_matches": {
+    "eng": "Failed to fetch matches",
+    "ch": "获取匹配失败"
+  },
+  "please_select_status": {
+    "eng": "Please select a status",
+    "ch": "请选择状态"
+  },
+  "failed_to_update_match": {
+    "eng": "Failed to update match",
+    "ch": "更新匹配失败"
+  },
+  "please_select_status_and_reason": {
+    "eng": "Please select a status and provide a reason",
+    "ch": "请选择状态并提供原因"
+  },
+  "failed_to_submit_request": {
+    "eng": "Failed to submit request",
+    "ch": "提交请求失败"
+  },
+  "failed_to_submit_permission_request": {
+    "eng": "Failed to submit permission request",
+    "ch": "提交权限请求失败"
+  },
+  "no_valid_matches_selected": {
+    "eng": "No valid matches selected for resume action",
+    "ch": "未选择有效的匹配进行恢复操作"
+  },
+  "no_matches_selected_for_resume": {
+    "eng": "No matches selected for resume action",
+    "ch": "未选择匹配进行恢复操作"
+  },
+  "no_matches_to_resume": {
+    "eng": "No matches to resume",
+    "ch": "没有要恢复的匹配"
+  },
+  "payload_too_large": {
+    "eng": "Payload too large. Please reduce the number of matches.",
+    "ch": "负载过大。请减少匹配数量。"
+  },
+  "failed_to_resume_all_matches": {
+    "eng": "Failed to resume all matches",
+    "ch": "恢复所有匹配失败"
+  },
+  "no_matches_selected": {
+    "eng": "No matches selected",
+    "ch": "未选择匹配"
+  },
+  "no_not_found_players_in_selection": {
+    "eng": "No not found players in current selection",
+    "ch": "当前选择中没有未找到的玩家"
+  },
+  "failed_to_unselect_not_found": {
+    "eng": "Failed to unselect not found players",
+    "ch": "取消选择未找到玩家失败"
+  },
+  "failed_to_clear_not_found_filter": {
+    "eng": "Failed to clear not found filter",
+    "ch": "清除未找到筛选失败"
+  },
+  "resume_all": {
+    "eng": "Resume All",
+    "ch": "恢复所有"
+  },
+  "resume_all_pending_failed": {
+    "eng": "Resume all pending/failed matches",
+    "ch": "恢复所有待处理/失败的匹配"
+  },
+  "transfer_account": {
+    "eng": "Transfer Account",
+    "ch": "转账账户"
+  },
+  "match_status": {
+    "eng": "Match Status",
+    "ch": "匹配状态"
+  },
+  "comment": {
+    "eng": "Comment",
+    "ch": "评论"
+  },
+  "status": {
+    "eng": "Status",
+    "ch": "状态"
+  },
+  "actions": {
+    "eng": "Actions",
+    "ch": "操作"
+  },
+  "game": {
+    "eng": "Game",
+    "ch": "游戏"
+  },
+  "resume_all_request_sent_successfully": {
+    "eng": "Resume All request sent successfully",
+    "ch": "恢复所有请求发送成功"
+  },
+  "removed_not_found_players_from_selection": {
+    "eng": "Removed {count} not found players from selection",
+    "ch": "从选择中移除了 {count} 个未找到的玩家"
+  },
+  "no_not_found_players_in_current_selection": {
+    "eng": "No not found players in current selection",
+    "ch": "当前选择中没有未找到的玩家"
   },
   "no_unmatched_players": {
     "eng": "No unmatched players found for this process",

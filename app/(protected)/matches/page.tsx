@@ -77,7 +77,7 @@ export default function MatchManagementPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [availableBonuses, setAvailableBonuses] = useState<Bonus[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(100);
   const [totalMatches, setTotalMatches] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -125,8 +125,11 @@ const [newStatus, setNewStatus] = useState("");
   const [resumeAllConfirmationOpen, setResumeAllConfirmationOpen] = useState(false);
   const [resumeAllFilterNotFound, setResumeAllFilterNotFound] = useState(false);
   
+  // State for resume process ID
+  const [resumeProcessId, setResumeProcessId] = useState<string>("");
+  
   // Maximum records limit
-  const MAX_RECORDS_LIMIT = 5000;
+  const MAX_RECORDS_LIMIT = 3000;
 
   // Update fetchMatches to include activeTab filtering
   const fetchMatches = async (page = currentPage, size = pageSize, search = searchTerm, status = statusFilter) => {
@@ -169,7 +172,7 @@ const [newStatus, setNewStatus] = useState("");
       setAvailableBonuses(Array.from(bonuses.values()));
     } catch (error) {
       console.error("Error fetching matches:", error);
-      toast.error("Failed to fetch matches");
+              toast.error(t("failed_to_fetch_matches", lang));
     } finally {
       setLoading(false);
     }
@@ -354,6 +357,11 @@ const updateSingleMatch = (data: any) => {
     setSelectAllChecked(false);
   }, [activeTab, bonusFilter]);
 
+  // Reset select all state when page changes
+  useEffect(() => {
+    setSelectAllChecked(false);
+  }, [currentPage]);
+
   // Remove all client-side filtering and pagination logic (filteredMatches, paginatedMatches, etc.)
   // Update groupedByProcess to use matches directly
   const groupedByProcess = useMemo(() => {
@@ -404,7 +412,7 @@ const updateMatch = async () => {
   
   // Check if status is being updated
   if (!newStatus) {
-    toast.error("Please select a status");
+            toast.error(t("please_select_status", lang));
     return;
   }
   
@@ -440,13 +448,13 @@ const updateMatch = async () => {
     fetchMatches(); // Refresh the data
   } catch (error) {
     console.error("Error updating match:", error);
-    toast.error(error instanceof Error ? error.message : "Failed to update match");
+            toast.error(error instanceof Error ? error.message : t("failed_to_update_match", lang));
   }
 };
   // Submit permission request for match changes
   const submitMatchChangeRequest = async () => {
     if (!matchToEdit || !newStatus || !auth || requestMessage.length < 10) {
-      toast.error("Please select a status and provide a reason");
+              toast.error(t("please_select_status_and_reason", lang));
       return;
     }
     
@@ -472,7 +480,7 @@ const updateMatch = async () => {
         toast.success("Permission request submitted successfully");
         setEditDialogOpen(false);
       } else {
-        toast.error(result.error || "Failed to submit request");
+        toast.error(result.error || t("failed_to_submit_request", lang));
       }
     } catch (error) {
       console.error("Error submitting permission request:", error);
@@ -568,7 +576,7 @@ const updateMatch = async () => {
             
             if (selectedMatchData.length == 0) {
               console.log(`🔍 RESUME DEBUG: No valid matches, returning early`);
-              toast.error("No valid matches selected for resume action");
+              toast.error(t("no_valid_matches_selected", lang));
               return;
             }
             
@@ -580,7 +588,7 @@ const updateMatch = async () => {
             console.log(`🔍 RESUME DEBUG: About to make fetch request...`);
           } else {
             console.log(`🔍 RESUME DEBUG: No selected matches, returning early`);
-            toast.error("No matches selected for resume action");
+            toast.error(t("no_matches_selected_for_resume", lang));
             return;
           }
           break;
@@ -680,6 +688,8 @@ const updateMatch = async () => {
     setResumeAllProcessId(processId);
   };
 
+
+
   // Handler to confirm Resume All with filtering option
   const confirmResumeAllWithFilter = async (filterNotFound: boolean) => {
     console.log(`🔍 DEBUG: confirmResumeAllWithFilter called with filterNotFound = ${filterNotFound}`);
@@ -689,12 +699,35 @@ const updateMatch = async () => {
     console.log(`🔍 DEBUG: Fetching matches...`);
     
     try {
-      const response = await fetch(`/api/matches?all=true&status=pending,failed`);
-      if (!response.ok) throw new Error("Failed to fetch matches");
-      const data = await response.json();
+      console.log(`🔍 DEBUG: Using current page matches for resume all...`);
       
-      // Filter for the current process only
-      let processMatches = data.data.filter((m: Match) => m.process_id === resumeAllProcessId && m.transfer_account_id !== null);
+      // Use current page matches instead of fetching all
+      let processMatches = matches.filter((m: Match) => 
+        m.process_id === resumeAllProcessId && 
+        m.transfer_account_id !== null &&
+        (m.status.toLowerCase() === "pending" || m.status.toLowerCase() === "failed")
+      );
+      
+      console.log(`🔍 DEBUG: Found ${processMatches.length} matches on current page for process ${resumeAllProcessId}`);
+      
+      // If we have matches on current page, use them. Otherwise, try to fetch all
+      if (processMatches.length === 0) {
+        console.log(`🔍 DEBUG: No matches on current page, fetching all matches...`);
+        const response = await fetch(`/api/matches?all=true&status=pending,failed`);
+        console.log(`🔍 DEBUG: Response status: ${response.status}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`🔍 DEBUG: API Error - Status: ${response.status}, Body: ${errorText}`);
+          throw new Error(`Failed to fetch matches: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log(`🔍 DEBUG: Received ${data.data?.length || 0} matches from API`);
+        
+        // Filter for the current process only
+        processMatches = data.data.filter((m: Match) => m.process_id === resumeAllProcessId && m.transfer_account_id !== null);
+      }
       
       // If user chose to filter out not found players, remove them
       if (filterNotFound) {
@@ -703,24 +736,26 @@ const updateMatch = async () => {
         );
       }
       
-      // Check if we exceed the maximum records limit
+      // Check if we exceed the maximum records limit and take only the first 3000
       if (processMatches.length > MAX_RECORDS_LIMIT) {
-        toast.error(`Cannot process more than ${MAX_RECORDS_LIMIT} records. Found ${processMatches.length} matches.`);
-        setResumeAllLoading(false);
-        console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - too many records`);
-        return;
+        const originalCount = processMatches.length;
+        processMatches = processMatches.slice(0, MAX_RECORDS_LIMIT);
+        toast.success(`Found ${originalCount} matches. Processing first ${MAX_RECORDS_LIMIT} matches.`);
+        console.log(`🔍 DEBUG: Limited to first ${MAX_RECORDS_LIMIT} matches out of ${originalCount}`);
       }
       
       // Show warning if approaching the limit
       if (processMatches.length > MAX_RECORDS_LIMIT * 0.8) {
-        toast.error(`Warning: Processing ${processMatches.length} records (${Math.round(processMatches.length / MAX_RECORDS_LIMIT * 100)}% of limit)`);
+        toast.success(`Processing ${processMatches.length} records (${Math.round(processMatches.length / MAX_RECORDS_LIMIT * 100)}% of limit)`);
       }
       
       setResumeAllMatches(processMatches);
       setResumeAllDialogOpen(true);
       console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - resume dialog shown with ${processMatches.length} matches`);
     } catch (error) {
-      toast.error("Failed to fetch all pending/failed matches");
+      console.error(`🔍 DEBUG: Error in confirmResumeAllWithFilter:`, error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Failed to fetch all pending/failed matches: ${errorMessage}`);
       console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - error occurred`);
     } finally {
       setResumeAllLoading(false);
@@ -737,7 +772,7 @@ const updateMatch = async () => {
     
     if (!resumeAllProcessId || resumeAllMatches.length === 0) {
       console.log(`❌ No matches to resume`);
-      toast.error("No matches to resume");
+              toast.error(t("no_matches_to_resume", lang));
       setResumeAllDialogOpen(false);
       return;
     }
@@ -767,7 +802,7 @@ const updateMatch = async () => {
       
       if (sizeInMB > 5) { // 5MB limit
         console.log(`❌ Payload too large: ${sizeInMB.toFixed(2)} MB`);
-        toast.error(`Payload too large (${sizeInMB.toFixed(2)} MB). Please reduce the number of matches.`);
+        toast.error(`${t("payload_too_large", lang)} (${sizeInMB.toFixed(2)} MB)`);
         setResumeAllLoading(false);
         console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - payload too large`);
         return;
@@ -790,7 +825,7 @@ const updateMatch = async () => {
       }
       
       console.log(`✅ Resume All request successful`);
-      toast.success("Resume All request sent successfully");
+              toast.success(t("resume_all_request_sent_successfully", lang));
       setResumeAllDialogOpen(false);
       fetchMatches();
     } catch (error) {
@@ -799,7 +834,7 @@ const updateMatch = async () => {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : 'No stack trace'
       });
-      toast.error(error instanceof Error ? error.message : "Failed to resume all matches");
+              toast.error(error instanceof Error ? error.message : t("failed_to_resume_all_matches", lang));
     } finally {
       setResumeAllLoading(false);
       console.log(`🔍 DEBUG: Full-screen overlay HIDDEN - resume process completed`);
@@ -867,8 +902,14 @@ const updateMatch = async () => {
 
   // Utility: handleProcessAction
   const handleProcessAction = (process: { id: string, status: string }, action: string) => {
+    if (action === "resume") {
+      // Show resume dialog with selected matches list directly
+      setResumeProcessId(process.id);
+      setResumeDialogOpen(true);
+    } else {
     setSelectedAction({ match: matches.find(m => m.process_id === process.id)!, action });
     setConfirmDialogOpen(true);
+    }
   };
 
   // Utility: handleSingleMatchAction
@@ -877,18 +918,31 @@ const updateMatch = async () => {
     setConfirmDialogOpen(true);
   };
 
-  // Utility: toggleSelectAll
+  // Utility: toggleSelectAll - only select current page data, accumulate with existing selections
   const toggleSelectAll = () => {
     if (selectAllChecked) {
-      setSelectedMatches([]);
+      // Remove only current page selections when unchecking
+      const currentPageMatchIds = matches.map(match => match.id);
+      setSelectedMatches(prevSelected => 
+        prevSelected.filter(id => !currentPageMatchIds.includes(id))
+      );
     } else {
+      // Add valid matches from current page to existing selections
       const validMatches = matches
         .filter(match =>
           match.status.toLowerCase() !== "success" &&
           match.transfer_account_id !== null
         )
         .map(match => match.id);
-      setSelectedMatches(validMatches);
+      setSelectedMatches(prevSelected => {
+        const newSelections = [...prevSelected];
+        validMatches.forEach(id => {
+          if (!newSelections.includes(id)) {
+            newSelections.push(id);
+          }
+        });
+        return newSelections;
+      });
     }
     setSelectAllChecked(!selectAllChecked);
   };
@@ -908,32 +962,94 @@ const updateMatch = async () => {
     });
   };
 
-  // Function to unselect not found players from selected matches
-  const unselectNotFoundPlayers = () => {
-    const notFoundPlayerIds = matches
-      .filter(match => 
+  // Function to unselect not found players from selected matches - applies to all selected data
+  const unselectNotFoundPlayers = async () => {
+    if (selectedMatches.length === 0) {
+      toast.error(t("no_matches_selected", lang));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Fetch all selected matches to check their status
+      const params = new URLSearchParams();
+      params.append("all", "true"); // Fetch all records to check selected ones
+      
+      const response = await fetch(`/api/matches?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch matches for filtering");
+      const data = await response.json();
+      
+      // Find all selected matches that are "not found" players
+      const allMatches = data.data;
+      const notFoundPlayerIds = allMatches
+        .filter((match: Match) => 
+          selectedMatches.includes(match.id) &&
         match.status.toLowerCase() === "failed" && 
         match.comment === "unable to find the player"
       )
-      .map(match => match.id);
+        .map((match: Match) => match.id);
     
+      // Remove not found players from selection
     setSelectedMatches(prevSelected => 
       prevSelected.filter(id => !notFoundPlayerIds.includes(id))
     );
+      
+      if (notFoundPlayerIds.length > 0) {
+        toast.success(t("removed_not_found_players_from_selection", lang).replace("{count}", notFoundPlayerIds.length.toString()));
+      } else {
+        toast.error(t("no_not_found_players_in_selection", lang));
+      }
+    } catch (error) {
+      console.error("Error unselecting not found players:", error);
+      toast.error(t("failed_to_unselect_not_found", lang));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Function to clear not found filter (unselect not found players)
-  const clearNotFoundFilter = () => {
-    const notFoundPlayerIds = matches
-      .filter(match => 
+  // Function to clear not found filter (unselect not found players) - applies to all selected data
+  const clearNotFoundFilter = async () => {
+    if (selectedMatches.length === 0) {
+      toast.error("No matches selected");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Fetch all selected matches to check their status
+      const params = new URLSearchParams();
+      params.append("all", "true"); // Fetch all records to check selected ones
+      
+      const response = await fetch(`/api/matches?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch matches for filtering");
+      const data = await response.json();
+      
+      // Find all selected matches that are "not found" players
+      const allMatches = data.data;
+      const notFoundPlayerIds = allMatches
+        .filter((match: Match) => 
+          selectedMatches.includes(match.id) &&
         match.status.toLowerCase() === "failed" && 
         match.comment === "unable to find the player"
       )
-      .map(match => match.id);
+        .map((match: Match) => match.id);
     
+      // Remove not found players from selection
     setSelectedMatches(prevSelected => 
       prevSelected.filter(id => !notFoundPlayerIds.includes(id))
     );
+      
+      if (notFoundPlayerIds.length > 0) {
+        toast.success(t("removed_not_found_players_from_selection", lang).replace("{count}", notFoundPlayerIds.length.toString()));
+      } else {
+        toast.success(t("no_not_found_players_in_current_selection", lang));
+      }
+    } catch (error) {
+      console.error("Error clearing not found filter:", error);
+      toast.error(t("failed_to_clear_not_found_filter", lang));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Check if any selected matches are not found players
@@ -945,6 +1061,20 @@ const updateMatch = async () => {
         match.comment === "unable to find the player";
     });
   }, [selectedMatches, matches]);
+
+  // Check if all selectable items on current page are selected
+  const isCurrentPageAllSelected = useMemo(() => {
+    const selectableMatches = matches.filter(match =>
+      match.status.toLowerCase() !== "success" &&
+      match.transfer_account_id !== null
+    );
+    
+    if (selectableMatches.length === 0) return false;
+    
+    return selectableMatches.every(match => 
+      selectedMatches.includes(match.id)
+    );
+  }, [matches, selectedMatches]);
 
   // Check if there are active filters
   const hasActiveFilters = useMemo(() => {
@@ -987,7 +1117,7 @@ const updateMatch = async () => {
       toast.success(`Selected ${allFilteredMatchIds.length} matches`);
     } catch (error) {
       console.error("Error selecting all filtered matches:", error);
-      toast.error("Failed to select all filtered matches");
+              toast.error(t("failed_to_select_all_filtered", lang));
     } finally {
       setLoading(false);
     }
@@ -1118,6 +1248,15 @@ const updateMatch = async () => {
                   <p className="text-sm text-amber-800">{t("mark onhold description", lang)}</p>
                 </div>
               </div>
+            ) : selectedAction?.action === "resume" ? (
+              <div className="space-y-3">
+                <p>{t("confirm resume selected matches", lang)}</p>
+                <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    {t("resume selected matches description", lang)} ({selectedMatches.length} {t("matches", lang)})
+                  </p>
+                </div>
+              </div>
             ) : selectedAction?.action === "refilter-single" ? (
               <div className="space-y-3">
                 <p>{t("confirm refilter match", lang)}</p>
@@ -1200,6 +1339,7 @@ const updateMatch = async () => {
                 const firstSelectedMatch = matches.find((match) => selectedMatches.includes(match.id))
                 if (firstSelectedMatch) {
                   setSelectedAction({ match: firstSelectedMatch, action: "resume" })
+                  setResumeDialogOpen(false)
                   executeAction()
                 }
               }}
@@ -1483,6 +1623,8 @@ const updateMatch = async () => {
         </DialogContent>
       </Dialog>
 
+
+
       {/* Resume All dialog */}
       <Dialog open={resumeAllDialogOpen} onOpenChange={setResumeAllDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -1507,27 +1649,7 @@ const updateMatch = async () => {
               </div>
             )}
             
-            {/* Progress bar for loading state */}
-            {resumeAllLoading && (
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="text-sm font-medium">Processing matches...</span>
-                  </div>
-                  <span className="text-sm text-muted-foreground">Please wait</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-black h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
-                </div>
-                <div className="mt-2 text-xs text-muted-foreground text-center">
-                  This may take up to 2 minutes for large datasets
-                </div>
-              </div>
-            )}
+
             
             <Table>
               <TableHeader>
@@ -1791,7 +1913,7 @@ const updateMatch = async () => {
                     {process.status !== ProcessStatus.PROCESSING && (
                       <TableHead className="w-[50px]">
                         <Checkbox
-                          checked={selectAllChecked}
+                          checked={isCurrentPageAllSelected}
                           onCheckedChange={toggleSelectAll}
                           aria-label={t("select all", lang)}
                         />
