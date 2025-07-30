@@ -1,0 +1,14 @@
+name: ⚠️ Print EC2 SSH Key (TEMP)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  print-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print EC2 SSH Key
+        run: |
+          echo "----- START OF KEY -----"
+          echo "${{ secrets.EC2_SSH_KEY }}"
+          echo "----- END OF KEY -----"
