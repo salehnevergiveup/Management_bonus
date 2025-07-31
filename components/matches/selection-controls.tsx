@@ -8,8 +8,8 @@ interface SelectionControlsProps {
   selectedMatches: string[];
   hasSelectedNotFoundPlayers: boolean;
   onClearSelection: () => void;
-  onUnselectNotFound: () => void;
-  onClearNotFoundFilter: () => void;
+  onUnselectNotFound: () => Promise<void>;
+  onClearNotFoundFilter: () => Promise<void>;
   onSelectAllFiltered: () => void;
   hasActiveFilters: boolean;
   totalFilteredMatches: number;
@@ -32,8 +32,7 @@ export default function SelectionControls({
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-muted-foreground">
-        {selectedMatches.length} {t("match", lang)}
-        {selectedMatches.length !== 1 ? t("es", lang) : ""} {t("selected", lang)}
+        {selectedMatches.length} {t("matches", lang)} {t("selected", lang)}
       </span>
       
       <div className="flex items-center gap-2">
@@ -70,7 +69,7 @@ export default function SelectionControls({
           <Button
             size="sm"
             variant="outline"
-            onClick={onUnselectNotFound}
+            onClick={async () => await onUnselectNotFound()}
             className="text-orange-600 hover:text-orange-700"
           >
             {t("unselect not found", lang)}
@@ -80,7 +79,7 @@ export default function SelectionControls({
           <Button
             size="sm"
             variant="outline"
-            onClick={onClearNotFoundFilter}
+            onClick={async () => await onClearNotFoundFilter()}
             className="text-blue-600 hover:text-blue-700"
           >
             {t("clear not found filter", lang)}
