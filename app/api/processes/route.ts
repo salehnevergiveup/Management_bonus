@@ -14,12 +14,18 @@ export async function GET(request: Request) {
     }
 
   
-    const query =
-      auth.role === Roles.Admin
-        ? { include: { user: true } }
-        : { where: { user_id: auth.id }, include: { user: true } };
+    const baseQuery = {
+      orderBy: [
+        { updated_at: 'desc' },
+        { created_at: 'desc' }
+      ],
+      include: { user: true }
+    };
 
-    const total = await prisma.userProcess.count();
+    const query = auth.role === Roles.Admin
+      ? { ...baseQuery }
+      : { ...baseQuery, where: { user_id: auth.id } };
+        const total = await prisma.userProcess.count();
 
     const paginationResult = await Pagination(
       prisma.userProcess,

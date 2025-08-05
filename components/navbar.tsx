@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, ChevronDown, Menu } from "lucide-react"
+import { Bell, ChevronDown, Menu, Clock } from "lucide-react"
 import { useEffect } from "react"
 import { Button } from "@components/ui/button"
 import { signOut } from "next-auth/react"
@@ -10,7 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { useSidebar } from "@components/ui/sidebar"
 import Link from "next/link"
 import { NotificationPanel } from "./ui/notification-panel"
-import { cn } from "@/lib/utils" // Make sure you have this utility
+import { cn } from "@/lib/utils"
 import { useLanguage } from "@app/contexts/LanguageContext"
 import { t } from "@app/lib/i18n"
 import {
@@ -24,39 +24,88 @@ import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar"
 import { error } from "console"
 import { ThemeToggle } from "./theme-toggle"
 
-export function Navbar({ className, ...props }:  {className: any}) {
+// Malaysian Time Clock Component
+function MalaysianClock() {
+  const [time, setTime] = useState("")
+  const [date, setDate] = useState("")
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date()
+      
+      // Format time for Malaysian timezone
+      const timeFormatter = new Intl.DateTimeFormat('en-MY', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false // Use 24-hour format, change to true for 12-hour
+      })
+      
+      // Format date for Malaysian timezone
+      const dateFormatter = new Intl.DateTimeFormat('en-MY', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short'
+      })
+      
+      setTime(timeFormatter.format(now))
+      setDate(dateFormatter.format(now))
+    }
+
+    // Update immediately
+    updateTime()
+    
+    // Update every second
+    const interval = setInterval(updateTime, 1000)
+    
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div className="flex items-center gap-2 text-sm bg-secondary/50 rounded-md px-3 py-1.5 border">
+      <Clock className="h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col leading-none">
+        <span className="font-mono font-medium">{time}</span>
+        <span className="text-xs text-muted-foreground">{date} MST</span>
+      </div>
+    </div>
+  )
+}
+
+export function Navbar({ className, ...props }: { className: any }) {
   const { auth, isLoading } = useUser()
   const isMobile = useIsMobile()
   const { setOpenMobile } = useSidebar()
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
-const { lang, setLang } = useLanguage()
+  const { lang, setLang } = useLanguage()
+
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/login" })
   }
 
-  useEffect(() => {  
-      const notificationsCount = async()  => { 
-        try { 
-          const res  = await fetch("/api/notifications/count");  
-          if(!res.ok) {  
-            throw new Error("Failed to fetch notifications");
-          } 
-          const data  = await res.json();
-          if(!data?.count ==  undefined) {  
-            throw new Error("Failed to fetch the count");
-          }
-
-          setUnreadNotificationCount(data.count);
-
-        } catch(error) {  
-          console.error(error); 
+  useEffect(() => {
+    const notificationsCount = async () => {
+      try {
+        const res = await fetch("/api/notifications/count")
+        if (!res.ok) {
+          throw new Error("Failed to fetch notifications")
         }
-      }
+        const data = await res.json()
+        if (!data?.count == undefined) {
+          throw new Error("Failed to fetch the count")
+        }
 
-      notificationsCount(); 
-                              
-  },[]); 
+        setUnreadNotificationCount(data.count)
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    notificationsCount()
+  }, [])
 
   if (isLoading) {
     return (
@@ -81,7 +130,11 @@ const { lang, setLang } = useLanguage()
         )}
         {!isMobile && <span className="text-lg font-semibold truncate">{t("management_dashboard", lang)}</span>}
       </div>
+
+
+
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
+        <MalaysianClock />
         <ThemeToggle />
         <Button variant="outline" size="icon" className="relative" onClick={() => setIsNotificationPanelOpen(true)}>
           <Bell className="h-5 w-5" />

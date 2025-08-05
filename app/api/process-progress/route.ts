@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     
     const process =  await prisma.userProcess.findFirst({
         where: {  
-            status: {in:  [ProcessStatus.PROCESSING,  ProcessStatus.PENDING]}
+            status: {in:  [ProcessStatus.PROCESSING,  ProcessStatus.PENDING, ProcessStatus.FAILED]}
         }
     })
 
@@ -37,13 +37,16 @@ export async function GET(request: Request) {
       )
     } 
 
-    const processProgress = await prisma.processProgress.findMany({
-      where: {
-        process_id: process.id, 
-        event_name: Events.PROGRESS_TRACKER
-      }
-    })
-    
+  const processProgress = await prisma.processProgress.findMany({
+    where: {
+      process_id: process.id,
+      event_name: Events.PROGRESS_TRACKER
+    },
+    orderBy: {
+      created_at: 'desc'  
+    }
+  })
+
     return NextResponse.json(processProgress, { status: 200 });
 
   } catch (error: any) {

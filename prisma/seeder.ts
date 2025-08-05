@@ -18,8 +18,10 @@ const seedProduction = async () => {
   console.log("🏭 Running Production Seeders (minimal data)...");
   
   try {
+    await TruncateSeeder();
     await SeedPermissions();
     await SeedRoles();
+    await AutomationApiKey();
     await SeedAdminUser();
     await SeedTransferAccounts();
     await SeedPlayers();
