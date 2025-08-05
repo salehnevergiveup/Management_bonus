@@ -1148,15 +1148,18 @@ const updateMatch = async () => {
     }
   };
 
-  // CSV Export function
-  const exportFailedMatchesToCSV = async (type: "all" | "selected", processId?: string) => {
+  // CSV Export function - now exports all matches, not just failed ones
+  const exportAllMatchesToCSV = async (type: "all" | "selected", processId?: string) => {
     if (!processId) {
       toast.error(t("please_select_process", lang));
       return;
     }
     
-    // Show initial loading message
-    toast.loading(t("preparing_export", lang), { id: "export" });
+    // Show initial loading message with non-blocking behavior
+    const loadingToast = toast.loading(t("preparing_export", lang), { 
+      id: "export",
+      duration: Infinity // Keep loading until we dismiss it
+    });
     
     try {
       console.log("Starting export with params:", { type, processId });
@@ -1167,70 +1170,91 @@ const updateMatch = async () => {
       params.append("processId", processId);
       
       if (type === "selected") {
-        // Get only selected failed matches for this process
-        const selectedFailedMatches = matches.filter(match => 
+        // Get all selected matches for this process (not just failed ones)
+        const selectedMatchesForProcess = matches.filter(match => 
           selectedMatches.includes(match.id) && 
-          match.status.toLowerCase() === "failed" &&
           match.process_id === processId
         );
         
-        console.log("Selected failed matches:", selectedFailedMatches.length);
+        console.log("Selected matches for export:", selectedMatchesForProcess.length);
         
-        if (selectedFailedMatches.length === 0) {
-          toast.error(t("no_failed_matches_to_export", lang), { id: "export" });
+        if (selectedMatchesForProcess.length === 0) {
+          toast.error(t("no_matches_to_export", lang), { id: "export" });
           return;
         }
         
-        params.append("selectedIds", selectedFailedMatches.map(m => m.id).join(","));
+        params.append("selectedIds", selectedMatchesForProcess.map(m => m.id).join(","));
       }
 
-      // Call the backend API
-      const response = await fetch(`/api/matches/export-failed?${params.toString()}`);
+      // Use the new API endpoint for all matches with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+      
+      const response = await fetch(`/api/matches/export-all?${params.toString()}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         if (response.status === 404) {
-          toast.error(t("no_failed_matches_to_export", lang), { id: "export" });
+          toast.error(t("no_matches_to_export", lang), { id: "export" });
           return;
         }
-        throw new Error("Failed to export failed matches");
+        throw new Error("Failed to export matches");
       }
 
       // Get the CSV content from response
       const csvContent = await response.text();
       
-      // Create and download CSV file
+      // Create and download CSV file using non-blocking approach
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
       
-      // Get filename from response headers or create default
-      const contentDisposition = response.headers.get("content-disposition");
-      let filename = `failed_matches_${type}_${new Date().toISOString().split('T')[0]}.csv`;
-      
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
+      // Use setTimeout to ensure UI remains responsive
+      setTimeout(() => {
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        
+        // Get filename from response headers or create default
+        const contentDisposition = response.headers.get("content-disposition");
+        let filename = `all_matches_${type}_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+          if (filenameMatch) {
+            filename = filenameMatch[1];
+          }
         }
-      }
-      
-      link.setAttribute("download", filename);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+        
+        link.setAttribute("download", filename);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the URL object
+        URL.revokeObjectURL(url);
+      }, 100);
 
       // Get count from the CSV content (subtract header row)
       const lineCount = csvContent.split('\n').length - 1;
       
       // Show success message with count
-      toast.success(t("failed_matches_exported_successfully", lang).replace("{count}", lineCount.toString()), { id: "export" });
+      toast.success(t("all_matches_exported_successfully", lang).replace("{count}", lineCount.toString()), { id: "export" });
       
       console.log(`Export completed: ${lineCount} rows exported`);
     } catch (error) {
-      console.error("Error exporting failed matches:", error);
-      toast.error(t("failed_to_export_failed_matches", lang), { id: "export" });
+      console.error("Error exporting matches:", error);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        toast.error(t("export_timeout_error", lang), { id: "export" });
+      } else {
+        toast.error(t("failed_to_export_matches", lang), { id: "export" });
+      }
+    } finally {
+      // Ensure loading toast is dismissed
+      toast.dismiss("export");
     }
   };
 
@@ -1982,35 +2006,32 @@ const updateMatch = async () => {
                       </Tooltip>
                     )}
 
-                    {/* Export Failed Matches button */}
+                    {/* Export All Matches button */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-red-500 hover:text-red-700"
+                          className="text-blue-500 hover:text-blue-700"
                           onClick={() => {
-                            // Show notification that export is starting
-                            toast.loading(t("preparing_export", lang), { id: "export" });
-                            
                             // Get the current process ID from the first match
                             const currentProcessId = matches.length > 0 ? matches[0].process_id : null;
                             
                             if (!currentProcessId) {
-                              toast.error(t("no_process_found", lang), { id: "export" });
+                              toast.error(t("no_process_found", lang));
                               return;
                             }
                             
-                            // Export all failed matches for the current process
-                            exportFailedMatchesToCSV("all", currentProcessId);
+                            // Export all matches for the current process
+                            exportAllMatchesToCSV("all", currentProcessId);
                           }}
                         >
                           <Download className="h-4 w-4 mr-1" />
-                          {t("export failed", lang)}
+                          {t("export all", lang)}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{t("export_failed_matches_tooltip", lang)}</p>
+                        <p>{t("export_all_matches_tooltip", lang)}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
