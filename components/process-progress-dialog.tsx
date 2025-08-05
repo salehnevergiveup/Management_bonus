@@ -165,7 +165,7 @@ function ProgressItemCard({ item }: { item: ProcessProgressItem }) {
 
           <div>
             <p className="text-muted-foreground">{t("created_at", lang)}:</p>
-            <p>{formatName(item.created_at || "")}</p>
+            <p>{item.created_at ? new Date(item.created_at).toLocaleString() : "N/A"}</p>
           </div>
         </div>
 
