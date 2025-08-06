@@ -24,6 +24,7 @@ model User {
   user_processes  UserProcess[]
   sender_requests Request[]        @relation("RequestSender")
   admin_requests  Request[]        @relation("RequestAdmin")
+  import_failures ImportFailure[]
 }
 
 model Role {
@@ -271,4 +272,19 @@ model Request {
   @@index([sender_id])
   @@index([marked_admin_id])
   @@index([model_name, model_id])
+}
+
+model ImportFailure {
+  id                String   @id @default(uuid())
+  user_id           String
+  import_session_id String
+  username          String
+  account           String
+  reason            String
+  created_at        DateTime @default(now())
+
+  user              User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([import_session_id])
 }
