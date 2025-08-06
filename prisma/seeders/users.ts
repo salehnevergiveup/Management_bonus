@@ -22,7 +22,7 @@ export const SeedAdminUser = async () => {
     create: {
       name: "Admin",
       email: "admin@mail.com",
-      username: "admin123",
+      username: "wbtransfer99",
       status: UserStatus.ACTIVE,
       password: hashedPassword,
       role_id: adminRole.id,
@@ -35,7 +35,7 @@ export const SeedAdminUser = async () => {
 export const SeedManagementUsers = async () => {
   console.log("Seeding management users...");
 
-  const hashedPassword = await bcrypt.hash("password", 10);
+  const hashedPassword = await bcrypt.hash("71222171@#admin", 10);
 
   const managementRole = await prisma.role.findUnique({
     where: { name: Roles.Management },
