@@ -134,7 +134,7 @@ async function processSmsInBackground(records: SmsRecord[], endpointName: string
         let message = `RM0 WB
 
 Dear ${record.UID || 'Player'},
-Claim WINBOX Extra B0nus credit now!`;
+Claim WINBOX Extra B O N U S credit now!`;
         
         // Add any additional dynamic fields before claim
         const additionalFields = Object.keys(record).filter(key => 
@@ -152,7 +152,7 @@ Claim WINBOX Extra B0nus credit now!`;
         message += `
 
 Claim: 
-Extrabonus88 .com`;
+E X T R A B O N U S 8 8. com`;
 
         // DEBUG: Show message format
         console.log(`[SMS DEBUG] Rewardreach Message for ${formattedPhone}:`);

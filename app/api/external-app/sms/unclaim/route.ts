@@ -138,7 +138,7 @@ async function processSmsInBackground(records: SmsRecord[], endpointName: string
         let message = `RM0 WB
 
 Dear ${record.UID || 'Player'},
-Claim WINBOX Extra B0nus credit now!
+Claim WINBOX Extra B O N U S  credit now!
 
 Balance: ${record.unclaimAmount || '0'}`;
         
@@ -157,7 +157,7 @@ Balance: ${record.unclaimAmount || '0'}`;
         message += `
 
 Claim: 
-Extrabonus88 .com`;
+E X T R A B O N U S 8 8. com`;
 
         // DEBUG: Show message format
         console.log(`[SMS DEBUG] Unclaim Message for ${formattedPhone}:`);
