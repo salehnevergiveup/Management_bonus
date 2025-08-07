@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyExternalApi } from "@/lib/externalApiAuth";
+import { smsRateLimiter } from "@/lib/smsRateLimiter";
 
 interface SmsRecord {
   phone_number: string;
@@ -50,6 +51,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate request size
+    const sizeValidation = smsRateLimiter.validateRequestSize(body.length);
+    if (!sizeValidation.valid) {
+      return NextResponse.json(
+        { error: sizeValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // Check concurrent request limits
+    const concurrentValidation = smsRateLimiter.checkConcurrentLimit();
+    if (!concurrentValidation.valid) {
+      return NextResponse.json(
+        { error: concurrentValidation.error },
+        { status: 429 }
+      );
+    }
+
+    // Check rate limiting per API key
+    const apiKey = request.headers.get('X-API-Key') || '';
+    const rateLimitValidation = smsRateLimiter.checkRateLimit(apiKey);
+    if (!rateLimitValidation.valid) {
+      return NextResponse.json(
+        { error: rateLimitValidation.error },
+        { status: 429 }
+      );
+    }
+
     // Validate each record
     const records: SmsRecord[] = body;
     for (let i = 0; i < records.length; i++) {
@@ -61,6 +90,9 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // Start tracking this request
+    smsRateLimiter.startRequest();
 
     // Start background processing
     processSmsInBackground(records, 'unclaim');
@@ -161,5 +193,8 @@ Extrabonus88 .com`;
 
   } catch (error) {
     console.error(`[ERROR] Background SMS processing error:`, error);
+  } finally {
+    // End tracking this request
+    smsRateLimiter.endRequest();
   }
 }
