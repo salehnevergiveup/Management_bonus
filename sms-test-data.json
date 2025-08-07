@@ -1,0 +1,61 @@
+{
+  "rewardreach_sms_test": [
+    {
+      "phone_number": "60123456789",
+      "UID": "123456",
+      "bonus_amount": "500",
+      "currency": "USD"
+    },
+    {
+      "phone_number": "60111222333",
+      "UID": "789012",
+      "bonus_amount": "750",
+      "currency": "MYR"
+    }
+  ],
+  "unclaim_sms_test": [
+    {
+      "phone_number": "60123456789",
+      "UID": "123456",
+      "unclaimAmount": "1000",
+      "bonus_type": "Extra"
+    },
+    {
+      "phone_number": "60111222333",
+      "UID": "789012",
+      "unclaimAmount": "500",
+      "bonus_type": "Special"
+    }
+  ],
+  "incomplete_phone_tests": [
+    {
+      "phone_number": "123456789",
+      "UID": "123456",
+      "description": "Missing 60 prefix"
+    },
+    {
+      "phone_number": "0123456789",
+      "UID": "789012",
+      "description": "Leading zero without 60"
+    },
+    {
+      "phone_number": "601234567",
+      "UID": "456789",
+      "description": "Too short (9 digits)"
+    },
+    {
+      "phone_number": "601234567890123",
+      "UID": "789123",
+      "description": "Too long (15 digits)"
+    },
+    {
+      "phone_number": "60123456789",
+      "UID": "123456",
+      "description": "Correct format (11 digits with 60)"
+    }
+  ],
+  "endpoints": {
+    "rewardreach": "POST /api/external-app/sms/rewardreach",
+    "unclaim": "POST /api/external-app/sms/unclaim"
+  }
+} 

@@ -5,7 +5,7 @@ import { UserStatus, Roles } from "@/constants/enums";
 export const SeedAdminUser = async () => {
   console.log("Seeding admin user...");
 
-  const hashedPassword = await bcrypt.hash("password", 10);
+  const hashedPassword = await bcrypt.hash("71222171@#admin", 10);
 
   const adminRole = await prisma.role.findUnique({
     where: { name: Roles.Admin },

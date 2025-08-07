@@ -11,7 +11,8 @@ permissionsList = permissionsList.concat([
   "process:resume",  
   "matches:match",  
   "automation", 
-  "refresh-api-key"
+  "refresh-api-key",
+  "sms-send"
 ]);
 
 export const SeedPermissions = async () => {
@@ -20,7 +21,7 @@ export const SeedPermissions = async () => {
   await Promise.all(
     permissionsList.map(async (permission) => {
       await prisma.permission.upsert({
-        where: { name: permission },
+      where: { name: permission },
         update: {},
         create: { name: permission },
       });

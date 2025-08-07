@@ -288,3 +288,13 @@ model ImportFailure {
   @@index([user_id])
   @@index([import_session_id])
 }
+
+model SmsSendLog {
+  id             Int      @id @default(autoincrement())
+  endpoint_name  String
+  total_sent     Int
+  created_at     DateTime @default(now())
+
+  @@index([endpoint_name])
+  @@index([created_at])
+}
