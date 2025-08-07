@@ -65,6 +65,17 @@ A comprehensive business management platform built with Next.js, designed to han
 - **🔔 Notification Types** - Error, Success, Warning, Info notifications
 - **📈 Notification Analytics** - Track notification engagement
 
+### 📡 **External API Integration System**
+- **🔑 API Key Authentication** - Secure external app integration with API keys
+- **📱 SMS Integration** - External SMS sending with `/rewardreach` and `/unclaim` endpoints
+- **🌐 CORS Support** - Cross-origin requests enabled for external applications
+- **🛡️ Permission-Based Access** - Granular permissions for external integrations
+- **📊 API Usage Tracking** - Monitor external API usage and performance
+- **🔄 Background Processing** - Non-blocking API operations for high-volume requests
+- **📝 Message Templating** - Dynamic SMS message templates with personalized content
+- **📱 Malaysian Phone Format** - Automatic phone number formatting for Malaysian numbers
+- **📈 SMS Logging** - Comprehensive SMS send logs with batch tracking
+
 ### 📊 **Dashboard & Analytics**
 - **📈 Real-time Dashboard** - Live system metrics and KPIs
 - **📊 Process Analytics** - Monitor system performance and process efficiency
@@ -82,6 +93,103 @@ A comprehensive business management platform built with Next.js, designed to han
 - **🖥️ System Mode** - Automatically follows your system preference
 - **🔄 Theme Toggle** - Located in the top navigation bar
 - **💾 Persistent** - Your theme preference is saved across sessions
+
+## 🤖 Automation & External Integration
+
+### 📡 **External API Requirements**
+
+**API Key Authentication:**
+- **Required Header:** `X-API-Key: your-api-key`
+- **Permission:** `sms-send` for SMS endpoints
+- **Application:** `loyalty app` for SMS integration
+- **Expiration:** 90-day API key validity
+- **Rate Limiting:** Configurable per application
+
+**CORS Configuration:**
+- **Allowed Origins:** All origins (`*`) for external integrations
+- **Allowed Methods:** GET, POST, PUT, DELETE, OPTIONS
+- **Allowed Headers:** Content-Type, Authorization, X-API-Key
+- **Cache Duration:** 24 hours for preflight requests
+
+**SMS Endpoints:**
+- **Rewardreach:** `POST /api/external-app/sms/rewardreach`
+- **Unclaim:** `POST /api/external-app/sms/unclaim`
+- **Message Format:** Dynamic templating with personalized content
+- **Phone Format:** Automatic Malaysian number formatting (60 prefix)
+- **Processing:** Fire-and-forget background processing
+
+### 🔄 **Automation Features**
+
+**Background Processing:**
+- **Non-blocking Operations** - UI remains responsive during heavy operations
+- **Fire-and-Forget Pattern** - Immediate response with background processing
+- **Progress Tracking** - Real-time status updates via Server-Sent Events
+- **Error Handling** - Comprehensive error tracking and recovery
+- **Batch Processing** - Efficient handling of large datasets
+
+**Process Automation:**
+- **Automated Workflows** - Business process automation
+- **Event-Driven Architecture** - Real-time event processing
+- **Webhook Integration** - External system notifications
+- **Status Management** - Automated status transitions
+- **Retry Mechanisms** - Automatic retry for failed operations
+
+### 📱 **External API Usage Examples**
+
+**SMS Integration Example:**
+```javascript
+// Rewardreach SMS
+fetch('https://your-domain.com/api/external-app/sms/rewardreach', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'your-api-key-here'
+  },
+  body: JSON.stringify([
+    {
+      "phone_number": "60123456789",
+      "UID": "123456",
+      "bonus_amount": "500",
+      "currency": "USD"
+    }
+  ])
+})
+
+// Unclaim SMS
+fetch('https://your-domain.com/api/external-app/sms/unclaim', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'your-api-key-here'
+  },
+  body: JSON.stringify([
+    {
+      "phone_number": "60123456789",
+      "UID": "123456",
+      "unclaimAmount": "1000",
+      "bonus_type": "Extra"
+    }
+  ])
+})
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "SMS sending process started successfully",
+  "summary": {
+    "total_records": 1,
+    "status": "processing"
+  }
+}
+```
+
+**Message Templates:**
+- **Rewardreach:** `Dear {UID}, Claim WINBOX Extra B0nus credit now!`
+- **Unclaim:** `Dear {UID}, Claim WINBOX Extra B0nus credit now! Balance: {unclaimAmount}`
+- **Dynamic Fields:** Any additional key-value pairs added automatically
+- **Phone Formatting:** Automatic Malaysian format (60 prefix)
 
 ## 🚀 Quick Start
 
