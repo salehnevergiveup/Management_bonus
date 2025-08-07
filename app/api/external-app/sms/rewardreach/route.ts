@@ -91,20 +91,15 @@ async function processSmsInBackground(records: SmsRecord[], endpointName: string
     let totalSent = 0;
     const errors: string[] = [];
 
-    console.log(`[SMS] Starting background processing for ${records.length} records`);
-
     for (const record of records) {
       try {
-        let formattedPhone = record.phone_number;
-        if (!formattedPhone.startsWith('60')) {
-          formattedPhone = formattedPhone.replace(/^0+/, '');
-          if (!formattedPhone.startsWith('60')) {
-            formattedPhone = `60${formattedPhone}`;
-          }
-        }
+        // Use SMS service to validate and format Malaysian phone number
+        const smsService = (await import('@/lib/smsService')).smsService;
+        const formattedPhone = smsService.validatePhoneNumber(record.phone_number);
 
-        let message = `Dear ${record.UID || 'User'},
+        let message = `RM0 WB
 
+Dear ${record.UID || 'Player'},
 Claim WINBOX Extra B0nus credit now!`;
         
         // Add any additional dynamic fields before claim
@@ -114,6 +109,7 @@ Claim WINBOX Extra B0nus credit now!`;
         );
         
         if (additionalFields.length > 0) {
+          message += '\n';
           additionalFields.forEach(field => {
             message += `\n${field}: ${record[field]}`;
           });
@@ -121,19 +117,26 @@ Claim WINBOX Extra B0nus credit now!`;
         
         message += `
 
-Claim:
-Extrabonus88.com`;
+Claim: 
+Extrabonus88 .com`;
 
-        console.log(`[SMS] Sending to ${formattedPhone}: ${message}`);
+        // DEBUG: Show message format
+        console.log(`[SMS DEBUG] Rewardreach Message for ${formattedPhone}:`);
+        console.log(message);
+        console.log(`[SMS DEBUG] Message length: ${message.length} characters`);
+
+        // Send the message using the validated phone number
+        const success = await smsService.sendSms(formattedPhone, message);
         
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        totalSent++;
+        if (success) {
+          totalSent++;
+        } else {
+          errors.push(`Failed to send SMS to ${formattedPhone}`);
+        }
         
       } catch (error) {
-        const errorMsg = `Failed to send SMS to ${record.phone_number}: ${error}`;
-        console.error(errorMsg);
-        errors.push(errorMsg);
+        errors.push(`Failed to send SMS to ${record.phone_number}: ${error}`);
+        // Continue with next record - don't stop the entire process
       }
     }
 
@@ -144,7 +147,6 @@ Extrabonus88.com`;
           total_sent: totalSent
         }
       });
-      console.log(`[SMS] Background processing completed. Total sent: ${totalSent}, Errors: ${errors.length}`);
     } catch (dbError) {
       console.error("[ERROR] Failed to log SMS batch:", dbError);
     }
