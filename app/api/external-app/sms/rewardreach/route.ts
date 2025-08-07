@@ -7,6 +7,18 @@ interface SmsRecord {
   [key: string]: any; 
 }
 
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-User-ID, X-Process-ID',
+      'Access-Control-Max-Age': '86400',
+    }
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -37,6 +49,13 @@ export async function POST(request: NextRequest) {
       summary: {
         total_records: records.length,
         status: "processing"
+      }
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-User-ID, X-Process-ID',
+        'Access-Control-Max-Age': '86400',
       }
     });
 
