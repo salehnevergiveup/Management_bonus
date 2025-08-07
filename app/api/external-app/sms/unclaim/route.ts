@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { verifyExternalApi } from "@/lib/externalApiAuth";
 
 interface SmsRecord {
   phone_number: string;
@@ -21,6 +21,24 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify API key authentication
+    const apiKeyVerification = await verifyExternalApi(request, "sms-send");
+    
+    if (!apiKeyVerification.valid) {
+      return NextResponse.json(
+        { error: apiKeyVerification.error },
+        { status: apiKeyVerification.status }
+      );
+    }
+
+    // Check if the application is "loyalty app"
+    if (apiKeyVerification.application !== "loyalty app") {
+      return NextResponse.json(
+        { error: "Unauthorized: Only loyalty app can send SMS" },
+        { status: 403 }
+      );
+    }
+
     // Parse request body
     const body = await request.json();
 
@@ -45,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Start background processing
-    processSmsInBackground(records, 'voucher');
+    processSmsInBackground(records, 'unclaim');
 
     // Return immediate response
     return NextResponse.json({
