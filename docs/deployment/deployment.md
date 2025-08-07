@@ -207,6 +207,17 @@ Navigate to: **Repository → Settings → Secrets and variables → Actions**
 | `NEXTAUTH_SECRET` | NextAuth.js encryption key |
 | `API_KEY` | External service integration |
 
+#### SMS Configuration
+
+| Secret Name | Description |
+|-------------|-------------|
+| `SMS_USER` | SMS API username |
+| `SMS_PASSWORD` | SMS API password |
+| `SMS_FROM` | SMS sender code (5-digit) |
+| `SMS_URL` | SMS provider endpoint URL |
+| `SMS_DATA_CODING` | SMS data coding (default: 0) |
+| `SMS_TEST_MODE` | Test mode flag (true/false) |
+
 ### 2.2 Secret Value Updates
 
 Update these critical secrets with your AWS infrastructure values:

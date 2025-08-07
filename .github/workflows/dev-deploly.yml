@@ -322,6 +322,11 @@ jobs:
             echo "API_KEY=${{ secrets.DEV_API_KEY }}" >> .env
             echo "SHARED_SECRET=${{ secrets.DEV_SHARED_SECRET }}" >> .env
             echo "EXTERNAL_APP_URL=${{ secrets.DEV_EXTERNAL_APP_URL }}" >> .env
+            echo "SMS_USER=${{ secrets.DEV_SMS_USER }}" >> .env
+            echo "SMS_PASSWORD=${{ secrets.DEV_SMS_PASSWORD }}" >> .env
+            echo "SMS_FROM=${{ secrets.DEV_SMS_FROM }}" >> .env
+            echo "SMS_URL=${{ secrets.DEV_SMS_URL }}" >> .env
+            echo "SMS_DATA_CODING=${{ secrets.DEV_SMS_DATA_CODING }}" >> .env
             
             chmod 600 .env
             chown ${{ secrets.DEV_EC2_USER }}:${{ secrets.DEV_EC2_USER }} .env
