@@ -4,7 +4,7 @@ import { verifyExternalApi } from "@/lib/externalApiAuth";
 import { smsRateLimiter } from "@/lib/smsRateLimiter";
 
 interface SmsRecord {
-  phone_number: string;
+  phoneNo: string;
   [key: string]: any; 
 }
 
@@ -83,9 +83,9 @@ export async function POST(request: NextRequest) {
     const records: SmsRecord[] = body;
     for (let i = 0; i < records.length; i++) {
       const record = records[i];
-      if (!record.phone_number) {
+      if (!record.phoneNo) {
         return NextResponse.json(
-          { error: `Record at index ${i} is missing phone_number` },
+          { error: `Record at index ${i} is missing phoneNo` },
           { status: 400 }
         );
       }
@@ -133,18 +133,18 @@ async function processSmsInBackground(records: SmsRecord[], endpointName: string
       try {
         // Use SMS service to validate and format Malaysian phone number
         const smsService = (await import('@/lib/smsService')).smsService;
-        const formattedPhone = smsService.validatePhoneNumber(record.phone_number);
+        const formattedPhone = smsService.validatePhoneNumber(record.phoneNo);
 
         let message = `RM0 WB
 
-Dear ${record.UID || 'Player'},
+Dear ${record.playerId || 'Player'},
 Claim WINBOX Extra B O N U S  credit now!
 
 Balance: ${record.unclaimAmount || '0'}`;
         
-        // Add any additional dynamic fields before claim (excluding phone_number, UID, unclaimAmount)
+        // Add any additional dynamic fields before claim (excluding phoneNo, playerId, unclaimAmount)
         const additionalFields = Object.keys(record).filter(key => 
-          key !== 'phone_number' && key !== 'UID' && key !== 'unclaimAmount' &&
+          key !== 'phoneNo' && key !== 'playerId' && key !== 'unclaimAmount' &&
           record[key] !== undefined && record[key] !== null && record[key] !== ''
         );
         
@@ -174,7 +174,7 @@ E X T R A B O N U S 8 8. com`;
         }
 
       } catch (error) {
-        errors.push(`Failed to send SMS to ${record.phone_number}: ${error}`);
+        errors.push(`Failed to send SMS to ${record.phoneNo}: ${error}`);
         // Continue with next record - don't stop the entire process
       }
     }
