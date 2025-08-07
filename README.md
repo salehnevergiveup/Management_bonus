@@ -75,6 +75,11 @@ A comprehensive business management platform built with Next.js, designed to han
 - **📝 Message Templating** - Dynamic SMS message templates with personalized content
 - **📱 Malaysian Phone Format** - Automatic phone number formatting for Malaysian numbers
 - **📈 SMS Logging** - Comprehensive SMS send logs with batch tracking
+- **🛡️ Rate Limiting** - Comprehensive rate limiting system for SMS endpoints
+- **📊 Request Size Limits** - Maximum 5,000 SMS per request
+- **⚡ Concurrent Limits** - Maximum 5 concurrent requests
+- **⏱️ Rate Limits** - 10 requests per minute per API key
+- **📈 Real-time Monitoring** - Live rate limiter status and statistics
 
 ### 📊 **Dashboard & Analytics**
 - **📈 Real-time Dashboard** - Live system metrics and KPIs
@@ -117,6 +122,15 @@ A comprehensive business management platform built with Next.js, designed to han
 - **Message Format:** Dynamic templating with personalized content
 - **Phone Format:** Automatic Malaysian number formatting (60 prefix)
 - **Processing:** Fire-and-forget background processing
+- **Rate Limiting:** Comprehensive limits and monitoring
+
+**Rate Limiting System:**
+- **Request Size:** Maximum 5,000 SMS per request
+- **Concurrent Requests:** Maximum 5 concurrent requests
+- **Rate Limits:** 10 requests per minute per API key
+- **Status Monitoring:** Real-time rate limiter status
+- **Error Handling:** Proper HTTP status codes (400, 429)
+- **Background Processing:** Non-blocking with request tracking
 
 ### 🔄 **Automation Features**
 
@@ -185,11 +199,102 @@ fetch('https://your-domain.com/api/external-app/sms/unclaim', {
 }
 ```
 
+**Rate Limiting Responses:**
+```json
+// Request too large (400 Bad Request)
+{
+  "error": "Request too large. Maximum 5000 SMS per request. Received: 6000"
+}
+
+// Too many concurrent requests (429 Too Many Requests)
+{
+  "error": "Too many concurrent requests. Maximum 5 concurrent requests allowed. Current: 5"
+}
+
+// Rate limit exceeded (429 Too Many Requests)
+{
+  "error": "Rate limit exceeded. Maximum 10 requests per minute per API key."
+}
+```
+
 **Message Templates:**
 - **Rewardreach:** `Dear {UID}, Claim WINBOX Extra B0nus credit now!`
 - **Unclaim:** `Dear {UID}, Claim WINBOX Extra B0nus credit now! Balance: {unclaimAmount}`
 - **Dynamic Fields:** Any additional key-value pairs added automatically
 - **Phone Formatting:** Automatic Malaysian format (60 prefix)
+
+**Rate Limiter Status:**
+```bash
+GET /api/sms-rate-limiter-status
+```
+Response:
+```json
+{
+  "success": true,
+  "message": "Rate limiter status",
+  "status": {
+    "concurrentRequests": 0,
+    "maxConcurrentRequests": 5,
+    "maxSmsPerRequest": 5000,
+    "maxRequestsPerMinute": 10,
+    "timestamp": "2025-08-07T13:05:16.287Z"
+  }
+}
+```
+
+## 🛡️ Rate Limiting Best Practices
+
+### 📊 **Capacity Planning**
+- **Request Size:** Keep batches under 5,000 SMS for optimal performance
+- **Concurrent Requests:** Limit to 5 concurrent requests to prevent server overload
+- **Rate Limits:** Stay under 10 requests per minute per API key
+- **Monitoring:** Use status endpoint to track current usage
+
+### ⚡ **Performance Optimization**
+- **Batch Processing:** Send multiple SMS in single requests when possible
+- **Error Handling:** Implement retry logic for rate limit errors
+- **Monitoring:** Track rate limiter status for capacity planning
+- **Testing:** Use status endpoint to verify limits before production
+
+### 🔧 **Configuration**
+- **Request Size Limit:** 5,000 SMS per request (configurable)
+- **Concurrent Limit:** 5 concurrent requests (configurable)
+- **Rate Limit:** 10 requests per minute per API key (configurable)
+- **Cleanup:** Automatic cleanup of old rate limit data every 5 minutes
+
+### 📈 **Monitoring & Alerts**
+- **Status Endpoint:** Real-time rate limiter status
+- **Error Tracking:** Monitor 400 and 429 status codes
+- **Performance Metrics:** Track request success rates
+- **Capacity Planning:** Monitor usage patterns for scaling
+
+### 🧪 **Testing Rate Limits**
+```bash
+# Check current status
+curl -X GET http://localhost:3000/api/sms-rate-limiter-status
+
+# Test request size limit (should fail with 400)
+curl -X POST http://localhost:3000/api/external-app/sms/rewardreach \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '[6000 records]'
+
+# Test concurrent limit (send 6 requests simultaneously)
+for i in {1..6}; do
+  curl -X POST http://localhost:3000/api/external-app/sms/rewardreach \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: your-api-key" \
+    -d '[{"phone_number": "1121615114", "UID": "P$i"}]' &
+done
+
+# Test rate limit (send 11 requests in 1 minute)
+for i in {1..11}; do
+  curl -X POST http://localhost:3000/api/external-app/sms/rewardreach \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: your-api-key" \
+    -d '[{"phone_number": "1121615114", "UID": "P$i"}]'
+done
+```
 
 ## 🚀 Quick Start
 
