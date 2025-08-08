@@ -155,29 +155,24 @@ async function processSmsInBackground(records: SmsRecord[], endpointName: string
         const smsService = (await import('@/lib/smsService')).smsService;
         const formattedPhone = smsService.validatePhoneNumber(record.phoneNo);
 
-        let message = `RM0 WB
-
-Dear ${record.playerId || 'Player'},
-Claim WINBOX Extra B O N U S  credit now!
-
-Balance: ${record.unclaimAmount || '0'}`;
+        // Get active message from database
+        const activeMessageResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/sms-messages/active/unclaim`);
+        const activeMessageData = await activeMessageResponse.json();
         
-        // Add any additional dynamic fields before claim (excluding phoneNo, playerId, unclaimAmount)
-        const additionalFields = Object.keys(record).filter(key => 
-          key !== 'phoneNo' && key !== 'playerId' && key !== 'unclaimAmount' &&
-          record[key] !== undefined && record[key] !== null && record[key] !== ''
-        );
-        
-        if (additionalFields.length > 0) {
-          additionalFields.forEach(field => {
-            message += `\n${field}: ${record[field]}`;
-          });
+        let message: string;
+        if (activeMessageData.success && activeMessageData.data) {
+          // Use dynamic message from database
+          const { processMessage } = await import('@/lib/messageProcessor');
+          message = processMessage(activeMessageData.data.message, record);
+          
+          // Debug logging
+          console.log('[SMS DEBUG] Unclaim Message Processing:');
+          console.log('- Template:', activeMessageData.data.message);
+          console.log('- Data:', record);
+          console.log('- Processed Message:', message);
+        } else {
+          throw new Error('No active message found for unclaim endpoint');
         }
-        
-        message += `
-
-Claim: 
-E X T R A B O N U S 8 8. com`;
 
         // DEBUG: Show message format
         console.log(`[SMS DEBUG] Unclaim Message for ${formattedPhone}:`);
