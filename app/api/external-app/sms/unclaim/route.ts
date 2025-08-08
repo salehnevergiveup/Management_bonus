@@ -40,8 +40,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse request body
-    const body = await request.json();
+    // Parse request body with error handling
+    let body;
+    try {
+      const bodyText = await request.text();
+      console.log("[DEBUG] Request body length:", bodyText?.length || 0);
+      console.log("[DEBUG] Request body preview:", bodyText?.substring(0, 200) || "empty");
+      
+      if (!bodyText || bodyText.trim() === '') {
+        console.error("[ERROR] Request body is empty");
+        return NextResponse.json(
+          { error: "Request body is empty" },
+          { status: 400 }
+        );
+      }
+      body = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error("[ERROR] Failed to parse request body:", parseError);
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
 
     // Validate that body is an array
     if (!Array.isArray(body)) {

@@ -128,15 +128,28 @@ export class SmsService {
         const status = jsonResponse.status;
         console.log(`[SMS] 📊 Status from response: ${status}`);
         
-        // Check if status indicates success (0, 200, "success", "ok")
-        if (status === 0 || status === 200 || status === "success" || status === "ok") {
+        // Check if status indicates success (0, 200, 201, "success", "ok")
+        if (status === 0 || status === 200 || status === 201 || status === "success" || status === "ok") {
           console.log(`[SMS] ✅ Success based on status: ${status}`);
           return true;
         }
         
-        // Check if status indicates error (non-zero, error codes)
-        if (status !== 0 && status !== 200 && status !== "success" && status !== "ok") {
+        // Check if status indicates error (non-zero, error codes, but not 201)
+        if (status !== 0 && status !== 200 && status !== 201 && status !== "success" && status !== "ok") {
           console.log(`[SMS] ❌ Error based on status: ${status}`);
+          return false;
+        }
+      }
+      
+      // Check for data array with statusCode field (specific to this SMS provider)
+      if (jsonResponse.data && Array.isArray(jsonResponse.data) && jsonResponse.data.length > 0) {
+        const firstItem = jsonResponse.data[0];
+        if (firstItem.statusCode === "001") {
+          console.log(`[SMS] ✅ Success based on statusCode: ${firstItem.statusCode}`);
+          return true;
+        }
+        if (firstItem.statusCode && firstItem.statusCode !== "001") {
+          console.log(`[SMS] ❌ Error based on statusCode: ${firstItem.statusCode}`);
           return false;
         }
       }
@@ -167,7 +180,10 @@ export class SmsService {
       'delivered',
       'accepted',
       'message sent',
-      'sms sent'
+      'sms sent',
+      'created',
+      'submitted',
+      '001'
     ];
     
     // Common error indicators

@@ -1,0 +1,157 @@
+{
+  "info": {
+    "name": "SMS Endpoints Test",
+    "description": "Test collection for SMS endpoints with proper error handling"
+  },
+  "item": [
+    {
+      "name": "Test Rewardreach SMS - Valid Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "your-api-key-here"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"phoneNo\": \"60123456789\",\n    \"playerId\": \"123456\",\n    \"bonus_type\": \"Extra\"\n  },\n  {\n    \"phoneNo\": \"60111222333\",\n    \"playerId\": \"789012\"\n  }\n]"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/external-app/sms/rewardreach",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "external-app", "sms", "rewardreach"]
+        }
+      }
+    },
+    {
+      "name": "Test Unclaim SMS - Valid Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "your-api-key-here"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"phoneNo\": \"60123456789\",\n    \"playerId\": \"123456\",\n    \"unclaimAmount\": \"1000\"\n  },\n  {\n    \"phoneNo\": \"60111222333\",\n    \"playerId\": \"789012\",\n    \"unclaimAmount\": \"500\"\n  }\n]"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/external-app/sms/unclaim",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "external-app", "sms", "unclaim"]
+        }
+      }
+    },
+    {
+      "name": "Test Empty Request Body",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "your-api-key-here"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/external-app/sms/rewardreach",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "external-app", "sms", "rewardreach"]
+        }
+      }
+    },
+    {
+      "name": "Test Invalid JSON",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "your-api-key-here"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "invalid json content"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/external-app/sms/rewardreach",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "external-app", "sms", "rewardreach"]
+        }
+      }
+    },
+    {
+      "name": "Test Missing phoneNo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "your-api-key-here"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"playerId\": \"123456\"\n  }\n]"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/external-app/sms/rewardreach",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "external-app", "sms", "rewardreach"]
+        }
+      }
+    },
+    {
+      "name": "Test Rate Limiter Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/sms-rate-limiter-status",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "sms-rate-limiter-status"]
+        }
+      }
+    }
+  ]
+} 
