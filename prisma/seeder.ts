@@ -13,6 +13,7 @@ import SeedBonuses from "./seeders/bonuses";
 import SeedExchangeRate from "./seeders/exchange_rate";
 import SeedUserMatch from "./seeders/user_match";
 import SeedTransferProcesses from "./seeders/process_transfer_account";
+import { SeedSmsMessages } from "./seeders/sms-messages";
 
 const seedProduction = async () => {
   console.log("🏭 Running Production Seeders (minimal data)...");
@@ -26,6 +27,7 @@ const seedProduction = async () => {
     await SeedTransferAccounts();
     await SeedPlayers();
     await SeedBonuses();
+    await SeedSmsMessages();
     console.log("✅ Production seeders executed successfully.");
   } catch (error) {
     console.error("❌ Production seeding error:", error);
@@ -54,6 +56,7 @@ const seedDevelopment = async () => {
     await SeedBonuses();
     await SeedTransferProcesses();
     await SeedUserMatch();
+    await SeedSmsMessages();
     console.log("✅ Development/UAT seeders executed successfully.");
   } catch (error) {
     console.error("❌ Development seeding error:", error);

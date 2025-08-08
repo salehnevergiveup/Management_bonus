@@ -12,7 +12,8 @@ permissionsList = permissionsList.concat([
   "matches:match",  
   "automation", 
   "refresh-api-key",
-  "sms-send"
+  "sms-send",
+  "sms-messages"
 ]);
 
 export const SeedPermissions = async () => {

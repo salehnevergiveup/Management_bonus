@@ -298,3 +298,17 @@ model SmsSendLog {
   @@index([endpoint_name])
   @@index([created_at])
 }
+
+model SmsMessage {
+  id          String   @id @default(uuid())
+  endpoint    String   // e.g., "rewardreach", "unclaim"
+  message     String   @db.Text // The message template with placeholders
+  is_active   Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  String?  // User ID who created the message
+  updated_by  String?  // User ID who last updated the message
+
+  @@index([endpoint])
+  @@index([is_active])
+}

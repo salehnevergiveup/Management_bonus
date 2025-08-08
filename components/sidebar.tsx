@@ -20,6 +20,7 @@ import {
   Repeat2,
   UserCog,
   History,
+  MessageSquare,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { useUser } from "@/contexts/usercontext"
@@ -372,6 +373,44 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
                             <Link href="/history">
                               <History className="h-4 w-4 flex-shrink-0" />
                               <span className="truncate text-xs">{t("data_exploration", lang)}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                    </>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+
+        <SidebarSeparator />
+
+        {/* Broadcasting Section */}
+        <Collapsible defaultOpen className="group/collapsible">
+          <SidebarGroup>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center justify-between">
+                Broadcasting
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {isLoading ? (
+                    <div className="flex h-16 items-center justify-center">
+                      <div className="spinner">{t("loading", lang)}...</div>
+                    </div>
+                  ) : (
+                    <>
+                      {checkAccess("sms-messages") && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton asChild>
+                            <Link href="/broadcasting">
+                              <MessageSquare className="h-4 w-4 flex-shrink-0" />
+                              <span className="truncate text-xs">SMS Messages</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
