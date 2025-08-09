@@ -10,11 +10,13 @@ type BaseFormData = {
   id: string;
   formId: string;
   thread_id: string;
+  threadId?: string; // For real-time compatibility
   processId: string;
   isOpen: boolean;
   timestamp: number;
   type: string;
   timeout?: number;
+  data?: any; // For database forms
   [key: string]: any; 
 };
 
@@ -44,8 +46,20 @@ const FormLoader = () => {
             ...form,
             formId: `form-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             isOpen: true,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            // Map thread_id to the expected structure
+            threadId: form.thread_id, // For real-time compatibility
+            data: {
+              ...form.data,
+              thread_id: form.thread_id // Ensure thread_id is in data as well
+            }
           };
+
+          // Debug logging for timeout forms
+          if (form.data?.timeout && form.data.timeout > 0) {
+            // Timeout form loaded successfully
+          }
+
           
           if (form.event_name === Events.VERIFICATION_OPTIONS) {
             verificationOptions.push(formWithId);

@@ -11,11 +11,13 @@ type BaseFormData = {
   id: string,
   formId: string;
   thread_id: string;
+  threadId?: string; // For real-time compatibility
   processId: string;
   isOpen: boolean;
   timestamp: number;
   type: string;
   timeout?: number;
+  data?: any; // For database forms
   [key: string]: any; 
 };
 
@@ -67,7 +69,8 @@ const SSEListener = () => {
           setVerificationOptionsForms(prev => [...prev, newForm]);
         }, 300);
         
-        if (parsedData.timeout && typeof parsedData.timeout === 'number') {
+        // Only set timeout if timeout is provided and greater than 0
+        if (parsedData.timeout && typeof parsedData.timeout === 'number' && parsedData.timeout > 0) {
           setTimeout(() => {
             closeVerificationOptionsForm(formId);
           }, parsedData.timeout * 1000);
@@ -97,7 +100,8 @@ const SSEListener = () => {
           setVerificationCodeForms(prev => [...prev, newForm]);
         }, 300);
         
-        if (parsedData.timeout && typeof parsedData.timeout === 'number') {
+        // Only set timeout if timeout is provided and greater than 0
+        if (parsedData.timeout && typeof parsedData.timeout === 'number' && parsedData.timeout > 0) {
           setTimeout(() => {
             closeVerificationCodeForm(formId);
           }, parsedData.timeout * 1000);
@@ -121,7 +125,8 @@ const SSEListener = () => {
           setShowConfirmTransfer(true);
         }, 300);
         
-        if (parsedData.timeout && typeof parsedData.timeout === 'number') {
+        // Only set timeout if timeout is provided and greater than 0
+        if (parsedData.timeout && typeof parsedData.timeout === 'number' && parsedData.timeout > 0) {
           setTimeout(() => {
             closeConfirmTransferDialog();
           }, parsedData.timeout * 1000);

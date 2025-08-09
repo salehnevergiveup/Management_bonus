@@ -125,8 +125,10 @@ export async function POST(request: NextRequest) {
 
       const responseData = await backendResponse.json();
 
+      console.log("verification code submitted successfully");
       
-      //set the timeout to 0 if the form is submitted
+      // Set is_active to false when form is submitted
+
       const processProgressData = await prisma.processProgress.findUnique({
         where: { 
           id
@@ -135,15 +137,23 @@ export async function POST(request: NextRequest) {
           data: true 
         }
       })
-      let newProcessProgressData = JSON.parse(JSON.stringify(processProgressData))  
-      newProcessProgressData.data.timeout =  0;  
-  
-      await prisma.processProgress.update({
-        where: {id}, 
-        data: { 
-          data: newProcessProgressData
-        }
-      })
+      
+      if (processProgressData && processProgressData.data && typeof processProgressData.data === 'object') {
+        const currentData = processProgressData.data as Record<string, any>;
+        const updatedData: Record<string, any> = {
+          ...currentData,
+          is_active: false
+        };
+        
+
+        
+        await prisma.processProgress.update({
+          where: {id}, 
+          data: { 
+            data: updatedData
+          }
+        })
+      }
   
       return NextResponse.json({
         success: true,

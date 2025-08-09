@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const { event_name, status, process_stage, thread_stage, thread_id, data } = body;
-
+    console.log(body); 
     if (!event_name || !status || !process_stage) {
       return NextResponse.json(
         { error: "Missing event_name, status or process_stage" },
