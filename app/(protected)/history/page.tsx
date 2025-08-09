@@ -20,7 +20,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BatchExportDialog } from "@/components/batch-export-dialog"
 import { useLanguage } from "@app/contexts/LanguageContext"
 import { t } from "@app/lib/i18n"
-import { MessageSquare } from "lucide-react"
 
 interface User {
   id: string
@@ -52,12 +51,7 @@ interface DebugInfo {
   totalWithFilter: number
 }
 
-interface SmsSendLog {
-  id: number;
-  endpoint_name: string;
-  total_sent: number;
-  created_at: string;
-}
+
 
 export default function HistoryDataPage() {
   const { auth, isLoading } = useUser()
@@ -74,7 +68,6 @@ export default function HistoryDataPage() {
   const [batchExportDialogOpen, setBatchExportDialogOpen] = useState(false)
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null)
   const [showDebug, setShowDebug] = useState(false)
-  const [smsSendLogs, setSmsSendLogs] = useState<SmsSendLog[]>([])
   const router = useRouter()
 
   // Filter out statuses that are not "success" or "failed"
@@ -85,17 +78,7 @@ export default function HistoryDataPage() {
     })
   }
 
-  const fetchSmsSendLogs = async () => {
-    try {
-      const response = await fetch('/api/sms-send-logs');
-      if (response.ok) {
-        const data = await response.json();
-        setSmsSendLogs(data.logs || []);
-      }
-    } catch (error) {
-      console.error('Error fetching SMS send logs:', error);
-    }
-  };
+
 
   const fetchHistoricalProcesses = async () => {
     if (auth) {
@@ -144,7 +127,6 @@ export default function HistoryDataPage() {
   useEffect(() => {
     if (!isLoading && auth) {
       fetchHistoricalProcesses()
-      fetchSmsSendLogs()
     }
   }, [isLoading, auth, currentPage, pageSize, statusFilter])
 
@@ -470,35 +452,7 @@ export default function HistoryDataPage() {
         </CardContent>
       </Card>
 
-      {/* Message History */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Message History
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {smsSendLogs.map((log) => (
-              <div key={log.id} className="flex justify-between items-center border-b pb-2">
-                <div>
-                  <span className="font-medium">{log.endpoint_name}</span>
-                  <span className="text-sm text-gray-500 ml-2">
-                    {new Date(log.created_at).toLocaleString()}
-                  </span>
-                </div>
-                <Badge color="success" text={`${log.total_sent} sent`} />
-              </div>
-            ))}
-            {smsSendLogs.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No SMS send history yet.
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Export Preview Dialog */}
       {selectedProcess && (

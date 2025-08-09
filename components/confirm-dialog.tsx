@@ -223,11 +223,11 @@ const ConfirmTransferDialog = ({
         >
           <div className="space-y-4">
             {fullMessage && (
-              <div className="mb-4 text-sm text-gray-600 flex items-start">
+              <div className="mb-4 text-sm text-gray-600 dark:text-gray-300 flex items-start">
                 <div className="flex-grow">{messagePreview}</div>
                 {fullMessage.length > messagePreview.length && (
                   <button
-                    className="ml-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 flex-shrink-0"
+                    className="ml-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 flex-shrink-0"
                     onClick={() => setShowInfoDialog(true)}
                     title={t("view_full_message", lang)}
                   >

@@ -133,7 +133,7 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {data.data.message && <div className="mb-4 text-sm text-gray-600">{data.data.message}</div>}
+        {data.data.message && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">{data.data.message}</div>}
 
         <div className="space-y-2">
           <Label htmlFor="code">{t("verification_code", lang)}</Label>
