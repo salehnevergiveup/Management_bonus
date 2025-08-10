@@ -377,6 +377,16 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       )}
+                      {checkAccess("sms-messages") && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton asChild>
+                            <Link href="/sms-history">
+                              <MessageSquare className="h-4 w-4 flex-shrink-0" />
+                              <span className="truncate text-xs">{t("sms_history", lang)}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                     </>
                   )}
                 </SidebarMenu>
@@ -392,7 +402,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
           <SidebarGroup>
             <SidebarGroupLabel asChild>
               <CollapsibleTrigger className="flex w-full items-center justify-between">
-                Broadcasting
+                {t("broadcasting", lang)}
                 <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
@@ -410,7 +420,7 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
                           <SidebarMenuButton asChild>
                             <Link href="/broadcasting">
                               <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                              <span className="truncate text-xs">SMS Messages</span>
+                              <span className="truncate text-xs">{t("sms_messages", lang)}</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -428,7 +438,9 @@ export default function AppSidebar({ className, ...props }: React.ComponentProps
           {/* Language Switcher */}
           <Select value={lang} onValueChange={(val) => setLang(val as "eng" | "ch")}>
             <SelectTrigger className="w-full h-8">
-              <SelectValue />
+              <SelectValue>
+                {lang === "eng" ? t("english", lang) : t("chinese", lang)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="eng">{t("english", lang)}</SelectItem>

@@ -10,7 +10,7 @@ import { t } from "@app/lib/i18n"
 
 
 // Timer component integrated within this file
-const Timer = ({ seconds, onTimeout }: { seconds: number; onTimeout: () => void }) => {
+const Timer = ({ seconds, onTimeout, formId }: { seconds: number; onTimeout: () => void; formId?: any }) => {
   const [timeLeft, setTimeLeft] = useState(seconds)
   const { lang } = useLanguage()
 
@@ -121,9 +121,9 @@ const ConfirmTransferDialog = ({
     timeout = Number(data.timeout)
   }
 
-  // If no timeout specified or invalid (0 or NaN), use a default
-  if (!timeout || isNaN(timeout) || timeout <= 0) {
-    timeout = 120 // Default 2 minutes
+  // Only set timeout if it's a valid positive number
+  if (timeout && (isNaN(timeout) || timeout <= 0)) {
+    timeout = null // No timeout for invalid values
   }
 
   const title = data.data?.title || data.title || t("confirm_action", lang)
@@ -184,8 +184,28 @@ const ConfirmTransferDialog = ({
     }
   }
 
-  const handleTimeout = () => {
-    onClose()
+  const handleTimeout = async () => {
+    try {
+      // Mark the form as inactive in the database
+      const response = await fetch('/api/external-app/submit-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          confirmation: false, // Treat timeout as rejection
+          thread_id: threadId,
+          processId: processId,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to mark form as inactive on timeout');
+      }
+    } catch (error) {
+      console.error('Error marking form as inactive on timeout:', error);
+    }
+    
+    onClose();
   }
 
   if (!isOpen) {
@@ -198,16 +218,16 @@ const ConfirmTransferDialog = ({
         <DraggableCard
           title={title}
           badge={<Badge color={AppColor.SUCCESS} text={threadId || t("unknown", lang)} />}
-          timer={<Timer seconds={timeout} onTimeout={handleTimeout} />}
+          timer={timeout && timeout > 0 && <Timer seconds={timeout} onTimeout={handleTimeout} formId={id} />}
           onClose={onClose}
         >
           <div className="space-y-4">
             {fullMessage && (
-              <div className="mb-4 text-sm text-gray-600 flex items-start">
+              <div className="mb-4 text-sm text-gray-600 dark:text-gray-300 flex items-start">
                 <div className="flex-grow">{messagePreview}</div>
                 {fullMessage.length > messagePreview.length && (
                   <button
-                    className="ml-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 flex-shrink-0"
+                    className="ml-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 flex-shrink-0"
                     onClick={() => setShowInfoDialog(true)}
                     title={t("view_full_message", lang)}
                   >

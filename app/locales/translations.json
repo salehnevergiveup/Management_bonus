@@ -3687,6 +3687,118 @@
   "no_comment": {
     "eng": "No comment",
     "ch": "无评论"
+  },
+  "sms_history": {
+    "eng": "SMS History",
+    "ch": "短信历史"
+  },
+  "message_history": {
+    "eng": "Message History",
+    "ch": "消息历史"
+  },
+  "no_sms_history": {
+    "eng": "No SMS send history yet.",
+    "ch": "暂无短信发送历史。"
+  },
+  "sms_sent": {
+    "eng": "sent",
+    "ch": "已发送"
+  },
+  "sms_endpoint": {
+    "eng": "Endpoint",
+    "ch": "端点"
+  },
+  "sms_total_sent": {
+    "eng": "Total Sent",
+    "ch": "总发送数"
+  },
+  "sms_send_time": {
+    "eng": "Send Time",
+    "ch": "发送时间"
+  },
+  "sms_history_management": {
+    "eng": "SMS History Management",
+    "ch": "短信历史管理"
+  },
+  "view_sms_history": {
+    "eng": "View SMS History",
+    "ch": "查看短信历史"
+  },
+  "loading_sms_history": {
+    "eng": "Loading SMS history...",
+    "ch": "正在加载短信历史..."
+  },
+  "no_sms_logs_found": {
+    "eng": "No SMS logs found",
+    "ch": "未找到短信日志"
+  },
+  "sms_logs": {
+    "eng": "SMS Logs",
+    "ch": "短信日志"
+  },
+  "sms_endpoint_name": {
+    "eng": "Endpoint Name",
+    "ch": "端点名称"
+  },
+  "sms_created_at": {
+    "eng": "Created At",
+    "ch": "创建时间"
+  },
+  "sms_actions": {
+    "eng": "Actions",
+    "ch": "操作"
+  },
+  "sms_search_logs": {
+    "eng": "Search SMS logs...",
+    "ch": "搜索短信日志..."
+  },
+  "sms_filter_by_endpoint": {
+    "eng": "Filter by endpoint",
+    "ch": "按端点筛选"
+  },
+  "sms_all_endpoints": {
+    "eng": "All Endpoints",
+    "ch": "所有端点"
+  },
+  "sms_export_logs": {
+    "eng": "Export SMS Logs",
+    "ch": "导出短信日志"
+  },
+  "sms_export_success": {
+    "eng": "SMS logs exported successfully",
+    "ch": "短信日志导出成功"
+  },
+  "sms_export_failed": {
+    "eng": "Failed to export SMS logs",
+    "ch": "导出短信日志失败"
+  },
+  "failed_to_fetch_sms_logs": {
+    "eng": "Failed to fetch SMS logs",
+    "ch": "获取短信日志失败"
+  },
+  "error_fetching_sms_logs": {
+    "eng": "Error fetching SMS logs",
+    "ch": "获取短信日志时出错"
+  },
+  "no_results_match_criteria": {
+    "eng": "No results match your criteria",
+    "ch": "没有符合您条件的结果"
+  },
+  "loading": {
+    "eng": "Loading...",
+    "ch": "加载中..."
+  },
+  "view_sms_history_description": {
+    "eng": "View detailed SMS send logs and history in a dedicated page",
+    "ch": "在专用页面查看详细的短信发送日志和历史记录"
+  },
+  "broadcasting": {
+    "eng": "Broadcasting",
+    "ch": "广播"
+  },
+  "sms_messages": {
+    "eng": "SMS Messages",
+    "ch": "短信消息"
   }
 }
     

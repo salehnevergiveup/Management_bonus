@@ -14,20 +14,20 @@ export async function POST() {
     // 👇 Just change this line to test different events
     const eventName = Events.VERIFICATION_OPTIONS;
 
-    // 🔁 Automatically select the matching test data
+    // 🔁 Automatically select the matching test data for unlimited forms
     const testDataMap: Record<string, any> = {
       [Events.VERIFICATION_OPTIONS]: {
-        message: "Choose a verification method",
-        options: ["Email", "Mobile OTP"],
-        timeout: 30000
+        message: "Choose a verification method (unlimited time)",
+        options: ["Email", "Mobile OTP", "SMS"]
+        // No timeout = unlimited form
       },
       [Events.VERIFICATION_CODE]: {
-        message: "Enter your verification code",
-        timeout: 60000
+        message: "Enter your verification code (unlimited time)"
+        // No timeout = unlimited form
       },
       [Events.CONFIRMATION_DIALOG]: {
-        message: "Do you confirm this operation?", 
-        timeout: 60000
+        message: "Do you confirm this operation? (unlimited time)"
+        // No timeout = unlimited form
       },
       [Events.PROGRESS_TRACKER]: {
         message: "Progress updated to 60%",
@@ -56,7 +56,7 @@ export async function POST() {
     }
    
     return NextResponse.json(
-      { message: `✅ Dispatched: ${eventName}` },
+      { message: `✅ Dispatched unlimited form: ${eventName}` },
       { status: 201 }
     );
 
@@ -67,4 +67,4 @@ export async function POST() {
       { status: 500 }
     );
   }
-}
+} 

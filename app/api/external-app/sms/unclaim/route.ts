@@ -149,30 +149,34 @@ async function processSmsInBackground(records: SmsRecord[], endpointName: string
     let totalSent = 0;
     const errors: string[] = [];
 
+    // FIX: Fetch message template ONCE before the loop
+    console.log('[SMS DEBUG] Fetching message template for batch...');
+    const activeMessageResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/sms-messages/active/unclaim`);
+    const activeMessageData = await activeMessageResponse.json();
+    
+    if (!activeMessageData.success || !activeMessageData.data) {
+      throw new Error('No active message found for unclaim endpoint');
+    }
+
+    const messageTemplate = activeMessageData.data.message;
+    const { processMessage } = await import('@/lib/messageProcessor');
+    
+    console.log('[SMS DEBUG] Message template loaded:', messageTemplate);
+
     for (const record of records) {
       try {
         // Use SMS service to validate and format Malaysian phone number
         const smsService = (await import('@/lib/smsService')).smsService;
         const formattedPhone = smsService.validatePhoneNumber(record.phoneNo);
 
-        // Get active message from database
-        const activeMessageResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/sms-messages/active/unclaim`);
-        const activeMessageData = await activeMessageResponse.json();
+        // Process message using the pre-fetched template
+        const message = processMessage(messageTemplate, record);
         
-        let message: string;
-        if (activeMessageData.success && activeMessageData.data) {
-          // Use dynamic message from database
-          const { processMessage } = await import('@/lib/messageProcessor');
-          message = processMessage(activeMessageData.data.message, record);
-          
-          // Debug logging
-          console.log('[SMS DEBUG] Unclaim Message Processing:');
-          console.log('- Template:', activeMessageData.data.message);
-          console.log('- Data:', record);
-          console.log('- Processed Message:', message);
-        } else {
-          throw new Error('No active message found for unclaim endpoint');
-        }
+        // Debug logging
+        console.log('[SMS DEBUG] Unclaim Message Processing:');
+        console.log('- Template:', messageTemplate);
+        console.log('- Data:', record);
+        console.log('- Processed Message:', message);
 
         // DEBUG: Show message format
         console.log(`[SMS DEBUG] Unclaim Message for ${formattedPhone}:`);

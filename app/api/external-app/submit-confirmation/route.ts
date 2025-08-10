@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     
     await retransferAmountRequest(userProcess.id, userProcess.user_id, role,thread_id,confirmation);
     
-    //set the timeout to 0 if the form is submitted
+    // Set is_active to false when form is submitted
     const processProgressData = await prisma.processProgress.findUnique({
       where: { 
         id
@@ -80,15 +80,20 @@ export async function POST(request: Request) {
         data: true 
       }
     })
-    let newProcessProgressData = JSON.parse(JSON.stringify(processProgressData))  
-    newProcessProgressData.data.timeout =  0;  
+    
+    if (processProgressData && processProgressData.data && typeof processProgressData.data === 'object') {
+      const updatedData = {
+        ...processProgressData.data as Record<string, any>,
+        is_active: false
+      };
 
-    await prisma.processProgress.update({
-      where: {id}, 
-      data: { 
-        data: newProcessProgressData
-      }
-    })
+      await prisma.processProgress.update({
+        where: {id}, 
+        data: { 
+          data: updatedData
+        }
+      })
+    }
 
     return NextResponse.json(
       {

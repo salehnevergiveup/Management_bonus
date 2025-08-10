@@ -67,13 +67,26 @@ const dispatchConfirmation = async (dispatchData: DispatchDto) => {
       throw new Error("CONFIRMATION_DIALOG event requires 'message' in data");
     }
 
-    const id =  await saveToDatabase(dispatchData);
+    // Set is_active to true for new forms and store original timeout
+    const formData = {
+      ...data,
+      is_active: true,
+      timeout: typeof data.timeout === 'string' ? parseInt(data.timeout) : data.timeout, // Convert to number
+      original_timeout: typeof data.timeout === 'string' ? parseInt(data.timeout) : data.timeout // Store original timeout for accurate expiration calculation
+    };
+
+
+
+    const id = await saveToDatabase({
+      ...dispatchData,
+      data: formData
+    });
 
     eventEmitter.emit(dispatchData.userId, eventName, {
       id,
       threadId,
       processId,
-      data
+      data: formData
     });
 
   } catch (error) {
@@ -89,17 +102,30 @@ const dispatchVerificationOption = async (dispatchData: DispatchDto) => {
       throw new Error("Missing threadId, processId, or data for VERIFICATION_METHOD event");
     }
 
-    if (!data.message || !data.options || !data.timeout) {
-      throw new Error("VERIFICATION_METHOD event requires 'message', 'options', and 'timeout' in data");
+    if (!data.message || !data.options) {
+      throw new Error("VERIFICATION_METHOD event requires 'message' and 'options' in data");
     }
 
-    const id = await saveToDatabase(dispatchData);
+    // Set is_active to true for new forms and store original timeout
+    const formData = {
+      ...data,
+      is_active: true,
+      timeout: typeof data.timeout === 'string' ? parseInt(data.timeout) : data.timeout, // Convert to number
+      original_timeout: typeof data.timeout === 'string' ? parseInt(data.timeout) : data.timeout // Store original timeout for accurate expiration calculation
+    };
+
+
+
+    const id = await saveToDatabase({
+      ...dispatchData,
+      data: formData
+    });
 
     eventEmitter.emit(dispatchData.userId, eventName, {
       id,
       threadId,
       processId,
-      data
+      data: formData
     });
 
   } catch (error) {
@@ -115,17 +141,30 @@ const dispatchVerificationCode = async (dispatchData: DispatchDto) => {
       throw new Error("Missing threadId, processId, or data for VERIFICATION_CODE event");
     }
 
-    if (!data.message || !data.timeout) {
-      throw new Error("VERIFICATION_CODE event requires 'message' and 'timeout' in data");
+    if (!data.message) {
+      throw new Error("VERIFICATION_CODE event requires 'message' in data");
     }
 
-    const id = await saveToDatabase(dispatchData);
+    // Set is_active to true for new forms and store original timeout
+    const formData = {
+      ...data,
+      is_active: true,
+      timeout: typeof data.timeout === 'string' ? parseInt(data.timeout) : data.timeout, // Convert to number
+      original_timeout: typeof data.timeout === 'string' ? parseInt(data.timeout) : data.timeout // Store original timeout for accurate expiration calculation
+    };
+
+
+
+    const id = await saveToDatabase({
+      ...dispatchData,
+      data: formData
+    });
 
     eventEmitter.emit(dispatchData.userId, eventName, {
       id,
       threadId,
       processId,
-      data
+      data: formData
     });
 
   } catch (error) {

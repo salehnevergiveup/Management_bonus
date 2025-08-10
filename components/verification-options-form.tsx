@@ -41,7 +41,7 @@ interface VerificationMethodFormProps {
 const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFormProps) => {
   const [verificationMethod, setVerificationMethod] = useState("")
   const { lang } = useLanguage()
- 
+
   // Validate required properties at runtime
   useEffect(() => {
     if (!data.data.options) {
@@ -117,8 +117,27 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
     }
   }
 
-  const handleTimeout = () => {
-    onClose()
+  const handleTimeout = async () => {
+    try {
+      // Mark the form as inactive in the database
+      const response = await fetch('/api/external-app/submit-verification-option', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: data.id ?? data.data.id,
+          verification_method: 'TIMEOUT',
+          thread_id: data.threadId ?? data.data.thread_id,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to mark form as inactive on timeout');
+      }
+    } catch (error) {
+      console.error('Error marking form as inactive on timeout:', error);
+    }
+    
+    onClose();
   }
 
   if (!isOpen) return null
@@ -127,11 +146,11 @@ const VerificationOptionsForm = ({ data, isOpen, onClose }: VerificationMethodFo
     <DraggableCard
       title={t("select_verification_method", lang)}
       badge={<Badge color={AppColor.SUCCESS} text={data.threadId ?? data.data.thread_id} />}
-      timer={data.data.timeout && <Timer seconds={data.data.timeout} onTimeout={handleTimeout} />}
+      timer={data.data.timeout && data.data.timeout > 0 && <Timer seconds={data.data.timeout} onTimeout={handleTimeout} formId={data.id} />}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {data.data.message && <div className="mb-4 text-sm text-gray-600">{data.data.message}</div>}
+        {data.data.message && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">{data.data.message}</div>}
 
         <div className="space-y-2">
           <Label htmlFor="verificationMethod">{t("verification_method", lang)}</Label>

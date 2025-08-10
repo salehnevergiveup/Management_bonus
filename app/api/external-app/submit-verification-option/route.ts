@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
     
     const { verification_method, thread_id, id } = body;
     
+
+    
     if (!verification_method) {
       return NextResponse.json(
         { error: "Missing required field: verificationMethod is required" },
@@ -100,9 +102,9 @@ export async function POST(request: NextRequest) {
     try {
       // Check if the URL is properly formatted
       const backendUrl = `${process.env.EXTERNAL_APP_URL}submit-verification-option`;
-
       // Send request to Python backend
-      const backendResponse = await fetch(backendUrl, {
+
+      const backendResponse =  await fetch(backendUrl, {
         method: 'POST',
         headers: {
           ...headers,
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(requestData)
       });
       
-      if (!backendResponse.ok) {
+      if (!backendResponse.ok) { 
         let errorDetails;
         try {
           errorDetails = await backendResponse.json();
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest) {
       
       const responseData = await backendResponse.json();
 
-      //set the timeout to 0 if the form is submitted
+            // Set is_active to false when form is submitted
      const processProgressData = await prisma.processProgress.findUnique({
       where: { 
         id
@@ -140,16 +142,25 @@ export async function POST(request: NextRequest) {
         data: true 
       }
     })
-    let newProcessProgressData = JSON.parse(JSON.stringify(processProgressData))  
-    newProcessProgressData.data.timeout =  0;  
 
-    await prisma.processProgress.update({
-      where: {id}, 
-      data: { 
-        data: newProcessProgressData
-      }
-    })
+    
+    if (processProgressData && processProgressData.data && typeof processProgressData.data === 'object') {
+      const currentData = processProgressData.data as Record<string, any>;
+      const updatedData: Record<string, any> = {
+        ...currentData,
+        is_active: false
+      };
       
+
+      
+     let test = await prisma.processProgress.update({
+        where: {id}, 
+        data: { 
+          data: updatedData
+        }
+      })
+
+    }
       return NextResponse.json({
         success: true,
         message: "Verification method submitted successfully",

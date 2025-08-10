@@ -57,12 +57,13 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
+      
       if (!res.ok) {
         const error = await res.json()
         throw new Error(t("failed_submit_verification_code", lang))
       }
 
-      const result = await res.json()
+      // const result = await res.json()
       onClose()
     } catch (error) {
       console.error(t("error_submitting_verification_code", lang), error)
@@ -96,8 +97,30 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
     }
   }
 
-  const handleTimeout = () => {
-    onClose()
+  const handleTimeout = async () => {
+    console.log(`Form ${data.id} timed out, marking as inactive`);
+    
+    try {
+      // Mark the form as inactive in the database
+      const response = await fetch('/api/external-app/submit-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: data.id ?? data.data.id,
+          code: 'TIMEOUT',
+          thread_id: data.threadId ?? data.data.thread_id,
+          process_id: data.processId ?? data.process_id,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to mark form as inactive on timeout');
+      }
+    } catch (error) {
+      console.error('Error marking form as inactive on timeout:', error);
+    }
+    
+    onClose();
   }
 
   if (!isOpen) return null
@@ -106,11 +129,11 @@ const VerificationCodeForm = ({ data, isOpen, onClose }: VerificationFormProps) 
     <DraggableCard
       title={t("enter_verification_code", lang)}
       badge={<Badge color={AppColor.SUCCESS} text={data.threadId ?? data.data.thread_id} />}
-      timer={data.data.timeout && <Timer seconds={data.data.timeout} onTimeout={handleTimeout} />}
+      timer={data.data.timeout && data.data.timeout > 0 && <Timer seconds={data.data.timeout} onTimeout={handleTimeout} formId={data.id} />}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {data.data.message && <div className="mb-4 text-sm text-gray-600">{data.data.message}</div>}
+        {data.data.message && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">{data.data.message}</div>}
 
         <div className="space-y-2">
           <Label htmlFor="code">{t("verification_code", lang)}</Label>
