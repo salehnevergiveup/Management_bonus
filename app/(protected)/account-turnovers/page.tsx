@@ -51,8 +51,8 @@ interface ExportBatch {
   exportedAt?: string;
 }
 
-const EXPORT_LIMIT = 1000; // Batch size: 1,000 records per batch
-const QUICK_EXPORT_LIMIT = 20000; // Quick export: 20,000 records max
+const EXPORT_LIMIT = 10000; // Batch size: 10,000 records per batch
+const QUICK_EXPORT_LIMIT = 100000; // Quick export: 100,000 records max
 
 export default function AccountTurnoverPage() {
   const { auth, isLoading } = useUser();
@@ -340,7 +340,17 @@ export default function AccountTurnoverPage() {
 
   const handleExportAll = async () => {
     if (filteredTurnovers.length > QUICK_EXPORT_LIMIT) {
-      toast.error(`Too many records to export at once (${filteredTurnovers.length}). Please use batch export for records over ${QUICK_EXPORT_LIMIT.toLocaleString()}.`);
+      // Export first 20k records, then suggest batch for remaining
+      const firstBatch = filteredTurnovers.slice(0, QUICK_EXPORT_LIMIT);
+      const remaining = filteredTurnovers.length - QUICK_EXPORT_LIMIT;
+      
+      const csvContent = convertToCSV(firstBatch);
+      const filename = `account-turnovers-${new Date().toISOString().split('T')[0]}-first-100k.csv`;
+      downloadCSV(csvContent, filename);
+      
+      if (remaining > 0) {
+        toast.success(`Exported first ${QUICK_EXPORT_LIMIT.toLocaleString()} records. ${remaining} records remaining - use batch export.`);
+      }
       return;
     }
 
@@ -608,15 +618,18 @@ export default function AccountTurnoverPage() {
                 <div className="space-y-2">
                   <Button 
                     onClick={handleExportAll}
-                    disabled={isExporting || filteredTurnovers.length > QUICK_EXPORT_LIMIT}
+                    disabled={isExporting}
                     className="w-full"
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    {t("export_all_records", lang)} ({filteredTurnovers.length})
+                    {filteredTurnovers.length > QUICK_EXPORT_LIMIT 
+                      ? `${t("export_first", lang)} ${QUICK_EXPORT_LIMIT.toLocaleString()} ${t("records", lang)}`
+                      : `${t("export_all_records", lang)} (${filteredTurnovers.length})`
+                    }
                   </Button>
                   {filteredTurnovers.length > QUICK_EXPORT_LIMIT && (
                     <p className="text-xs text-muted-foreground">
-                      {t("too_many_records_use_batch", lang)} {QUICK_EXPORT_LIMIT.toLocaleString()}+ {t("records", lang)}
+                      {t("exporting_first", lang)} {QUICK_EXPORT_LIMIT.toLocaleString()} {t("records", lang)}. {t("use_batch_for_remaining", lang)} {filteredTurnovers.length - QUICK_EXPORT_LIMIT} {t("records", lang)}.
                     </p>
                   )}
                 </div>
