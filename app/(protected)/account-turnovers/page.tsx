@@ -51,7 +51,8 @@ interface ExportBatch {
   exportedAt?: string;
 }
 
-const EXPORT_LIMIT = 100;
+const EXPORT_LIMIT = 1000; // Batch size: 1,000 records per batch
+const QUICK_EXPORT_LIMIT = 20000; // Quick export: 20,000 records max
 
 export default function AccountTurnoverPage() {
   const { auth, isLoading } = useUser();
@@ -338,8 +339,8 @@ export default function AccountTurnoverPage() {
   };
 
   const handleExportAll = async () => {
-    if (filteredTurnovers.length > 1000) {
-      toast.error("Too many records to export at once. Please use batch export.");
+    if (filteredTurnovers.length > QUICK_EXPORT_LIMIT) {
+      toast.error(`Too many records to export at once (${filteredTurnovers.length}). Please use batch export for records over ${QUICK_EXPORT_LIMIT.toLocaleString()}.`);
       return;
     }
 
@@ -591,11 +592,11 @@ export default function AccountTurnoverPage() {
           </DialogHeader>
           
           <div className="space-y-4">
-            {filteredTurnovers.length > EXPORT_LIMIT && (
+            {filteredTurnovers.length > QUICK_EXPORT_LIMIT && (
               <Alert>
                 <AlertDescription>
                   {t("large_dataset_warning", lang)} {filteredTurnovers.length} {t("records_found", lang)}. 
-                  {t("batch_export_recommended", lang)} {EXPORT_LIMIT} {t("records_per_batch", lang)}.
+                  {t("batch_export_recommended", lang)} {EXPORT_LIMIT.toLocaleString()} {t("records_per_batch", lang)}.
                 </AlertDescription>
               </Alert>
             )}
@@ -607,15 +608,15 @@ export default function AccountTurnoverPage() {
                 <div className="space-y-2">
                   <Button 
                     onClick={handleExportAll}
-                    disabled={isExporting || filteredTurnovers.length > 1000}
+                    disabled={isExporting || filteredTurnovers.length > QUICK_EXPORT_LIMIT}
                     className="w-full"
                   >
                     <Download className="mr-2 h-4 w-4" />
                     {t("export_all_records", lang)} ({filteredTurnovers.length})
                   </Button>
-                  {filteredTurnovers.length > 1000 && (
+                  {filteredTurnovers.length > QUICK_EXPORT_LIMIT && (
                     <p className="text-xs text-muted-foreground">
-                      {t("too_many_records_use_batch", lang)}
+                      {t("too_many_records_use_batch", lang)} {QUICK_EXPORT_LIMIT.toLocaleString()}+ {t("records", lang)}
                     </p>
                   )}
                 </div>
