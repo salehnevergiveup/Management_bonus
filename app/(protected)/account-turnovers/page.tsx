@@ -51,8 +51,8 @@ interface ExportBatch {
   exportedAt?: string;
 }
 
-const EXPORT_LIMIT = 1000; // Batch size: 1,000 records per batch
-const QUICK_EXPORT_LIMIT = 20000; // Quick export: 20,000 records max
+const EXPORT_LIMIT = 10000; // Batch size: 10,000 records per batch
+const QUICK_EXPORT_LIMIT = 100000; // Quick export: 100,000 records max
 
 export default function AccountTurnoverPage() {
   const { auth, isLoading } = useUser();
@@ -345,7 +345,7 @@ export default function AccountTurnoverPage() {
       const remaining = filteredTurnovers.length - QUICK_EXPORT_LIMIT;
       
       const csvContent = convertToCSV(firstBatch);
-      const filename = `account-turnovers-${new Date().toISOString().split('T')[0]}-first-20k.csv`;
+      const filename = `account-turnovers-${new Date().toISOString().split('T')[0]}-first-100k.csv`;
       downloadCSV(csvContent, filename);
       
       if (remaining > 0) {
