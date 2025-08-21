@@ -12,12 +12,12 @@ export const SeedBonuses = async () => {
       }
       
       // Verify that required properties exist in baselineData
-      if (!baselineData.games || !baselineData.turnoverThresholds || !baselineData.defaultCurrency) {
+      if (!baselineData.games || !baselineData.multipliers || !baselineData.turnoverThresholds || !baselineData.defaultCurrency) {
         return [];
       }
       
       const bonuses = [];
-      const { games, turnoverThresholds, defaultCurrency } = baselineData;
+      const { games, multipliers, turnoverThresholds, defaultCurrency } = baselineData;
       
       Object.keys(turnoverData).forEach(username => {
         const userData = turnoverData[username];
@@ -38,6 +38,12 @@ export const SeedBonuses = async () => {
             return;
           }
           
+          // Get multiplier for this game, default to 1 if not specified
+          const multiplier = multipliers[game] || 1;
+          
+          // Calculate final turnover: multiplier × current turnover
+          const finalTurnover = turnover * multiplier;
+          
           const category = games[game];
           
           // Get the appropriate thresholds based on game category
@@ -46,17 +52,17 @@ export const SeedBonuses = async () => {
             return;
           }
           
-          // Find the correct payout threshold
+          // Find the correct payout threshold using finalTurnover
           let payout = 0;
           
           for (let i = categoryThresholds.length - 1; i >= 0; i--) {
-            if (turnover >= categoryThresholds[i].turnover) {
+            if (finalTurnover >= categoryThresholds[i].turnover) {
               payout = categoryThresholds[i].payout;
               break;
             }
           }
           
-          // If turnover didn't meet minimum threshold, no bonus
+          // If final turnover didn't meet minimum threshold, no bonus
           if (payout === 0) {
             return;
           }
@@ -125,6 +131,40 @@ export const SeedBonuses = async () => {
         "DB CASINO": "low",
         "EZUGI": "low"
       },
+      "multipliers": {
+        "EKOR": 1,
+        "LUCKY365": 1,
+        "LION KING": 1,
+        "MONKEYKING": 1,
+        "JDB SLOT": 1,
+        "PLAY8": 1,
+        "KINGMIDAS": 1,
+        "MAX BET": 1,
+        "MICROSLOT": 1,
+        "RCB988": 1,
+        "CMD": 1,
+        "BTI": 1,
+        "9WICKETS": 1,
+        "MEGA88": 1,
+        "YGR": 1,
+        "ASKME SLOT": 1,
+        "918KISS": 1,
+        "POKER WIN": 1,
+        "ACE WIN": 1,
+        "PRAGMATIC": 1,
+        "SPADE": 1,
+        "JILI": 1,
+        "BG": 1,
+        "AG": 1,
+        "PT LIVE": 1,
+        "PT SLOT": 1,
+        "SV388": 1,
+        "EVOLUTION": 1,
+        "HOTROAD": 1,
+        "SEXY": 1,
+        "DB CASINO": 1,
+        "EZUGI": 1
+      },
       "turnoverThresholds": {
         "high": [
           { "turnover": 500, "payout": 8 },
@@ -154,14 +194,16 @@ export const SeedBonuses = async () => {
 
     const bonusDescription = `This bonus system calculates player rewards based on their turnover in different games. 
 Games are categorized as either 'high' or 'low', with different payout thresholds for each category.
-Higher turnover amounts lead to larger bonus payouts, with tiered reward levels.
+The system applies multipliers to player turnover before determining bonus payouts.
+Final turnover = multiplier × current turnover
+Higher final turnover amounts lead to larger bonus payouts, with tiered reward levels.
 The system automatically handles currency conversion if a player's currency differs from the default (MYR).
-Players with turnover below the minimum threshold (500) receive no bonus.`;
+Players with final turnover below the minimum threshold (500) receive no bonus.`;
 
     // Create the bonus
     const bonus = await prisma.bonus.create({
       data: {
-        name: "Multiplier-Based Turnover Bonus",
+        name: "Low and High Turnover Bonus",
         description: bonusDescription,
         function: bonusFunction.toString(),
         baseline: bonusBaseline,
