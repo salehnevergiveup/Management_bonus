@@ -4,7 +4,7 @@ export const SeedBonuses = async () => {
   console.log('Starting Bonus seeding...');
   
   try {
-    // Define the bonus function with simplified multiplier logic
+    // Define the bonus data
     const bonusFunction = `function calculateTurnoverBonus(turnoverData, exchangeRates, baselineData) {
       // Parse baselineData if it's a string
       if (typeof baselineData === 'string') {
@@ -12,12 +12,12 @@ export const SeedBonuses = async () => {
       }
       
       // Verify that required properties exist in baselineData
-      if (!baselineData.games || !baselineData.defaultCurrency) {
+      if (!baselineData.games || !baselineData.turnoverThresholds || !baselineData.defaultCurrency) {
         return [];
       }
       
       const bonuses = [];
-      const { games, defaultCurrency } = baselineData;
+      const { games, turnoverThresholds, defaultCurrency } = baselineData;
       
       Object.keys(turnoverData).forEach(username => {
         const userData = turnoverData[username];
@@ -33,30 +33,52 @@ export const SeedBonuses = async () => {
             return;
           }
           
-          // Get multiplier for this game, or use default (1) if not specified
-          const multiplier = games[game] || 1;
+          // Skip games not in our categories
+          if (!games[game]) {
+            return;
+          }
           
-          // Calculate bonus: turnover * multiplier
-          let bonusAmount = turnover * multiplier;
+          const category = games[game];
           
-          // Convert bonus to user's currency if different from base currency
-          let convertedBonus = bonusAmount;
+          // Get the appropriate thresholds based on game category
+          const categoryThresholds = turnoverThresholds[category];
+          if (!categoryThresholds || !Array.isArray(categoryThresholds)) {
+            return;
+          }
+          
+          // Find the correct payout threshold
+          let payout = 0;
+          
+          for (let i = categoryThresholds.length - 1; i >= 0; i--) {
+            if (turnover >= categoryThresholds[i].turnover) {
+              payout = categoryThresholds[i].payout;
+              break;
+            }
+          }
+          
+          // If turnover didn't meet minimum threshold, no bonus
+          if (payout === 0) {
+            return;
+          }
+          
+          // Convert payout to user's currency if different from base currency
+          let convertedPayout = payout;
           
           if (currency !== defaultCurrency) {
             // First check direct conversion rate
             if (exchangeRates[defaultCurrency] && exchangeRates[defaultCurrency][currency]) {
-              convertedBonus = bonusAmount * exchangeRates[defaultCurrency][currency];
+              convertedPayout = payout * exchangeRates[defaultCurrency][currency];
             } 
             // If no direct conversion, try reverse
             else if (exchangeRates[currency] && exchangeRates[currency][defaultCurrency]) {
-              convertedBonus = bonusAmount / exchangeRates[currency][defaultCurrency];
+              convertedPayout = payout / exchangeRates[currency][defaultCurrency];
             }
           }
           
-          // Add bonus to results
+          // Add bonus to results with the ID and game fields included
           bonuses.push({
             username,
-            amount: convertedBonus,
+            amount: convertedPayout,
             currency,
             game,            
             turnover_id: id,  
@@ -68,19 +90,73 @@ export const SeedBonuses = async () => {
       return bonuses;
     }`;
 
-    // Simplified baseline with empty games object
     const bonusBaseline = {
       "games": {
-        // Empty - all games will use default multiplier of 1
+        "EKOR": "high",
+        "LUCKY365": "high",
+        "LION KING": "high",
+        "MONKEYKING": "high",
+        "JDB SLOT": "high",
+        "PLAY8": "high",
+        "KINGMIDAS": "high",
+        "MAX BET": "high",
+        "MICROSLOT": "high",
+        "RCB988": "high",
+        "CMD": "high",
+        "BTI": "high",
+        "9WICKETS": "high",
+        "MEGA88": "high",
+        "YGR": "high",
+        "ASKME SLOT": "high",
+        "918KISS": "low",
+        "POKER WIN": "low",
+        "ACE WIN": "low",
+        "PRAGMATIC": "low",
+        "SPADE": "low",
+        "JILI": "low",
+        "BG": "low",
+        "AG": "low",
+        "PT LIVE": "low",
+        "PT SLOT": "low",
+        "SV388": "low",
+        "EVOLUTION": "low",
+        "HOTROAD": "low",
+        "SEXY": "low",
+        "DB CASINO": "low",
+        "EZUGI": "low"
+      },
+      "turnoverThresholds": {
+        "high": [
+          { "turnover": 500, "payout": 8 },
+          { "turnover": 1000, "payout": 15 },
+          { "turnover": 3000, "payout": 30 },
+          { "turnover": 10000, "payout": 100 },
+          { "turnover": 50000, "payout": 550 },
+          { "turnover": 100000, "payout": 1200 },
+          { "turnover": 500000, "payout": 5000 },
+          { "turnover": 1000000, "payout": 12000 },
+          { "turnover": 5000000, "payout": 58888 }
+        ],
+        "low": [
+          { "turnover": 500, "payout": 3 },
+          { "turnover": 1000, "payout": 6 },
+          { "turnover": 3000, "payout": 20 },
+          { "turnover": 10000, "payout": 40 },
+          { "turnover": 50000, "payout": 300 },
+          { "turnover": 100000, "payout": 600 },
+          { "turnover": 500000, "payout": 2350 },
+          { "turnover": 1000000, "payout": 4800 },
+          { "turnover": 5000000, "payout": 25000 }
+        ]
       },
       "defaultCurrency": "MYR"
     };
 
-    const bonusDescription = `This simplified bonus system calculates player rewards using multipliers based on their turnover in different games. 
-Each game has a specific multiplier (e.g., 0.02 for high-tier games, 0.01 for low-tier games).
-Games not listed in the baseline use the default multiplier of 1 (hardcoded).
-Bonus = Turnover × Game Multiplier
-The system automatically handles currency conversion if a player's currency differs from the default (MYR).`;
+    const bonusDescription = `This bonus system calculates player rewards based on their turnover in different games. 
+Games are categorized as either 'high' or 'low', with different payout thresholds for each category.
+Higher turnover amounts lead to larger bonus payouts, with tiered reward levels.
+The system automatically handles currency conversion if a player's currency differs from the default (MYR).
+Players with turnover below the minimum threshold (500) receive no bonus.`;
 
     // Create the bonus
     const bonus = await prisma.bonus.create({
