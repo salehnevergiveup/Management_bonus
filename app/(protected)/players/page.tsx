@@ -382,6 +382,7 @@ export default function PlayerManagementPage() {
 
     const results: Array<{ username: string; account: string }> = [];
     const formatErrors: string[] = [];
+    const duplicates: string[] = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -407,11 +408,11 @@ export default function PlayerManagementPage() {
         continue;
       }
       
-      // Check for duplicate usernames in the file
+      // Check for duplicate usernames in the file - but don't stop the process
       const existingInFile = results.find(r => r.username.toLowerCase() === username.toLowerCase());
       if (existingInFile) {
-        formatErrors.push(`Line ${i + 1}: Duplicate username "${username}"`);
-        continue;
+        duplicates.push(`Line ${i + 1}: Duplicate username "${username}" - will be skipped`);
+        continue; // Skip this duplicate, continue with others
       }
       
       results.push({ username, account });
@@ -424,6 +425,11 @@ export default function PlayerManagementPage() {
 
     if (results.length === 0) {
       throw new Error(t("no_valid_records_found", lang));
+    }
+
+    // Log duplicates for information but don't stop the process
+    if (duplicates.length > 0) {
+      console.log('Duplicates found in CSV (will be skipped):', duplicates);
     }
 
     return results;
@@ -869,7 +875,8 @@ export default function PlayerManagementPage() {
                   <ul className="text-xs text-yellow-700 list-disc list-inside space-y-1">
                     <li>Exactly 2 columns per line</li>
                     <li>No empty usernames or accounts</li>
-                    <li>No duplicate usernames in file</li>
+                    <li>Duplicate usernames in file will be skipped</li>
+                    <li>Existing players in database will be skipped</li>
                     <li>Transfer accounts must exist in system</li>
                   </ul>
                 </div>

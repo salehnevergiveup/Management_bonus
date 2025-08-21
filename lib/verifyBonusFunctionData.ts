@@ -46,8 +46,8 @@ export function validateBonusResultType(output: any[]) {
 
     if (!('game' in item)) {
       errors.push(`Item at index ${index} is missing 'game' property`);
-    } else if (typeof item.amount !== 'number' || isNaN(item.amount)) {
-      errors.push(`Item at index ${index} has 'game' that is not a number`);
+    } else if (typeof item.game !== 'string') {
+      errors.push(`Item at index ${index} has 'game' that is not a string`);
     }
     
     if (!('currency' in item)) {
