@@ -278,8 +278,8 @@ export default function PlayerManagementPage() {
       }
 
       // Check file size limit
-      if (playersToImport.length > 10000) {
-        throw new Error("File too large. Maximum 10,000 records allowed per import process. Please split your file into smaller chunks.");
+      if (playersToImport.length > 30000) {
+        throw new Error("File too large. Maximum 30,000 records allowed per import process. Please split your file into smaller chunks.");
       }
 
       // Show starting notification
@@ -386,25 +386,65 @@ export default function PlayerManagementPage() {
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
       
-      // Check if we have exactly 2 columns
-      if (values.length !== 2) {
-        formatErrors.push(`Line ${i + 1}: Expected 2 columns, found ${values.length}`);
+      // Try different delimiters - check if it's tab-separated or semicolon-separated
+      let values: string[] = [];
+      
+      // First try comma separation
+      if (line.includes(',')) {
+        // Improved CSV parsing that handles quoted values
+        let current = '';
+        let inQuotes = false;
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        
+        // Add the last value
+        values.push(current.trim());
+      } 
+      // Try tab separation
+      else if (line.includes('\t')) {
+        values = line.split('\t').map(v => v.trim());
+      }
+      // Try semicolon separation
+      else if (line.includes(';')) {
+        values = line.split(';').map(v => v.trim());
+      }
+      // Default to comma
+      else {
+        values = line.split(',').map(v => v.trim());
+      }
+      
+      // Remove quotes from values
+      const cleanValues = values.map(v => v.replace(/^"|"$/g, ''));
+      
+      // Check if we have at least 6 columns (need 1st and 6th)
+      if (cleanValues.length < 6) {
+        formatErrors.push(`Line ${i + 1}: Expected at least 6 columns, found ${cleanValues.length}`);
         continue;
       }
       
-      const username = values[0];
-      const account = values[1];
+      const username = cleanValues[0]; // First column
+      const account = cleanValues[5];  // Sixth column (index 5)
       
       // Validate that both username and account are present
       if (!username || username === '') {
-        formatErrors.push(`Line ${i + 1}: Missing username`);
+        formatErrors.push(`Line ${i + 1}: Missing username in first column`);
         continue;
       }
       
       if (!account || account === '') {
-        formatErrors.push(`Line ${i + 1}: Missing account`);
+        formatErrors.push(`Line ${i + 1}: Missing transfer account in sixth column`);
         continue;
       }
       
@@ -418,9 +458,9 @@ export default function PlayerManagementPage() {
       results.push({ username, account });
     }
 
-    // If there are format errors, throw them all at once
+    // If there are format errors, throw a simple error message
     if (formatErrors.length > 0) {
-      throw new Error(`Format validation failed:\n${formatErrors.join('\n')}`);
+      throw new Error(`Unaccepted format or corrupted format. Expected 6 columns (1st: username, 6th: transfer account). Found ${formatErrors.length} lines with incorrect format.`);
     }
 
     if (results.length === 0) {
@@ -854,30 +894,33 @@ export default function PlayerManagementPage() {
             <div className="space-y-2">
               <Label>{t("csv_format_instructions", lang)}</Label>
               <div className="bg-gray-50 p-3 rounded-md text-sm">
-                <p className="font-medium mb-2 text-red-600">⚠️ Important: No headers required!</p>
-                <p className="mb-2">Format: <strong>username,account</strong></p>
+                <p className="font-medium mb-2 text-red-600">⚠️ Important: 6-column CSV format!</p>
+                <p className="mb-2">Format: <strong>Column 1: Player username, Column 6: Transfer account</strong></p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>First column: Player username</li>
-                  <li>Second column: Transfer account username</li>
-                  <li>No headers - start directly with data</li>
+                  <li><strong>First column (Column 1):</strong> Player username</li>
+                  <li><strong>Sixth column (Column 6):</strong> Transfer account username</li>
+                  <li>Other columns are ignored</li>
+                  <li>Headers are optional</li>
                   <li>One record per line</li>
                 </ul>
                 <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
                   <p className="text-xs font-medium text-blue-800 mb-1">Sample CSV format:</p>
                   <code className="text-xs text-blue-700">
-                    CHANGE2010,FBTRANSFER01<br/>
-                    LEE1234,FBTRANSFER01<br/>
-                    BURAGAS88,FBTRANSFER01
+                    CHANGE2010,Message,Date,Number,Status,FBTRANSFER01<br/>
+                    LEE1234,Message,Date,Number,Status,FBTRANSFER01<br/>
+                    BURAGAS88,Message,Date,Number,Status,FBTRANSFER01
                   </code>
                 </div>
                 <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
                   <p className="text-xs font-medium text-yellow-800 mb-1">Validation checks:</p>
                   <ul className="text-xs text-yellow-700 list-disc list-inside space-y-1">
-                    <li>Exactly 2 columns per line</li>
-                    <li>No empty usernames or accounts</li>
+                    <li>At least 6 columns per line</li>
+                    <li>No empty usernames in first column</li>
+                    <li>No empty transfer accounts in sixth column</li>
                     <li>Duplicate usernames in file will be skipped</li>
                     <li>Existing players in database will be skipped</li>
                     <li>Transfer accounts must exist in system</li>
+                    <li>Maximum 30,000 records per file</li>
                   </ul>
                 </div>
               </div>
