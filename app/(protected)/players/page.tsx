@@ -278,8 +278,8 @@ export default function PlayerManagementPage() {
       }
 
       // Check file size limit
-      if (playersToImport.length > 10000) {
-        throw new Error("File too large. Maximum 10,000 records allowed per import process. Please split your file into smaller chunks.");
+      if (playersToImport.length > 50000) {
+        throw new Error("File too large. Maximum 50,000 records allowed per import process. Please split your file into smaller chunks.");
       }
 
       // Show starting notification
