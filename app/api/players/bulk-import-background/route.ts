@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Per import limit
-    if (players.length > 10000) {
+    if (players.length > 30000) {
       return NextResponse.json({ 
-        error: "File too large. Maximum 10,000 records allowed per import process. Please split your file into smaller chunks." 
+        error: "File too large. Maximum 30,000 records allowed per import process. Please split your file into smaller chunks." 
       }, { status: 400 });
     }
 
