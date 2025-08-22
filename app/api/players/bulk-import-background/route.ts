@@ -127,9 +127,8 @@ async function processPlayersInBackground(userId: string, players: Array<{ usern
   };
 
   try {
-    // Debug: Check current player count in database
+    // Check current player count in database
     const currentPlayerCount = await prisma.player.count();
-    console.log(`Starting import for user ${userId}. Current players in database: ${currentPlayerCount}`);
     
     // Notify user that import has started
     await ProcessCommand["notify all"](
@@ -147,67 +146,91 @@ async function processPlayersInBackground(userId: string, players: Array<{ usern
       const endIndex = Math.min(startIndex + batchSize, players.length);
       const batch = players.slice(startIndex, endIndex);
 
-      // Process batch - CONTINUE even if individual players fail
+      // Prepare batch data for efficient insertion
+      const playersToCreate: Array<{ account_username: string; transfer_account_id: string }> = [];
+      const existingUsernames = new Set<string>();
+      
+      // First, check for existing players in this batch
+      const usernamesToCheck = batch.map(p => p.username.trim());
+      const existingPlayers = await prisma.player.findMany({
+        where: {
+          account_username: { in: usernamesToCheck }
+        },
+        select: { account_username: true }
+      });
+      
+      existingPlayers.forEach(p => existingUsernames.add(p.account_username.toLowerCase()));
+      
+      // Get all unique transfer account usernames from this batch
+      const transferAccountUsernames = [...new Set(batch.map(p => p.account.trim()))];
+      const transferAccounts = await prisma.transferAccount.findMany({
+        where: {
+          username: { in: transferAccountUsernames },
+          type: { not: "main_account" }
+        },
+        select: { id: true, username: true }
+      });
+      
+      const transferAccountMap = new Map(
+        transferAccounts.map(ta => [ta.username.toLowerCase(), ta.id])
+      );
+      
+      // Process each player in the batch
       for (const player of batch) {
-        try {
-          // Clean the username (trim whitespace and normalize case)
-          const cleanUsername = player.username.trim();
-          
-          // Check if player already exists (case-insensitive)
-          const existingPlayer = await prisma.player.findFirst({
-            where: {
-              account_username: cleanUsername
-            }
-          });
-
-          if (existingPlayer) {
-            console.log(`Player already exists: ${cleanUsername}`);
-            results.failed.push({
-              username: cleanUsername,
-              account: player.account,
-              reason: "Player already exists"
-            });
-            continue; // Continue to next player, don't stop the process
-          }
-
-          // Clean the account name
-          const cleanAccount = player.account.trim();
-          
-          // Find transfer account by username
-          const transferAccount = await prisma.transferAccount.findFirst({
-            where: {
-              username: cleanAccount,
-              type: { not: "main_account" } // Exclude main accounts
-            }
-          });
-
-          if (!transferAccount) {
-            console.log(`Transfer account not found: ${cleanAccount}`);
-            results.failed.push({
-              username: cleanUsername,
-              account: cleanAccount,
-              reason: "Transfer account not found"
-            });
-            continue; // Continue to next player, don't stop the process
-          }
-
-          // Create player
-          await prisma.player.create({
-            data: {
-              account_username: cleanUsername,
-              transfer_account_id: transferAccount.id
-            }
-          });
-
-          results.success++;
-        } catch (error) {
-          console.error("Error creating player:", error);
+        const cleanUsername = player.username.trim();
+        const cleanAccount = player.account.trim();
+        
+        // Check if player already exists
+        if (existingUsernames.has(cleanUsername.toLowerCase())) {
           results.failed.push({
-            username: player.username,
-            account: player.account,
-            reason: "Database error"
+            username: cleanUsername,
+            account: cleanAccount,
+            reason: "Player already exists"
           });
-          // Continue to next player, don't stop the process
+          continue;
+        }
+        
+        // Check if transfer account exists
+        const transferAccountId = transferAccountMap.get(cleanAccount.toLowerCase());
+        if (!transferAccountId) {
+          results.failed.push({
+            username: cleanUsername,
+            account: cleanAccount,
+            reason: "Transfer account not found"
+          });
+          continue;
+        }
+        
+        // Add to batch for insertion
+        playersToCreate.push({
+          account_username: cleanUsername,
+          transfer_account_id: transferAccountId
+        });
+      }
+      
+      // Batch insert all valid players
+      if (playersToCreate.length > 0) {
+        try {
+          await prisma.player.createMany({
+            data: playersToCreate,
+            skipDuplicates: true // Extra safety in case of race conditions
+          });
+          results.success += playersToCreate.length;
+        } catch (error) {
+          console.error("Error in batch player creation:", error);
+          // If batch insert fails, fall back to individual inserts
+          for (const playerData of playersToCreate) {
+            try {
+              await prisma.player.create({ data: playerData });
+              results.success++;
+            } catch (individualError) {
+              results.failed.push({
+                username: playerData.account_username,
+                account: "Unknown",
+                reason: "Database error during batch insert"
+              });
+            }
+          }
         }
       }
 
@@ -216,20 +239,17 @@ async function processPlayersInBackground(userId: string, players: Array<{ usern
       
       // Log progress for large imports
       if (players.length > 1000 && batchIndex % 10 === 0) {
-        console.log(`Import progress for user ${userId}: ${batchIndex + 1}/${totalBatches} batches completed`);
+        // Progress logged silently
       }
     }
 
     // Send final notification with summary only
     const successMessage = `Player import completed! Successfully imported ${results.success} players.`;
     const failureMessage = results.failed.length > 0 
-      ? ` Failed to import ${results.failed.length} players. A dialog will appear with details.`
+      ? ` Failed to import ${results.failed.length} players.`
       : "";
 
-    console.log(`Import completed for user ${userId}: ${results.success} successful, ${results.failed.length} failed`);
-    if (results.failed.length > 0) {
-      console.log("First 5 failed records:", results.failed.slice(0, 5));
-    }
+    // Import completed silently
 
     await ProcessCommand["notify all"](
       userId,
@@ -276,7 +296,7 @@ async function storeFailedImportResults(userId: string, failedRecords: Array<{ u
       data: failedRecordsToCreate
     });
 
-    console.log("Failed import results stored for user:", userId, "Count:", failedRecords.length, "Session:", importSessionId);
+    // Failed import results stored silently
     
   } catch (error) {
     console.error("Error storing failed import results:", error);
