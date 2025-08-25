@@ -4,23 +4,56 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/provider";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
+  return handleExport(request, "GET");
+}
+
+export async function POST(request: NextRequest) {
+  return handleExport(request, "POST");
+}
+
+async function handleExport(request: NextRequest, method: "GET" | "POST") {
   try {
-    console.log("Export all matches route called");
+    console.log(`Export all matches route called via ${method}`);
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const processId = searchParams.get("processId");
-    const exportType = searchParams.get("type");
-    const selectedIds = searchParams.get("selectedIds");
-    const limit = searchParams.get("limit");
-    const search = searchParams.get("search");
-    const status = searchParams.get("status");
-    const bonusId = searchParams.get("bonus_id");
-    const hasTransferAccount = searchParams.get("hasTransferAccount");
-    const notFoundPlayers = searchParams.get("notFoundPlayers");
+    let processId: string | null;
+    let exportType: string | null;
+    let selectedIds: string | null;
+    let limit: string | null;
+    let search: string | null;
+    let status: string | null;
+    let bonusId: string | null;
+    let hasTransferAccount: string | null;
+    let notFoundPlayers: string | null;
+
+    if (method === "GET") {
+      // Extract from URL parameters
+      const { searchParams } = new URL(request.url);
+      processId = searchParams.get("processId");
+      exportType = searchParams.get("type");
+      selectedIds = searchParams.get("selectedIds");
+      limit = searchParams.get("limit");
+      search = searchParams.get("search");
+      status = searchParams.get("status");
+      bonusId = searchParams.get("bonus_id");
+      hasTransferAccount = searchParams.get("hasTransferAccount");
+      notFoundPlayers = searchParams.get("notFoundPlayers");
+    } else {
+      // Extract from request body
+      const body = await request.json();
+      processId = body.processId;
+      exportType = body.type;
+      selectedIds = body.selectedIds;
+      limit = body.limit;
+      search = body.search;
+      status = body.status;
+      bonusId = body.bonus_id;
+      hasTransferAccount = body.hasTransferAccount;
+      notFoundPlayers = body.notFoundPlayers;
+    }
 
     if (!processId) {
       return NextResponse.json({ error: "Process ID is required" }, { status: 400 });
@@ -97,18 +130,29 @@ export async function GET(request: NextRequest) {
     }
 
     // Use chunking for large datasets
-    const CHUNK_SIZE = 5000; // Process 5k records at a time
+    const CHUNK_SIZE = 1000; // Process 1k records at a time (reduced from 5k)
     let allMatches: any[] = [];
 
-    if (shouldLimit && totalCount > CHUNK_SIZE) {
-      // Use chunking for large limited exports
-      console.log("Using chunking for large export");
+    // Determine if we need chunking based on:
+    // 1. Limited export with large total count
+    // 2. Selected export with many IDs
+    // 3. Any export with large total count
+    const needsChunking = (
+      (shouldLimit && totalCount > CHUNK_SIZE) ||
+      (exportType === "selected" && selectedIds && selectedIds.split(",").length > CHUNK_SIZE) ||
+      totalCount > CHUNK_SIZE
+    );
+
+    if (needsChunking) {
+      // Use cursor-based pagination for better performance
+      console.log(`Using optimized chunking for large export (${exportType} type, ${totalCount} total records)`);
       
       let processed = 0;
-      let skip = 0;
+      let lastId = null;
+      const maxRecords = shouldLimit ? limitNumber : totalCount;
       
-      while (processed < limitNumber && skip < totalCount) {
-        const chunk = await prisma.match.findMany({
+      while (processed < maxRecords) {
+        const chunkQuery: any = {
           where: whereClause,
           include: {
             bonus: true,
@@ -118,15 +162,37 @@ export async function GET(request: NextRequest) {
           orderBy: {
             created_at: "desc"
           },
-          skip: skip,
-          take: Math.min(CHUNK_SIZE, limitNumber - processed)
-        });
+          take: Math.min(CHUNK_SIZE, maxRecords - processed)
+        };
+
+        // Use cursor-based pagination instead of skip
+        if (lastId) {
+          // For selected exports, we need to maintain the ID filter
+          if (exportType === "selected" && selectedIds) {
+            const selectedIdArray = selectedIds.split(",").filter(id => id.trim());
+            chunkQuery.where = {
+              ...whereClause,
+              id: {
+                in: selectedIdArray,
+                lt: lastId
+              }
+            };
+          } else {
+            chunkQuery.where.id = {
+              lt: lastId
+            };
+          }
+        }
+
+        const chunk = await prisma.match.findMany(chunkQuery);
+
+        if (chunk.length === 0) break;
 
         allMatches.push(...chunk);
         processed += chunk.length;
-        skip += CHUNK_SIZE;
+        lastId = chunk[chunk.length - 1].id;
 
-        console.log(`Processed chunk: ${chunk.length} records, total: ${processed}/${limitNumber}`);
+        console.log(`Processed chunk: ${chunk.length} records, total: ${processed}/${maxRecords}`);
       }
     } else {
       // Use regular query for smaller datasets
@@ -160,29 +226,49 @@ export async function GET(request: NextRequest) {
       }, { status: 413 });
     }
 
+    // Optimized CSV generation to reduce CPU usage
     const csvHeaders = [
       "ID", "Username", "Game", "Bonus", "Transfer Account", "Amount",
       "Currency", "Status", "Comment", "Created At", "Process ID"
     ];
 
-    const csvRows = allMatches.map(match => [
-      match.id, 
-      match.username, 
-      match.game, 
-      match.bonus?.name || "N/A",
-      match.transfer_account?.username || "N/A", 
-      match.amount.toString(),
-      match.currency, 
-      match.status, 
-      match.comment || "",
-      new Date(match.created_at).toLocaleString(), 
-      match.process_id
-    ]);
+    // Pre-allocate array size for better performance
+    const csvRows = new Array(allMatches.length);
+    
+    // Use more efficient string operations
+    for (let i = 0; i < allMatches.length; i++) {
+      const match = allMatches[i];
+      csvRows[i] = [
+        match.id, 
+        match.username, 
+        match.game || "N/A",
+        match.bonus?.name || "N/A",
+        match.transfer_account?.username || "N/A", 
+        match.amount.toString(),
+        match.currency, 
+        match.status, 
+        match.comment || "",
+        new Date(match.created_at).toLocaleString(), 
+        match.process_id
+      ];
+    }
 
-    const csvContent = [
-      csvHeaders.join(","),
-      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
+    // Optimized CSV content generation
+    const headerRow = csvHeaders.join(",");
+    const dataRows = csvRows.map(row => 
+      row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+    );
+    
+    const csvContent = [headerRow, ...dataRows].join("\n");
+
+    // Clear large arrays to free memory
+    allMatches = [];
+    csvRows.length = 0;
+    
+    // Force garbage collection if available
+    if (global.gc) {
+      global.gc();
+    }
 
     const timestamp = new Date().toISOString().split('T')[0];
     const processInfo = `_process_${processId}`;
