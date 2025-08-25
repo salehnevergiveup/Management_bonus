@@ -3768,10 +3768,98 @@
     "eng": "SMS logs exported successfully",
     "ch": "短信日志导出成功"
   },
-  "sms_export_failed": {
-    "eng": "Failed to export SMS logs",
-    "ch": "导出短信日志失败"
-  },
+      "sms_export_failed": {
+      "eng": "Failed to export SMS logs",
+      "ch": "导出短信日志失败"
+    },
+    "export_matches": {
+      "eng": "Export Matches",
+      "ch": "导出匹配"
+    },
+    "export_type": {
+      "eng": "Export Type",
+      "ch": "导出类型"
+    },
+    "export_all_matches": {
+      "eng": "Export All Matches",
+      "ch": "导出所有匹配"
+    },
+    "export_selected_matches": {
+      "eng": "Export Selected Matches",
+      "ch": "导出选中的匹配"
+    },
+    "export_filtered_matches": {
+      "eng": "Export Filtered Matches",
+      "ch": "导出筛选的匹配"
+    },
+    "export_limit": {
+      "eng": "Export Limit",
+      "ch": "导出限制"
+    },
+    "select_limit": {
+      "eng": "Select Limit",
+      "ch": "选择限制"
+    },
+    "records": {
+      "eng": "records",
+      "ch": "记录"
+    },
+    "no_limit": {
+      "eng": "No Limit",
+      "ch": "无限制"
+    },
+    "export_limit_description": {
+      "eng": "Limit the number of records to export. Use 'No Limit' for all records.",
+      "ch": "限制导出的记录数量。使用'无限制'导出所有记录。"
+    },
+    "export_progress": {
+      "eng": "Export Progress",
+      "ch": "导出进度"
+    },
+    "complete": {
+      "eng": "complete",
+      "ch": "完成"
+    },
+    "large_export_warning": {
+      "eng": "Large exports may take longer and consume more resources.",
+      "ch": "大量导出可能需要更长时间并消耗更多资源。"
+    },
+    "file_size_limit": {
+      "eng": "File size limit",
+      "ch": "文件大小限制"
+    },
+    "start_export": {
+      "eng": "Start Export",
+      "ch": "开始导出"
+    },
+    "export_already_in_progress": {
+      "eng": "Export already in progress",
+      "ch": "导出已在进行中"
+    },
+    "fetching_data": {
+      "eng": "Fetching data...",
+      "ch": "正在获取数据..."
+    },
+    "preparing_download": {
+      "eng": "Preparing download...",
+      "ch": "正在准备下载..."
+    },
+    "downloading_file": {
+      "eng": "Downloading file...",
+      "ch": "正在下载文件..."
+    },
+    "export_too_large": {
+      "eng": "Export too large. Please reduce the limit.",
+      "ch": "导出太大。请减少限制。"
+    },
+    "file_too_large": {
+      "eng": "File size exceeds 8MB limit ({size}MB)",
+      "ch": "文件大小超过8MB限制 ({size}MB)"
+    },
+    "select_export_type": {
+      "eng": "Select Export Type",
+      "ch": "选择导出类型"
+    },
   "failed_to_fetch_sms_logs": {
     "eng": "Failed to fetch SMS logs",
     "ch": "获取短信日志失败"
