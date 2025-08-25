@@ -1202,8 +1202,97 @@ const updateMatch = async () => {
           toast.error(t("no_matches_to_export", lang), { id: "export" });
           return;
         }
+
+        // Check if we have too many IDs for URL parameters (limit to 500 for GET)
+        const selectedIds = selectedMatchesForProcess.map(m => m.id).join(",");
+        const usePostMethod = selectedMatchesForProcess.length > 500 || selectedIds.length > 4000;
         
-        params.append("selectedIds", selectedMatchesForProcess.map(m => m.id).join(","));
+        if (usePostMethod) {
+          console.log(`Using POST method for ${selectedMatchesForProcess.length} selected matches`);
+          
+          // Use POST with request body for large selections
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+          
+          setExportProgress(25);
+          toast.loading(t("fetching_data", lang), { id: "export" });
+          
+          const response = await fetch(`/api/matches/export-all`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "selected",
+              processId: processId,
+              selectedIds: selectedIds,
+              limit: limit
+            }),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            if (response.status === 404) {
+              toast.error(t("no_matches_to_export", lang), { id: "export" });
+              return;
+            } else if (response.status === 413) {
+              toast.error(t("export_too_large", lang), { id: "export" });
+              return;
+            }
+            throw new Error("Failed to export matches");
+          }
+
+          // Handle CSV response (same as GET)
+          const csvContent = await response.text();
+          
+          // Check file size (8MB limit)
+          const fileSizeInMB = new Blob([csvContent]).size / (1024 * 1024);
+          if (fileSizeInMB > 8) {
+            toast.error(t("file_too_large", lang).replace("{size}", fileSizeInMB.toFixed(2)), { id: "export" });
+            return;
+          }
+          
+          // Create and download CSV file
+          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          
+          setExportProgress(90);
+          toast.loading(t("downloading_file", lang), { id: "export" });
+          
+          setTimeout(() => {
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            
+            const contentDisposition = response.headers.get("content-disposition");
+            let filename = `all_matches_${type}_${new Date().toISOString().split('T')[0]}.csv`;
+            
+            if (contentDisposition) {
+              const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+              if (filenameMatch) {
+                filename = filenameMatch[1];
+              }
+            }
+            
+            link.setAttribute("download", filename);
+            link.style.visibility = "hidden";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            URL.revokeObjectURL(url);
+          }, 100);
+
+          const lineCount = csvContent.split('\n').length - 1;
+          setExportProgress(100);
+          toast.success(t("all_matches_exported_successfully", lang).replace("{count}", lineCount.toString()), { id: "export" });
+          console.log(`Export completed: ${lineCount} rows exported`);
+          return;
+        } else {
+          // Use GET for smaller selections (existing logic)
+          params.append("selectedIds", selectedIds);
+        }
       } else if (type === "filtered") {
         // Add current filter parameters
         if (searchTerm.trim()) params.append("search", searchTerm.trim());
