@@ -147,16 +147,20 @@ async function processSmsInBackground(records: SmsRecord[], endpointName: string
     let totalSent = 0;
     const errors: string[] = [];
 
-    // FIX: Fetch message template ONCE before the loop
-    console.log('[SMS DEBUG] Fetching message template for batch...');
-    const activeMessageResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/sms-messages/active/rewardreach`);
-    const activeMessageData = await activeMessageResponse.json();
+    // FIX: Direct database query instead of HTTP request
+    console.log('[SMS DEBUG] Fetching message template from database...');
+    const activeMessage = await prisma.smsMessage.findFirst({
+      where: {
+        endpoint: 'rewardreach',
+        is_active: true
+      }
+    });
     
-    if (!activeMessageData.success || !activeMessageData.data) {
+    if (!activeMessage) {
       throw new Error('No active message found for rewardreach endpoint');
     }
 
-    const messageTemplate = activeMessageData.data.message;
+    const messageTemplate = activeMessage.message;
     const { processMessage } = await import('@/lib/messageProcessor');
     
     console.log('[SMS DEBUG] Message template loaded:', messageTemplate);
