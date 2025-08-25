@@ -128,6 +128,13 @@ const [newStatus, setNewStatus] = useState("");
   // State for resume process ID
   const [resumeProcessId, setResumeProcessId] = useState<string>("");
   
+  // Add state for export protection
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportType, setExportType] = useState<"all" | "selected" | "filtered">("all");
+  const [exportLimit, setExportLimit] = useState(10000); // Default 10k limit
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  
   // Maximum records limit
   const MAX_RECORDS_LIMIT = 3000;
 
@@ -1149,11 +1156,20 @@ const updateMatch = async () => {
   };
 
   // CSV Export function - now exports all matches, not just failed ones
-  const exportAllMatchesToCSV = async (type: "all" | "selected", processId?: string) => {
+  const exportAllMatchesToCSV = async (type: "all" | "selected" | "filtered", processId?: string, limit?: number) => {
     if (!processId) {
       toast.error(t("please_select_process", lang));
       return;
     }
+
+    // Prevent multiple exports
+    if (isExporting) {
+      toast.error(t("export_already_in_progress", lang));
+      return;
+    }
+
+    setIsExporting(true);
+    setExportProgress(0);
     
     // Show initial loading message with non-blocking behavior
     const loadingToast = toast.loading(t("preparing_export", lang), { 
@@ -1162,12 +1178,16 @@ const updateMatch = async () => {
     });
     
     try {
-      console.log("Starting export with params:", { type, processId });
+      console.log("Starting export with params:", { type, processId, limit });
       
       // Build query parameters
       const params = new URLSearchParams();
       params.append("type", type);
       params.append("processId", processId);
+      
+      if (limit) {
+        params.append("limit", limit.toString());
+      }
       
       if (type === "selected") {
         // Get all selected matches for this process (not just failed ones)
@@ -1184,11 +1204,29 @@ const updateMatch = async () => {
         }
         
         params.append("selectedIds", selectedMatchesForProcess.map(m => m.id).join(","));
+      } else if (type === "filtered") {
+        // Add current filter parameters
+        if (searchTerm.trim()) params.append("search", searchTerm.trim());
+        if (statusFilter !== "all") params.append("status", statusFilter);
+        if (bonusFilter !== "all") params.append("bonus_id", bonusFilter);
+        
+        // Add activeTab filtering
+        if (activeTab === "matched") {
+          params.append("hasTransferAccount", "true");
+        } else if (activeTab === "unmatched") {
+          params.append("hasTransferAccount", "false");
+        } else if (activeTab === "not_found") {
+          params.append("notFoundPlayers", "true");
+        }
       }
 
       // Use the new API endpoint for all matches with timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+      
+      // Update progress
+      setExportProgress(25);
+      toast.loading(t("fetching_data", lang), { id: "export" });
       
       const response = await fetch(`/api/matches/export-all?${params.toString()}`, {
         signal: controller.signal
@@ -1200,16 +1238,34 @@ const updateMatch = async () => {
         if (response.status === 404) {
           toast.error(t("no_matches_to_export", lang), { id: "export" });
           return;
+        } else if (response.status === 413) {
+          toast.error(t("export_too_large", lang), { id: "export" });
+          return;
         }
         throw new Error("Failed to export matches");
       }
 
+      // Update progress
+      setExportProgress(75);
+      toast.loading(t("preparing_download", lang), { id: "export" });
+
       // Get the CSV content from response
       const csvContent = await response.text();
+      
+      // Check file size (8MB limit)
+      const fileSizeInMB = new Blob([csvContent]).size / (1024 * 1024);
+      if (fileSizeInMB > 8) {
+        toast.error(t("file_too_large", lang).replace("{size}", fileSizeInMB.toFixed(2)), { id: "export" });
+        return;
+      }
       
       // Create and download CSV file using non-blocking approach
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
+      
+      // Update progress
+      setExportProgress(90);
+      toast.loading(t("downloading_file", lang), { id: "export" });
       
       // Use setTimeout to ensure UI remains responsive
       setTimeout(() => {
@@ -1240,6 +1296,9 @@ const updateMatch = async () => {
       // Get count from the CSV content (subtract header row)
       const lineCount = csvContent.split('\n').length - 1;
       
+      // Update progress
+      setExportProgress(100);
+      
       // Show success message with count
       toast.success(t("all_matches_exported_successfully", lang).replace("{count}", lineCount.toString()), { id: "export" });
       
@@ -1255,6 +1314,8 @@ const updateMatch = async () => {
     } finally {
       // Ensure loading toast is dismissed
       toast.dismiss("export");
+      setIsExporting(false);
+      setExportProgress(0);
     }
   };
 
@@ -1811,6 +1872,121 @@ const updateMatch = async () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t("export matches", lang)}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Export Type Selection */}
+            <div className="space-y-2">
+              <Label>{t("export type", lang)}</Label>
+              <Select value={exportType} onValueChange={(value: "all" | "selected" | "filtered") => setExportType(value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("select export type", lang)} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("export all matches", lang)}</SelectItem>
+                  <SelectItem value="selected" disabled={selectedMatches.length === 0}>
+                    {t("export selected matches", lang)} ({selectedMatches.length})
+                  </SelectItem>
+                  <SelectItem value="filtered" disabled={!hasActiveFilters}>
+                    {t("export filtered matches", lang)}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Export Limit */}
+            <div className="space-y-2">
+              <Label>{t("export limit", lang)}</Label>
+              <Select value={exportLimit.toString()} onValueChange={(value) => setExportLimit(parseInt(value))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("select limit", lang)} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1000">1,000 {t("records", lang)}</SelectItem>
+                  <SelectItem value="5000">5,000 {t("records", lang)}</SelectItem>
+                  <SelectItem value="10000">10,000 {t("records", lang)}</SelectItem>
+                  <SelectItem value="20000">20,000 {t("records", lang)}</SelectItem>
+                  <SelectItem value="50000">50,000 {t("records", lang)}</SelectItem>
+                  <SelectItem value="0">{t("no limit", lang)}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                {t("export limit description", lang)}
+              </p>
+            </div>
+
+            {/* Progress Bar */}
+            {isExporting && (
+              <div className="space-y-2">
+                <Label>{t("export progress", lang)}</Label>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                    style={{ width: `${exportProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-muted-foreground">{exportProgress}% {t("complete", lang)}</p>
+              </div>
+            )}
+
+            {/* Warning for large exports */}
+            {exportLimit > 10000 && (
+              <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                <p className="text-sm text-yellow-800">
+                  <strong>{t("warning", lang)}:</strong> {t("large export warning", lang)}
+                </p>
+              </div>
+            )}
+
+            {/* File size warning */}
+            <div className="bg-blue-50 p-3 rounded border border-blue-200">
+              <p className="text-sm text-blue-800">
+                <strong>{t("note", lang)}:</strong> {t("file size limit", lang)} (8MB)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setExportDialogOpen(false)}
+              disabled={isExporting}
+            >
+              {t("cancel", lang)}
+            </Button>
+            <Button
+              onClick={() => {
+                const currentProcessId = matches.length > 0 ? matches[0].process_id : null;
+                if (currentProcessId) {
+                  exportAllMatchesToCSV(exportType, currentProcessId, exportLimit === 0 ? undefined : exportLimit);
+                  setExportDialogOpen(false);
+                }
+              }}
+              disabled={isExporting || (exportType === "selected" && selectedMatches.length === 0) || (exportType === "filtered" && !hasActiveFilters)}
+              className="relative"
+            >
+              {isExporting ? (
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <span className="opacity-0">{t("exporting", lang)}</span>
+                </>
+              ) : (
+                t("start export", lang)
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 
@@ -2022,12 +2198,14 @@ const updateMatch = async () => {
                               return;
                             }
                             
-                            // Export all matches for the current process
-                            exportAllMatchesToCSV("all", currentProcessId);
+                            // Open export dialog instead of direct export
+                            setExportType("all");
+                            setExportDialogOpen(true);
                           }}
+                          disabled={isExporting}
                         >
                           <Download className="h-4 w-4 mr-1" />
-                          {t("export all", lang)}
+                          {isExporting ? t("exporting", lang) : t("export all", lang)}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>

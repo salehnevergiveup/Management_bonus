@@ -81,17 +81,19 @@ export default function FloatingProcessButton({ position = "right" }: FloatingPr
 
   return (
     <div className={cn("fixed z-50 bottom-8 flex items-center", position === "left" ? "left-8" : "right-8")}>
-      <div
-        className={cn(
-          "transition-all duration-300 ease-in-out flex items-center",
-          isHovered ? "opacity-100 mr-3" : "opacity-0 mr-0 pointer-events-none",
-          position === "left" && isHovered ? "ml-3" : "ml-0",
-        )}
-      >
-        <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg">
-          {t("active_process_tracker",lang)}
+      {/* Only render tooltip when hovered to prevent layout interference */}
+      {isHovered && (
+        <div
+          className={cn(
+            "transition-all duration-300 ease-in-out flex items-center mr-3 animate-in fade-in-0 slide-in-from-right-2",
+            position === "left" ? "ml-3" : "ml-0",
+          )}
+        >
+          <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg whitespace-nowrap">
+            {t("active_process_tracker",lang)}
+          </div>
         </div>
-      </div>
+      )}
       <ProcessProgressDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
