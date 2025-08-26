@@ -99,8 +99,11 @@ const [newStatus, setNewStatus] = useState("");
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [selectedComment, setSelectedComment] = useState<string>("");
   
-  // Selected matches
+  // Selection states
   const [selectedMatches, setSelectedMatches] = useState<string[]>([]);
+  const [isAllSelected, setIsAllSelected] = useState(false); // Flag for "Select All" mode
+  const [manualSelections, setManualSelections] = useState<Set<string>>(new Set()); // Manual selections
+  const [currentPageSelected, setCurrentPageSelected] = useState<Set<string>>(new Set()); // Current page selections
 
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
 
@@ -930,19 +933,17 @@ const updateMatch = async () => {
 
   // Simplified: Clear all selections
   const clearAllSelections = () => {
+    setIsAllSelected(false);
+    setManualSelections(new Set());
+    setCurrentPageSelected(new Set());
     setSelectedMatches([]);
     toast.success(t("cleared_all_selections", lang));
   };
 
-  // Simplified: Toggle individual match selection
+  // Toggle individual match selection with new logic
   const toggleMatchSelection = (matchId: string) => {
-    setSelectedMatches(prevSelected => {
-      if (prevSelected.includes(matchId)) {
-        return prevSelected.filter(id => id !== matchId);
-      } else {
-        return [...prevSelected, matchId];
-      }
-    });
+    const isCurrentlySelected = currentPageSelected.has(matchId);
+    handleRowSelection(matchId, !isCurrentlySelected);
   };
 
 
@@ -1008,14 +1009,11 @@ const updateMatch = async () => {
       }
       
       if (type === "selected") {
-        // Check if we have a large selection (likely from "Select All Matched")
-        const hasLargeSelection = selectedMatches.length > 100;
-        
-        if (hasLargeSelection) {
-          // For large selections, use server-side processing to avoid memory issues
-          console.log(`Using server-side processing for ${selectedMatches.length} selected matches`);
+        // Check if we're in "Select All" mode
+        if (isAllSelected) {
+          // Send [*] to indicate all matched records should be exported
+          console.log("Exporting all matched records (Select All mode)");
           
-          // Use POST with request body for large selections
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
           
@@ -1028,9 +1026,9 @@ const updateMatch = async () => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              type: "selected",
+              type: "select_all_matched", // Special type for "Select All"
               processId: processId,
-              selectedIds: selectedMatches.join(","),
+              selectedIds: "[*]", // Special marker for all records
               limit: limit
             }),
             signal: controller.signal
@@ -1316,56 +1314,84 @@ const updateMatch = async () => {
 
 
 
-  // Toggle select all matched records in entire process (not just current page)
-  const toggleSelectAllMatched = async () => {
-    if (isAllMatchedSelected) {
-      // If all are selected, deselect all
+  // New selection logic - pagination aware
+  const toggleSelectAllMatched = () => {
+    if (isAllSelected) {
+      // Deselect all
+      setIsAllSelected(false);
+      setManualSelections(new Set());
+      setCurrentPageSelected(new Set());
       setSelectedMatches([]);
       toast.success(t("deselected_all_matched", lang));
     } else {
-      // Fetch ALL matched records from the entire process
-      setLoading(true);
-      try {
-        const currentProcessId = matches[0]?.process_id;
-        if (!currentProcessId) {
-          toast.error("No process ID found");
-          return;
-        }
-        
-        // Fetch all matched records from the entire process
-        const response = await fetch(`/api/matches?all=true&process_id=${currentProcessId}&hasTransferAccount=true`);
-        if (!response.ok) throw new Error("Failed to fetch all matched records");
-        const data = await response.json();
-        
-        // Get all matched records (those with transfer_account_id)
-        const allMatchedMatches = data.data.filter((match: Match) => 
-          match.transfer_account_id !== null
-        );
-        
-        const matchedIds = allMatchedMatches.map((match: Match) => match.id);
-        setSelectedMatches(matchedIds);
-        
-        toast.success(t("selected_all_matched", lang).replace("{count}", matchedIds.length.toString()));
-      } catch (error) {
-        console.error("Error fetching all matched records:", error);
-        toast.error(t("failed_to_select_all_matched", lang));
-      } finally {
-        setLoading(false);
-      }
+      // Select all mode
+      setIsAllSelected(true);
+      setManualSelections(new Set());
+      
+      // Select all matched records on current page
+      const currentPageMatchedIds = matches
+        .filter(match => match.transfer_account_id !== null)
+        .map(match => match.id);
+      
+      setCurrentPageSelected(new Set(currentPageMatchedIds));
+      setSelectedMatches(currentPageMatchedIds);
+      
+      toast.success(t("selected_all_matched", lang).replace("{count}", "all"));
     }
   };
 
   // Check if all matched records in entire process are selected
   const isAllMatchedSelected = useMemo(() => {
-    if (selectedMatches.length === 0) return false;
-    
-    const currentProcessId = matches[0]?.process_id;
-    if (!currentProcessId) return false;
-    
-    // For now, we'll use a simple approach - if we have selected matches, assume they're from the entire process
-    // This is a simplified check since we don't want to fetch all records just to check the state
-    return selectedMatches.length > 0;
-  }, [selectedMatches, matches]);
+    return isAllSelected;
+  }, [isAllSelected]);
+
+  // Handle individual row selection
+  const handleRowSelection = (matchId: string, isChecked: boolean) => {
+    if (isAllSelected) {
+      // If in "Select All" mode, any manual selection turns off "Select All"
+      setIsAllSelected(false);
+      setManualSelections(new Set([matchId]));
+      setCurrentPageSelected(new Set([matchId]));
+      setSelectedMatches([matchId]);
+    } else {
+      // Normal manual selection
+      const newManualSelections = new Set(manualSelections);
+      const newCurrentPageSelected = new Set(currentPageSelected);
+      
+      if (isChecked) {
+        newManualSelections.add(matchId);
+        newCurrentPageSelected.add(matchId);
+      } else {
+        newManualSelections.delete(matchId);
+        newCurrentPageSelected.delete(matchId);
+      }
+      
+      setManualSelections(newManualSelections);
+      setCurrentPageSelected(newCurrentPageSelected);
+      setSelectedMatches(Array.from(newManualSelections));
+    }
+  };
+
+  // Update current page selections when page changes
+  useEffect(() => {
+    if (isAllSelected) {
+      // If "Select All" is active, select all matched records on current page
+      const currentPageMatchedIds = matches
+        .filter(match => match.transfer_account_id !== null)
+        .map(match => match.id);
+      
+      setCurrentPageSelected(new Set(currentPageMatchedIds));
+      setSelectedMatches(currentPageMatchedIds);
+    } else {
+      // If not in "Select All" mode, maintain manual selections for current page
+      const currentPageManualSelections = matches
+        .filter(match => manualSelections.has(match.id))
+        .map(match => match.id);
+      
+      setCurrentPageSelected(new Set(currentPageManualSelections));
+      setSelectedMatches(Array.from(manualSelections));
+    }
+  }, [matches, isAllSelected, manualSelections]);
 
   return (
     <div className="container mx-auto py-6">
@@ -1392,6 +1418,7 @@ const updateMatch = async () => {
 
           <SelectionControls
             selectedMatches={selectedMatches}
+            isAllSelected={isAllSelected}
             onClearSelection={clearAllSelections}
           />
 
@@ -1924,9 +1951,9 @@ const updateMatch = async () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("export all matches", lang)}</SelectItem>
-                  <SelectItem value="selected" disabled={selectedMatches.length === 0}>
-                    {t("export selected matches", lang)} ({selectedMatches.length})
-                  </SelectItem>
+                                  <SelectItem value="selected" disabled={selectedMatches.length === 0 && !isAllSelected}>
+                  {t("export selected matches", lang)} ({isAllSelected ? "All" : selectedMatches.length})
+                </SelectItem>
                                   <SelectItem value="filtered" disabled={true}>
                   {t("export filtered matches", lang)} (Disabled)
                 </SelectItem>
@@ -2002,7 +2029,7 @@ const updateMatch = async () => {
                   setExportDialogOpen(false);
                 }
               }}
-                              disabled={isExporting || (exportType === "selected" && selectedMatches.length === 0)}
+                              disabled={isExporting || (exportType === "selected" && selectedMatches.length === 0 && !isAllSelected)}
               className="relative"
             >
               {isExporting ? (
@@ -2293,7 +2320,7 @@ const updateMatch = async () => {
                         {process.status !== ProcessStatus.PROCESSING && (
                           <TableCell className="w-[50px]">
                             <Checkbox
-                              checked={selectedMatches.includes(match.id)}
+                              checked={currentPageSelected.has(match.id)}
                               onCheckedChange={() => toggleMatchSelection(match.id)}
                               aria-label={t("select match id", lang) + " " + match.id}
                               disabled={match.transfer_account_id === null || match.status.toLowerCase() === "success"}

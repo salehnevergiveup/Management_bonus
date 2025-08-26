@@ -23,7 +23,6 @@ export const convertToMYR = (amount: number, fromCurrency: string, exchangeRates
   }
   
   // If no conversion rate found, return original amount (fallback)
-  console.warn(`No conversion rate found for ${fromCurrency} to MYR, using original amount`);
   return amount;
 };
 

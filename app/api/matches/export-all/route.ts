@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
 async function handleExport(request: NextRequest, method: "GET" | "POST") {
   try {
-    console.log(`Export all matches route called via ${method}`);
+
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,7 +78,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
       whereClause.transfer_account_id = {
         not: null
       };
-      console.log("Using 'select_all_matched' export type - will export all matched records");
+
     } else if (exportType === "filtered") {
       // Add search filter
       if (search) {
@@ -116,23 +116,10 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
       }
     }
 
-    console.log("Export all matches query:", { 
-      processId, 
-      exportType, 
-      selectedIds, 
-      limit,
-      whereClause 
-    });
-
     // First, get the total count to check if we need chunking
     const totalCount = await prisma.match.count({
       where: whereClause
     });
-
-    console.log(`Total matches found: ${totalCount}`);
-    console.log(`Process ID: ${processId}`);
-    console.log(`Export type: ${exportType}`);
-    console.log(`Where clause:`, JSON.stringify(whereClause, null, 2));
 
     // Check if we exceed maximum records limit
     if (totalCount > MAX_RECORDS) {
@@ -146,15 +133,12 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
     const shouldLimit = limitNumber && limitNumber > 0;
 
     if (shouldLimit && totalCount > limitNumber) {
-      console.log(`Limiting export to ${limitNumber} records out of ${totalCount} total`);
+
     }
 
     // For selected exports, use a different approach to avoid cursor pagination issues
     if (exportType === "selected" && selectedIds) {
-      console.log(`Using direct ID processing for selected export`);
-      
       const selectedIdArray = selectedIds.split(",").filter(id => id.trim());
-      console.log(`Selected IDs count: ${selectedIdArray.length}`);
       
       // Use streaming CSV generation to prevent memory accumulation
       const csvChunks: string[] = [];
@@ -170,7 +154,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
       
       for (let i = 0; i < selectedIdArray.length; i += CHUNK_SIZE) {
         const chunkIds = selectedIdArray.slice(i, i + CHUNK_SIZE);
-        console.log(`Processing chunk ${Math.floor(i / CHUNK_SIZE) + 1}, IDs ${i + 1} to ${Math.min(i + CHUNK_SIZE, selectedIdArray.length)}`);
+
         
         const chunk = await prisma.match.findMany({
           where: {
@@ -204,7 +188,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
           }
         });
         
-        console.log(`Chunk returned: ${chunk.length} records`);
+
         
         // Process this chunk immediately and add to CSV
         const chunkRows: string[] = [];
@@ -237,7 +221,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
         chunkRows.length = 0;
         
         processed += chunk.length;
-        console.log(`Processed chunk: ${chunk.length} records, total: ${processed}/${selectedIdArray.length}`);
+
         
         // Clear chunk immediately to free memory
         chunk.length = 0;
@@ -279,7 +263,6 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
 
     // For select_all_matched and other export types, use cursor-based pagination
     if (exportType === "select_all_matched") {
-      console.log("Using cursor-based pagination for select_all_matched export");
       
       // Use streaming CSV generation to prevent memory accumulation
       const csvChunks: string[] = [];
@@ -294,8 +277,20 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
       let cursor: string | undefined;
       let processed = 0;
       let hasMore = true;
+      const startTime = Date.now();
+      const MAX_EXPORT_TIME = 300000; // 5 minutes timeout
       
-      while (hasMore) {
+      const MAX_ITERATIONS = 1000; // Safety limit to prevent infinite loops
+      let iteration = 0;
+      
+      while (hasMore && iteration < MAX_ITERATIONS) {
+        iteration++;
+
+        
+        // Check timeout
+        if (Date.now() - startTime > MAX_EXPORT_TIME) {
+          break;
+        }
         const chunk = await prisma.match.findMany({
           where: whereClause,
           select: {
@@ -320,7 +315,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
             }
           },
           orderBy: {
-            created_at: "desc"
+            id: "asc" // Use ID for better cursor performance
           },
           take: CURSOR_CHUNK_SIZE,
           ...(cursor && { cursor: { id: cursor } })
@@ -331,7 +326,13 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
           break;
         }
         
-        console.log(`Processing cursor chunk: ${chunk.length} records, total processed: ${processed}`);
+        // Safety check: if we get the same cursor twice, break to prevent infinite loop
+        if (cursor && chunk.length > 0 && chunk[chunk.length - 1]?.id === cursor) {
+          hasMore = false;
+          break;
+        }
+        
+
         
         // Process this chunk immediately and add to CSV
         const chunkRows: string[] = [];
@@ -366,7 +367,11 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
         processed += chunk.length;
         
         // Update cursor for next iteration
-        cursor = chunk[chunk.length - 1]?.id;
+        if (chunk.length > 0) {
+          cursor = chunk[chunk.length - 1]?.id;
+        } else {
+          hasMore = false;
+        }
         
         // Clear chunk immediately to free memory
         chunk.length = 0;
@@ -378,7 +383,6 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
         
         // Check if we've reached the limit
         if (shouldLimit && processed >= limitNumber) {
-          console.log(`Reached limit of ${limitNumber} records`);
           break;
         }
       }
@@ -413,7 +417,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
     }
 
     // For other export types, use regular query
-    console.log("Using regular query for non-selected export");
+
     
     const allMatches = await prisma.match.findMany({
       where: whereClause,
@@ -448,7 +452,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
       return NextResponse.json({ error: "No matches found for this process" }, { status: 404 });
     }
 
-    console.log(`Final export count: ${allMatches.length} records`);
+
 
     // Check estimated file size (rough calculation)
     const estimatedSizeInMB = (allMatches.length * 200) / (1024 * 1024); // ~200 bytes per record
