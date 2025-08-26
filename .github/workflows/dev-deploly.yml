@@ -347,6 +347,19 @@ jobs:
             echo "✅ Dependencies installed"
           '
       
+      - name: Run tests
+        run: |
+          set -e
+          ssh -i ~/.ssh/id_rsa ${{ secrets.DEV_EC2_USER }}@${{ secrets.DEV_EC2_HOST }} '
+            set -e
+            cd ${{ secrets.DEV_APP_DIR }}
+            
+            echo "🧪 Running tests..."
+            npm test
+            
+            echo "✅ Tests completed successfully"
+          '
+      
       - name: Database operations
         run: |
           set -e
