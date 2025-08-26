@@ -2511,10 +2511,22 @@
     "eng": "?",
     "ch": "吗？"
   },
-  "select all matched": "Select All Matched",
-  "deselected_all_matched": "Deselected all matched records",
-  "failed_to_select_all_matched": "Failed to select all matched records",
-  "cleared_all_selections": "All selections cleared"
+  "select all matched": {
+    "eng": "Select All Matched",
+    "ch": "选择所有匹配"
+  },
+  "deselected_all_matched": {
+    "eng": "Deselected all matched records",
+    "ch": "取消选择所有匹配记录"
+  },
+  "failed_to_select_all_matched": {
+    "eng": "Failed to select all matched records",
+    "ch": "选择所有匹配记录失败"
+  },
+  "cleared_all_selections": {
+    "eng": "All selections cleared",
+    "ch": "清除所有选择"
+  }
 }
     
   
