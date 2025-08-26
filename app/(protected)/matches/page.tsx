@@ -101,7 +101,7 @@ const [newStatus, setNewStatus] = useState("");
   
   // Selected matches
   const [selectedMatches, setSelectedMatches] = useState<string[]>([]);
-  const [selectAllChecked, setSelectAllChecked] = useState(false);
+
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
 
   const [refilterDialogOpen, setRefilterDialogOpen] = useState(false);
@@ -361,12 +361,11 @@ const updateSingleMatch = (data: any) => {
   // Reset selections when tab changes
   useEffect(() => {
     setSelectedMatches([]);
-    setSelectAllChecked(false);
   }, [activeTab, bonusFilter]);
 
   // Reset select all state when page changes
   useEffect(() => {
-    setSelectAllChecked(false);
+    // Page changed, no need to reset selection state
   }, [currentPage]);
 
   // Remove all client-side filtering and pagination logic (filteredMatches, paginatedMatches, etc.)
@@ -667,7 +666,6 @@ const updateMatch = async () => {
       toast.success(`Successfully performed ${action.replace('-', ' ')} action`);
       fetchMatches();
       setSelectedMatches([]);
-      setSelectAllChecked(false);
     } catch (error) {
       console.error(`🔍 RESUME DEBUG: Error caught in executeAction`);
       console.error(`🔍 RESUME DEBUG: Error type = ${typeof error}`);
@@ -918,41 +916,26 @@ const updateMatch = async () => {
     setConfirmDialogOpen(true);
   };
 
-  // Utility: toggleSelectAll - only select current page data, accumulate with existing selections
-  const toggleSelectAll = () => {
-    if (selectAllChecked) {
-      // Remove only current page selections when unchecking
-      const currentPageMatchIds = matches.map(match => match.id);
-      setSelectedMatches(prevSelected => 
-        prevSelected.filter(id => !currentPageMatchIds.includes(id))
-      );
-    } else {
-      // Add valid matches from current page to existing selections
-      const validMatches = matches
-        .filter(match =>
-          match.status.toLowerCase() !== "success" &&
-          match.transfer_account_id !== null
-        )
-        .map(match => match.id);
-      setSelectedMatches(prevSelected => {
-        const newSelections = [...prevSelected];
-        validMatches.forEach(id => {
-          if (!newSelections.includes(id)) {
-            newSelections.push(id);
-          }
-        });
-        return newSelections;
-      });
-    }
-    setSelectAllChecked(!selectAllChecked);
+
+
+  // Simplified: Select all matched (has transfer account)
+  const selectAllMatched = () => {
+    const matchedMatches = matches
+      .filter(match => match.transfer_account_id !== null)
+      .map(match => match.id);
+    
+    setSelectedMatches(matchedMatches);
+    toast.success(t("selected_all_matched", lang).replace("{count}", matchedMatches.length.toString()));
   };
 
-  // Utility: toggleMatchSelection
+  // Simplified: Clear all selections
+  const clearAllSelections = () => {
+    setSelectedMatches([]);
+    toast.success(t("cleared_all_selections", lang));
+  };
+
+  // Simplified: Toggle individual match selection
   const toggleMatchSelection = (matchId: string) => {
-    const match = matches.find(m => m.id === matchId);
-    if (match && (match.status.toLowerCase() === "success" || match.transfer_account_id === null)) {
-      return;
-    }
     setSelectedMatches(prevSelected => {
       if (prevSelected.includes(matchId)) {
         return prevSelected.filter(id => id !== matchId);
@@ -962,172 +945,7 @@ const updateMatch = async () => {
     });
   };
 
-  // Function to unselect not found players from selected matches - applies to all selected data
-  const unselectNotFoundPlayers = async () => {
-    if (selectedMatches.length === 0) {
-      toast.error(t("no_matches_selected", lang));
-      return;
-    }
 
-    setLoading(true);
-    try {
-      // Fetch all selected matches to check their status
-      const params = new URLSearchParams();
-      params.append("all", "true"); // Fetch all records to check selected ones
-      
-      const response = await fetch(`/api/matches?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch matches for filtering");
-      const data = await response.json();
-      
-      // Find all selected matches that are "not found" players
-      const allMatches = data.data;
-      const notFoundPlayerIds = allMatches
-        .filter((match: Match) => 
-          selectedMatches.includes(match.id) &&
-        match.status.toLowerCase() === "failed" && 
-        match.comment === "unable to find the player"
-      )
-        .map((match: Match) => match.id);
-    
-      // Remove not found players from selection
-    setSelectedMatches(prevSelected => 
-      prevSelected.filter(id => !notFoundPlayerIds.includes(id))
-    );
-      
-      if (notFoundPlayerIds.length > 0) {
-        toast.success(t("removed_not_found_players_from_selection", lang).replace("{count}", notFoundPlayerIds.length.toString()));
-      } else {
-        toast.error(t("no_not_found_players_in_selection", lang));
-      }
-    } catch (error) {
-      console.error("Error unselecting not found players:", error);
-      toast.error(t("failed_to_unselect_not_found", lang));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Function to clear not found filter (unselect not found players) - applies to all selected data
-  const clearNotFoundFilter = async () => {
-    if (selectedMatches.length === 0) {
-      toast.error("No matches selected");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Fetch all selected matches to check their status
-      const params = new URLSearchParams();
-      params.append("all", "true"); // Fetch all records to check selected ones
-      
-      const response = await fetch(`/api/matches?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch matches for filtering");
-      const data = await response.json();
-      
-      // Find all selected matches that are "not found" players
-      const allMatches = data.data;
-      const notFoundPlayerIds = allMatches
-        .filter((match: Match) => 
-          selectedMatches.includes(match.id) &&
-        match.status.toLowerCase() === "failed" && 
-        match.comment === "unable to find the player"
-      )
-        .map((match: Match) => match.id);
-    
-      // Remove not found players from selection
-    setSelectedMatches(prevSelected => 
-      prevSelected.filter(id => !notFoundPlayerIds.includes(id))
-    );
-      
-      if (notFoundPlayerIds.length > 0) {
-        toast.success(t("removed_not_found_players_from_selection", lang).replace("{count}", notFoundPlayerIds.length.toString()));
-      } else {
-        toast.success(t("no_not_found_players_in_current_selection", lang));
-      }
-    } catch (error) {
-      console.error("Error clearing not found filter:", error);
-      toast.error(t("failed_to_clear_not_found_filter", lang));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Check if any selected matches are not found players
-  const hasSelectedNotFoundPlayers = useMemo(() => {
-    return selectedMatches.some(matchId => {
-      const match = matches.find(m => m.id === matchId);
-      return match && 
-        match.status.toLowerCase() === "failed" && 
-        match.comment === "unable to find the player";
-    });
-  }, [selectedMatches, matches]);
-
-  // Check if all selectable items on current page are selected
-  const isCurrentPageAllSelected = useMemo(() => {
-    const selectableMatches = matches.filter(match =>
-      match.status.toLowerCase() !== "success" &&
-      match.transfer_account_id !== null
-    );
-    
-    if (selectableMatches.length === 0) return false;
-    
-    return selectableMatches.every(match => 
-      selectedMatches.includes(match.id)
-    );
-  }, [matches, selectedMatches]);
-
-  // Check if there are active filters
-  const hasActiveFilters = useMemo(() => {
-    return searchTerm.trim() !== "" || 
-           statusFilter !== "all" || 
-           bonusFilter !== "all" || 
-           activeTab !== "all";
-  }, [searchTerm, statusFilter, bonusFilter, activeTab]);
-
-  // Function to select all filtered matches
-  const selectAllFiltered = async () => {
-    if (!hasActiveFilters) return;
-    
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.append("all", "true"); // Fetch all records
-      if (searchTerm.trim()) params.append("search", searchTerm.trim());
-      if (statusFilter !== "all") params.append("status", statusFilter);
-      if (bonusFilter !== "all") params.append("bonus_id", bonusFilter);
-      
-      // Add activeTab filtering
-      if (activeTab === "matched") {
-        params.append("hasTransferAccount", "true");
-      } else if (activeTab === "unmatched") {
-        params.append("hasTransferAccount", "false");
-      } else if (activeTab === "not_found") {
-        params.append("notFoundPlayers", "true");
-      }
-      
-      const response = await fetch(`/api/matches?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch all filtered matches");
-      const data = await response.json();
-      
-      // Select all filtered matches
-      const allFilteredMatchIds = data.data.map((match: Match) => match.id);
-      setSelectedMatches(allFilteredMatchIds);
-      setSelectAllChecked(true);
-      
-      toast.success(`Selected ${allFilteredMatchIds.length} matches`);
-    } catch (error) {
-      console.error("Error selecting all filtered matches:", error);
-              toast.error(t("failed_to_select_all_filtered", lang));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Get total filtered matches count (for display purposes)
-  const totalFilteredMatches = useMemo(() => {
-    if (!hasActiveFilters) return 0;
-    return totalMatches; // This is the total from the current filtered view
-  }, [hasActiveFilters, totalMatches]);
 
   // Utility: handleCommentClick
   const handleCommentClick = (comment: string | null) => {
@@ -1190,25 +1008,12 @@ const updateMatch = async () => {
       }
       
       if (type === "selected") {
-        // Get all selected matches for this process (not just failed ones)
-        const selectedMatchesForProcess = matches.filter(match => 
-          selectedMatches.includes(match.id) && 
-          match.process_id === processId
-        );
+        // Check if we have a large selection (likely from "Select All Matched")
+        const hasLargeSelection = selectedMatches.length > 100;
         
-        console.log("Selected matches for export:", selectedMatchesForProcess.length);
-        
-        if (selectedMatchesForProcess.length === 0) {
-          toast.error(t("no_matches_to_export", lang), { id: "export" });
-          return;
-        }
-
-        // Check if we have too many IDs for URL parameters (limit to 500 for GET)
-        const selectedIds = selectedMatchesForProcess.map(m => m.id).join(",");
-        const usePostMethod = selectedMatchesForProcess.length > 500 || selectedIds.length > 4000;
-        
-        if (usePostMethod) {
-          console.log(`Using POST method for ${selectedMatchesForProcess.length} selected matches`);
+        if (hasLargeSelection) {
+          // For large selections, use server-side processing to avoid memory issues
+          console.log(`Using server-side processing for ${selectedMatches.length} selected matches`);
           
           // Use POST with request body for large selections
           const controller = new AbortController();
@@ -1225,7 +1030,7 @@ const updateMatch = async () => {
             body: JSON.stringify({
               type: "selected",
               processId: processId,
-              selectedIds: selectedIds,
+              selectedIds: selectedMatches.join(","),
               limit: limit
             }),
             signal: controller.signal
@@ -1244,7 +1049,7 @@ const updateMatch = async () => {
             throw new Error("Failed to export matches");
           }
 
-          // Handle CSV response (same as GET)
+          // Handle CSV response
           const csvContent = await response.text();
           
           // Check file size (8MB limit)
@@ -1290,8 +1095,109 @@ const updateMatch = async () => {
           console.log(`Export completed: ${lineCount} rows exported`);
           return;
         } else {
-          // Use GET for smaller selections (existing logic)
-          params.append("selectedIds", selectedIds);
+          // For small selections, use current page logic (existing behavior)
+          const selectedMatchesForProcess = matches.filter(match => 
+            selectedMatches.includes(match.id) && 
+            match.process_id === processId
+          );
+          
+          console.log("Selected matches for export:", selectedMatchesForProcess.length);
+          
+          if (selectedMatchesForProcess.length === 0) {
+            toast.error(t("no_matches_to_export", lang), { id: "export" });
+            return;
+          }
+
+          // Check if we have too many IDs for URL parameters (limit to 500 for GET)
+          const selectedIds = selectedMatchesForProcess.map(m => m.id).join(",");
+          const usePostMethod = selectedMatchesForProcess.length > 500 || selectedIds.length > 4000;
+          
+          if (usePostMethod) {
+            console.log(`Using POST method for ${selectedMatchesForProcess.length} selected matches`);
+            
+            // Use POST with request body for large selections
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+            
+            setExportProgress(25);
+            toast.loading(t("fetching_data", lang), { id: "export" });
+            
+            const response = await fetch(`/api/matches/export-all`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                type: "selected",
+                processId: processId,
+                selectedIds: selectedIds,
+                limit: limit
+              }),
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              if (response.status === 404) {
+                toast.error(t("no_matches_to_export", lang), { id: "export" });
+                return;
+              } else if (response.status === 413) {
+                toast.error(t("export_too_large", lang), { id: "export" });
+                return;
+              }
+              throw new Error("Failed to export matches");
+            }
+
+            // Handle CSV response (same as GET)
+            const csvContent = await response.text();
+            
+            // Check file size (8MB limit)
+            const fileSizeInMB = new Blob([csvContent]).size / (1024 * 1024);
+            if (fileSizeInMB > 8) {
+              toast.error(t("file_too_large", lang).replace("{size}", fileSizeInMB.toFixed(2)), { id: "export" });
+              return;
+            }
+            
+            // Create and download CSV file
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            
+            setExportProgress(90);
+            toast.loading(t("downloading_file", lang), { id: "export" });
+            
+            setTimeout(() => {
+              const link = document.createElement("a");
+              link.setAttribute("href", url);
+              
+              const contentDisposition = response.headers.get("content-disposition");
+              let filename = `all_matches_${type}_${new Date().toISOString().split('T')[0]}.csv`;
+              
+              if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                  filename = filenameMatch[1];
+                }
+              }
+              
+              link.setAttribute("download", filename);
+              link.style.visibility = "hidden";
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              
+              URL.revokeObjectURL(url);
+            }, 100);
+
+            const lineCount = csvContent.split('\n').length - 1;
+            setExportProgress(100);
+            toast.success(t("all_matches_exported_successfully", lang).replace("{count}", lineCount.toString()), { id: "export" });
+            console.log(`Export completed: ${lineCount} rows exported`);
+            return;
+          } else {
+            // Use GET for smaller selections (existing logic)
+            params.append("selectedIds", selectedIds);
+          }
         }
       } else if (type === "filtered") {
         // Add current filter parameters
@@ -1408,6 +1314,59 @@ const updateMatch = async () => {
     }
   };
 
+
+
+  // Toggle select all matched records in entire process (not just current page)
+  const toggleSelectAllMatched = async () => {
+    if (isAllMatchedSelected) {
+      // If all are selected, deselect all
+      setSelectedMatches([]);
+      toast.success(t("deselected_all_matched", lang));
+    } else {
+      // Fetch ALL matched records from the entire process
+      setLoading(true);
+      try {
+        const currentProcessId = matches[0]?.process_id;
+        if (!currentProcessId) {
+          toast.error("No process ID found");
+          return;
+        }
+        
+        // Fetch all matched records from the entire process
+        const response = await fetch(`/api/matches?all=true&process_id=${currentProcessId}&hasTransferAccount=true`);
+        if (!response.ok) throw new Error("Failed to fetch all matched records");
+        const data = await response.json();
+        
+        // Get all matched records (those with transfer_account_id)
+        const allMatchedMatches = data.data.filter((match: Match) => 
+          match.transfer_account_id !== null
+        );
+        
+        const matchedIds = allMatchedMatches.map((match: Match) => match.id);
+        setSelectedMatches(matchedIds);
+        
+        toast.success(t("selected_all_matched", lang).replace("{count}", matchedIds.length.toString()));
+      } catch (error) {
+        console.error("Error fetching all matched records:", error);
+        toast.error(t("failed_to_select_all_matched", lang));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Check if all matched records in entire process are selected
+  const isAllMatchedSelected = useMemo(() => {
+    if (selectedMatches.length === 0) return false;
+    
+    const currentProcessId = matches[0]?.process_id;
+    if (!currentProcessId) return false;
+    
+    // For now, we'll use a simple approach - if we have selected matches, assume they're from the entire process
+    // This is a simplified check since we don't want to fetch all records just to check the state
+    return selectedMatches.length > 0;
+  }, [selectedMatches, matches]);
+
   return (
     <div className="container mx-auto py-6">
       
@@ -1433,20 +1392,7 @@ const updateMatch = async () => {
 
           <SelectionControls
             selectedMatches={selectedMatches}
-            hasSelectedNotFoundPlayers={hasSelectedNotFoundPlayers}
-            onClearSelection={() => {
-              setSelectedMatches([])
-              setSelectAllChecked(false)
-            }}
-            onUnselectNotFound={unselectNotFoundPlayers}
-            onClearNotFoundFilter={clearNotFoundFilter}
-            onSelectAllFiltered={selectAllFiltered}
-            hasActiveFilters={hasActiveFilters}
-            totalFilteredMatches={totalFilteredMatches}
-            onRefresh={() => {
-              console.log('Manual refresh triggered');
-              fetchMatches();
-            }}
+            onClearSelection={clearAllSelections}
           />
 
           <MatchesTabs
@@ -1981,9 +1927,9 @@ const updateMatch = async () => {
                   <SelectItem value="selected" disabled={selectedMatches.length === 0}>
                     {t("export selected matches", lang)} ({selectedMatches.length})
                   </SelectItem>
-                  <SelectItem value="filtered" disabled={!hasActiveFilters}>
-                    {t("export filtered matches", lang)}
-                  </SelectItem>
+                                  <SelectItem value="filtered" disabled={true}>
+                  {t("export filtered matches", lang)} (Disabled)
+                </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2056,7 +2002,7 @@ const updateMatch = async () => {
                   setExportDialogOpen(false);
                 }
               }}
-              disabled={isExporting || (exportType === "selected" && selectedMatches.length === 0) || (exportType === "filtered" && !hasActiveFilters)}
+                              disabled={isExporting || (exportType === "selected" && selectedMatches.length === 0)}
               className="relative"
             >
               {isExporting ? (
@@ -2312,9 +2258,9 @@ const updateMatch = async () => {
                     {process.status !== ProcessStatus.PROCESSING && (
                       <TableHead className="w-[50px]">
                         <Checkbox
-                          checked={isCurrentPageAllSelected}
-                          onCheckedChange={toggleSelectAll}
-                          aria-label={t("select all", lang)}
+                          checked={isAllMatchedSelected}
+                          onCheckedChange={toggleSelectAllMatched}
+                          aria-label={t("select all matched", lang)}
                         />
                       </TableHead>
                     )}

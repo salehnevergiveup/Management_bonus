@@ -72,6 +72,13 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
       whereClause.id = {
         in: selectedIdArray
       };
+    } else if (exportType === "select_all_matched") {
+      // Special case: export all matched records for the process
+      // This is safe for large datasets as it uses cursor-based pagination
+      whereClause.transfer_account_id = {
+        not: null
+      };
+      console.log("Using 'select_all_matched' export type - will export all matched records");
     } else if (exportType === "filtered") {
       // Add search filter
       if (search) {
@@ -123,6 +130,9 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
     });
 
     console.log(`Total matches found: ${totalCount}`);
+    console.log(`Process ID: ${processId}`);
+    console.log(`Export type: ${exportType}`);
+    console.log(`Where clause:`, JSON.stringify(whereClause, null, 2));
 
     // Check if we exceed maximum records limit
     if (totalCount > MAX_RECORDS) {
@@ -139,30 +149,154 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
       console.log(`Limiting export to ${limitNumber} records out of ${totalCount} total`);
     }
 
-    // Use chunking for large datasets
-    const CHUNK_SIZE = 1000; // Process 1k records at a time (reduced from 5k)
-    let allMatches: any[] = [];
-
-    // Determine if we need chunking based on:
-    // 1. Limited export with large total count
-    // 2. Selected export with many IDs
-    // 3. Any export with large total count
-    const needsChunking = (
-      (shouldLimit && totalCount > CHUNK_SIZE) ||
-      (exportType === "selected" && selectedIds && selectedIds.split(",").length > CHUNK_SIZE) ||
-      totalCount > CHUNK_SIZE
-    );
-
-    if (needsChunking) {
-      // Use cursor-based pagination for better performance
-      console.log(`Using optimized chunking for large export (${exportType} type, ${totalCount} total records)`);
+    // For selected exports, use a different approach to avoid cursor pagination issues
+    if (exportType === "selected" && selectedIds) {
+      console.log(`Using direct ID processing for selected export`);
       
+      const selectedIdArray = selectedIds.split(",").filter(id => id.trim());
+      console.log(`Selected IDs count: ${selectedIdArray.length}`);
+      
+      // Use streaming CSV generation to prevent memory accumulation
+      const csvChunks: string[] = [];
+      const csvHeaders = [
+        "ID", "Username", "Game", "Bonus", "Transfer Account", "Amount",
+        "Currency", "Status", "Comment", "Created At", "Process ID"
+      ];
+      csvChunks.push(csvHeaders.join(",") + "\n");
+      
+      // Process selected IDs in chunks to avoid memory issues
+      const CHUNK_SIZE = 1000;
       let processed = 0;
-      let lastId = null;
-      const maxRecords = shouldLimit ? limitNumber : totalCount;
       
-      while (processed < maxRecords) {
-        const chunkQuery: any = {
+      for (let i = 0; i < selectedIdArray.length; i += CHUNK_SIZE) {
+        const chunkIds = selectedIdArray.slice(i, i + CHUNK_SIZE);
+        console.log(`Processing chunk ${Math.floor(i / CHUNK_SIZE) + 1}, IDs ${i + 1} to ${Math.min(i + CHUNK_SIZE, selectedIdArray.length)}`);
+        
+        const chunk = await prisma.match.findMany({
+          where: {
+            id: {
+              in: chunkIds
+            }
+          },
+          select: {
+            id: true,
+            username: true,
+            game: true,
+            amount: true,
+            currency: true,
+            status: true,
+            comment: true,
+            created_at: true,
+            process_id: true,
+            bonus: {
+              select: {
+                name: true
+              }
+            },
+            transfer_account: {
+              select: {
+                username: true
+              }
+            }
+          },
+          orderBy: {
+            created_at: "desc"
+          }
+        });
+        
+        console.log(`Chunk returned: ${chunk.length} records`);
+        
+        // Process this chunk immediately and add to CSV
+        const chunkRows: string[] = [];
+        for (const match of chunk) {
+          try {
+            const row = [
+              match.id, 
+              match.username || "", 
+              match.game || "N/A",
+              (match as any).bonus?.name || "N/A",
+              (match as any).transfer_account?.username || "N/A", 
+              match.amount?.toString() || "0",
+              match.currency || "", 
+              match.status || "", 
+              (match.comment || "").replace(/"/g, '""'), // Escape quotes
+              new Date(match.created_at).toLocaleString(), 
+              match.process_id || ""
+            ];
+            
+            const csvRow = row.map(cell => `"${String(cell)}"`).join(",");
+            chunkRows.push(csvRow);
+          } catch (rowError) {
+            console.error(`Error processing row:`, rowError);
+            continue;
+          }
+        }
+        
+        // Add chunk to CSV and clear immediately
+        csvChunks.push(chunkRows.join("\n") + "\n");
+        chunkRows.length = 0;
+        
+        processed += chunk.length;
+        console.log(`Processed chunk: ${chunk.length} records, total: ${processed}/${selectedIdArray.length}`);
+        
+        // Clear chunk immediately to free memory
+        chunk.length = 0;
+        
+        // Force garbage collection every few chunks
+        if (global.gc && processed % (CHUNK_SIZE * 3) === 0) {
+          global.gc();
+        }
+      }
+      
+      // Join all chunks and return
+      const csvContent = csvChunks.join("");
+      csvChunks.length = 0; // Clear chunks array
+      
+      console.log(`Final processed count: ${processed} records`);
+      console.log(`CSV content length: ${csvContent.length} characters`);
+      
+      // Force garbage collection
+      if (global.gc) {
+        global.gc();
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      const processInfo = `_process_${processId}`;
+      const typeInfo = "_selected";
+      const limitInfo = shouldLimit ? `_limit${limitNumber}` : "";
+      const filename = `all_matches${processInfo}${typeInfo}${limitInfo}_${timestamp}.csv`;
+
+      return new NextResponse(csvContent, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "X-Total-Count": selectedIdArray.length.toString(),
+          "X-Exported-Count": processed.toString(),
+        },
+      });
+    }
+
+    // For select_all_matched and other export types, use cursor-based pagination
+    if (exportType === "select_all_matched") {
+      console.log("Using cursor-based pagination for select_all_matched export");
+      
+      // Use streaming CSV generation to prevent memory accumulation
+      const csvChunks: string[] = [];
+      const csvHeaders = [
+        "ID", "Username", "Game", "Bonus", "Transfer Account", "Amount",
+        "Currency", "Status", "Comment", "Created At", "Process ID"
+      ];
+      csvChunks.push(csvHeaders.join(",") + "\n");
+      
+      // Use cursor-based pagination for safe handling of large datasets
+      const CURSOR_CHUNK_SIZE = 1000;
+      let cursor: string | undefined;
+      let processed = 0;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const chunk = await prisma.match.findMany({
           where: whereClause,
           select: {
             id: true,
@@ -188,71 +322,127 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
           orderBy: {
             created_at: "desc"
           },
-          take: Math.min(CHUNK_SIZE, maxRecords - processed)
-        };
-
-        // Use cursor-based pagination instead of skip
-        if (lastId) {
-          // For selected exports, we need to maintain the ID filter
-          if (exportType === "selected" && selectedIds) {
-            const selectedIdArray = selectedIds.split(",").filter(id => id.trim());
-            chunkQuery.where = {
-              ...whereClause,
-              id: {
-                in: selectedIdArray,
-                lt: lastId
-              }
-            };
-          } else {
-            chunkQuery.where.id = {
-              lt: lastId
-            };
+          take: CURSOR_CHUNK_SIZE,
+          ...(cursor && { cursor: { id: cursor } })
+        });
+        
+        if (chunk.length === 0) {
+          hasMore = false;
+          break;
+        }
+        
+        console.log(`Processing cursor chunk: ${chunk.length} records, total processed: ${processed}`);
+        
+        // Process this chunk immediately and add to CSV
+        const chunkRows: string[] = [];
+        for (const match of chunk) {
+          try {
+            const row = [
+              match.id, 
+              match.username || "", 
+              match.game || "N/A",
+              (match as any).bonus?.name || "N/A",
+              (match as any).transfer_account?.username || "N/A", 
+              match.amount?.toString() || "0",
+              match.currency || "", 
+              match.status || "", 
+              (match.comment || "").replace(/"/g, '""'), // Escape quotes
+              new Date(match.created_at).toLocaleString(), 
+              match.process_id || ""
+            ];
+            
+            const csvRow = row.map(cell => `"${String(cell)}"`).join(",");
+            chunkRows.push(csvRow);
+          } catch (rowError) {
+            console.error(`Error processing row:`, rowError);
+            continue;
           }
         }
-
-        const chunk = await prisma.match.findMany(chunkQuery);
-
-        if (chunk.length === 0) break;
-
-        allMatches.push(...chunk);
+        
+        // Add chunk to CSV and clear immediately
+        csvChunks.push(chunkRows.join("\n") + "\n");
+        chunkRows.length = 0;
+        
         processed += chunk.length;
-        lastId = chunk[chunk.length - 1].id;
-
-        console.log(`Processed chunk: ${chunk.length} records, total: ${processed}/${maxRecords}`);
+        
+        // Update cursor for next iteration
+        cursor = chunk[chunk.length - 1]?.id;
+        
+        // Clear chunk immediately to free memory
+        chunk.length = 0;
+        
+        // Force garbage collection every few chunks
+        if (global.gc && processed % (CURSOR_CHUNK_SIZE * 3) === 0) {
+          global.gc();
+        }
+        
+        // Check if we've reached the limit
+        if (shouldLimit && processed >= limitNumber) {
+          console.log(`Reached limit of ${limitNumber} records`);
+          break;
+        }
       }
-    } else {
-      // Use regular query for smaller datasets
-      console.log("Using regular query");
       
-      allMatches = await prisma.match.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          username: true,
-          game: true,
-          amount: true,
-          currency: true,
-          status: true,
-          comment: true,
-          created_at: true,
-          process_id: true,
-          bonus: {
-            select: {
-              name: true
-            }
-          },
-          transfer_account: {
-            select: {
-              username: true
-            }
-          }
+      // Join all chunks and return
+      const csvContent = csvChunks.join("");
+      csvChunks.length = 0; // Clear chunks array
+      
+      console.log(`Final processed count: ${processed} records`);
+      console.log(`CSV content length: ${csvContent.length} characters`);
+      
+      // Force garbage collection
+      if (global.gc) {
+        global.gc();
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      const processInfo = `_process_${processId}`;
+      const typeInfo = "_select_all_matched";
+      const limitInfo = shouldLimit ? `_limit${limitNumber}` : "";
+      const filename = `all_matches${processInfo}${typeInfo}${limitInfo}_${timestamp}.csv`;
+
+      return new NextResponse(csvContent, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "X-Total-Count": totalCount.toString(),
+          "X-Exported-Count": processed.toString(),
         },
-        orderBy: {
-          created_at: "desc"
-        },
-        ...(shouldLimit && { take: limitNumber })
       });
     }
+
+    // For other export types, use regular query
+    console.log("Using regular query for non-selected export");
+    
+    const allMatches = await prisma.match.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        username: true,
+        game: true,
+        amount: true,
+        currency: true,
+        status: true,
+        comment: true,
+        created_at: true,
+        process_id: true,
+        bonus: {
+          select: {
+            name: true
+          }
+        },
+        transfer_account: {
+          select: {
+            username: true
+          }
+        }
+      },
+      orderBy: {
+        created_at: "desc"
+      },
+      ...(shouldLimit && { take: limitNumber })
+    });
 
     if (allMatches.length === 0) {
       return NextResponse.json({ error: "No matches found for this process" }, { status: 404 });
@@ -274,14 +464,16 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
       "Currency", "Status", "Comment", "Created At", "Process ID"
     ];
 
-    // Generate CSV content in chunks to prevent memory issues
-    let csvContent = csvHeaders.join(",") + "\n";
+    // Use streaming approach to prevent memory accumulation
+    const csvChunks: string[] = [];
+    csvChunks.push(csvHeaders.join(",") + "\n");
     
     // Process records in smaller chunks to prevent V8 crashes
     const CSV_CHUNK_SIZE = 1000;
     
     for (let i = 0; i < allMatches.length; i += CSV_CHUNK_SIZE) {
       const chunk = allMatches.slice(i, i + CSV_CHUNK_SIZE);
+      const chunkRows: string[] = [];
       
       for (const match of chunk) {
         try {
@@ -289,8 +481,8 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
             match.id, 
             match.username || "", 
             match.game || "N/A",
-            match.bonus?.name || "N/A",
-            match.transfer_account?.username || "N/A", 
+            (match as any).bonus?.name || "N/A",
+            (match as any).transfer_account?.username || "N/A", 
             match.amount?.toString() || "0",
             match.currency || "", 
             match.status || "", 
@@ -300,7 +492,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
           ];
           
           const csvRow = row.map(cell => `"${String(cell)}"`).join(",");
-          csvContent += csvRow + "\n";
+          chunkRows.push(csvRow);
         } catch (rowError) {
           console.error(`Error processing row ${i}:`, rowError);
           // Continue with next row instead of crashing
@@ -308,14 +500,21 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
         }
       }
       
+      // Add chunk to CSV and clear chunkRows immediately
+      csvChunks.push(chunkRows.join("\n") + "\n");
+      chunkRows.length = 0; // Clear chunk array
+      
       // Force garbage collection every chunk to prevent memory buildup
       if (global.gc && i % (CSV_CHUNK_SIZE * 5) === 0) {
         global.gc();
       }
     }
 
-    // Clear large arrays to free memory immediately
-    allMatches = [];
+    // Join all chunks at the end (minimal memory impact)
+    const csvContent = csvChunks.join("");
+    
+    // Clear all arrays immediately
+    csvChunks.length = 0;
     
     // Force garbage collection if available
     if (global.gc) {
@@ -324,7 +523,7 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
 
     const timestamp = new Date().toISOString().split('T')[0];
     const processInfo = `_process_${processId}`;
-    const typeInfo = exportType === "selected" ? "_selected" : exportType === "filtered" ? "_filtered" : "_all";
+    const typeInfo = exportType === "filtered" ? "_filtered" : "_all";
     const limitInfo = shouldLimit ? `_limit${limitNumber}` : "";
     const filename = `all_matches${processInfo}${typeInfo}${limitInfo}_${timestamp}.csv`;
 
@@ -339,10 +538,9 @@ async function handleExport(request: NextRequest, method: "GET" | "POST") {
     });
 
   } catch (error) {
-    console.error("Error exporting all matches:", error);
-    return NextResponse.json(
-      { error: "Failed to export matches" },
-      { status: 500 }
-    );
+    console.error("Export error:", error);
+    return NextResponse.json({ 
+      error: "Failed to export matches. Please try again." 
+    }, { status: 500 });
   }
 } 
