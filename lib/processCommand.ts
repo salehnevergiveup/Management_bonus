@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import {Bonus, TurnoverData, ExchangeRates, BonusResult} from '@/types/bonus.type' 
 import {TransferAccount, Account, ResumeResult, Match, Transfer,Wallet } from '@/types/resume-data.type' 
 import {functionGenerator} from "@/lib/convertStringToFunction"
-
+import { deduplicateUsersByHighestAmount } from "@/lib/currencyUtils";
 
 const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null>  => {
    try{  
@@ -18,10 +18,13 @@ const filter = async(authId: string, bonus: Bonus): Promise<BonusResult[] | null
 
       }
       const newFunction = functionGenerator(bonus.function)
-      const data = newFunction(turnoverData, exchangeRateData, bonus.baseline);  
+      const rawData = newFunction(turnoverData, exchangeRateData, bonus.baseline);  
 
-      notifyAll(authId, "data filtering done successfully",NotificationType.SUCCESS);
-      return data; 
+      // Deduplicate users by keeping the highest amount (converted to MYR for fair comparison)
+      const deduplicatedData = deduplicateUsersByHighestAmount(rawData, exchangeRateData);
+
+      notifyAll(authId, `data filtering done successfully. Original: ${rawData.length} records, Deduplicated: ${deduplicatedData.length} records`,NotificationType.SUCCESS);
+      return deduplicatedData; 
    }catch(error) {  
     notifyAll(authId, "turnover data or exchange rate not found",NotificationType.ERROR);
     return null; 
